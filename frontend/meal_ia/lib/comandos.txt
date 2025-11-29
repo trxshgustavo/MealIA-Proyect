@@ -1,0 +1,5 @@
+cd C:\Users\ggonz\mealia-backend
+.\venv\Scripts\activate
+uvicorn main:app --reload --host 0.0.0.0
+"http://192.168.1.16:8000"; casa
+ "http://10.136.180.35:8000"; udd

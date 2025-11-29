@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "970236848335",
+    "project_id": "mealiav2",
+    "storage_bucket": "mealiav2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:970236848335:android:2a65cdbba7da1380b66fba",
+        "android_client_info": {
+          "package_name": "com.mealia.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "970236848335-i0tvsjmvpa8bqisok1svcvfhqvmct4e0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mealia.app",
+            "certificate_hash": "aebb072e1813af08ec9296b366a4f3eb6f3111a7"
+          }
+        },
+        {
+          "client_id": "970236848335-m9t5mjq1i9dbsacop9i49ve6k0eoc529.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2ZgtvNDAVFDd8C_AKHlv_EU3FDFbRYE8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "970236848335-m9t5mjq1i9dbsacop9i49ve6k0eoc529.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
