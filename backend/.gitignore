@@ -1,0 +1,12 @@
+# Entorno virtual de Python
+venv/
+
+# Archivo de secretos
+.env
+
+# Base de datos local de SQLite
+mealia.db
+
+# Archivos de caché de Python
+__pycache__/
+.pytest_cache/
