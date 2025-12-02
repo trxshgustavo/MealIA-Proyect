@@ -97,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Título
               const Text(
-                '¡Bienvenid@ a MealApp!',
+                '¡Bienvenid@ a Meal.IA!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.primaryText,

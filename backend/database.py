@@ -4,19 +4,24 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
-load_dotenv()
 
-# Si en el futuro quieres usar PostgreSQL (más pro), la URL sería así:
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+load_dotenv()
+SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URL")
+
+if SQLALCHEMY_DATABASE_URL is None:
+    
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./mealia.db"
+
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
+    connect_args={"check_same_thread": False} 
 )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-# Dependencia para obtener la sesión de BD en los endpoints
 def get_db():
     db = SessionLocal()
     try:

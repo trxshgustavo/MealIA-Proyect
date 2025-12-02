@@ -3,9 +3,11 @@ import '../theme/app_colors.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
+
   @override
   _WelcomeScreenState createState() => _WelcomeScreenState();
 }
+
 class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
@@ -14,19 +16,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+
+    // Configuración de Animaciones
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000), // Animación de 1 segundo
+      duration: const Duration(milliseconds: 1000),
     );
 
-    // Animación de desvanecimiento para todo
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeIn)
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
 
-    // Animación de deslizamiento para la zanahoria y el botón
     _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic)
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
     _controller.forward();
@@ -63,7 +65,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
               ),
               const SizedBox(height: 60),
 
@@ -82,15 +83,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               ),
               const SizedBox(height: 100),
 
-              // --- Imagen de la Zanahoria ---
+              // --- IMAGEN GIF (Mucho más simple y estable) ---
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: SlideTransition(
                   position: _slideAnimation,
-                  child: Image.asset(
-                    'assets/saludo_carrot.png',
-                    height: 400, // Más grande, como en la foto
-                    errorBuilder: (_, __, ___) => const Icon(Icons.error, color: AppColors.primaryText, size: 150),
+                  child: SizedBox(
+                    height: 350,
+                    // Flutter maneja los GIFs automáticamente como imágenes
+                    child: Image.asset(
+                      'assets/saludo_carrot.png',
+                      height: 350,
+                      fit: BoxFit.contain, // Ajusta para que se vea completa
+                      // Opcional: Esto evita parpadeos si el gif es pesado
+                      gaplessPlayback: true, 
+                    ),
                   ),
                 ),
               ),
@@ -103,19 +110,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   position: _slideAnimation,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Navega a la pantalla de Login
                       Navigator.pushNamed(context, '/login');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.inputFill, // Gris claro
-                      foregroundColor: AppColors.primaryText, // Texto oscuro
+                      backgroundColor: AppColors.inputFill,
+                      foregroundColor: AppColors.primaryText,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Comencemos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Comencemos',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                         SizedBox(width: 10),
                         Icon(Icons.arrow_forward),
                       ],
@@ -123,7 +134,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   ),
                 ),
               ),
-              const SizedBox(height: 40), // Espacio inferior
+              const SizedBox(height: 40),
             ],
           ),
         ),

@@ -14,17 +14,20 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel 
 from openai import OpenAI 
 
-import models, schemas, security, database
-from database import engine, get_db
+# --- CORRECCIÓN CRÍTICA: CARGAR .ENV PRIMERO ---
+# Cargamos las variables de entorno ANTES de importar los módulos locales.
+# Así, cuando 'security.py' se lea, la SECRET_KEY ya estará cargada.
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
-# Carga las claves secretas de .env
-load_dotenv()
+# --- AHORA SÍ IMPORTAMOS TUS MÓDULOS ---
+from . import models, schemas, security, database 
+from .database import engine, get_db
 
 # Configuración de OpenAI (Cliente moderno)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Crea las tablas en la base de datos
-models.Base.metadata.create_all(bind=engine)
+database.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Meal.IA Backend")
 
