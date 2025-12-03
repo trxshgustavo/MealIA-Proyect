@@ -154,7 +154,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             children: [
               _buildUserInfoCard(context, appState),
-              _buildStreakCard(context),
               _buildSettingsCard(
                 context,
                 children: [
@@ -178,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSettingsItem(
                     title: 'Suscripción',
                     onTap: () {
-                      // TODO: Navegar
+                      Navigator.pushNamed(context, '/subscription');
                     },
                   ),
                   _buildSettingsItem(
@@ -227,7 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           GestureDetector(
             onTap: _uploadPhoto,
             child: CircleAvatar(
-              radius: 50,
+              radius: 80,
               backgroundColor: AppColors.cardDark,
               // Lógica de visualización de imagen
               backgroundImage: _imageFile != null
@@ -238,20 +237,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: null, 
             ),
           ),
-          const SizedBox(width: 20), 
+          const SizedBox(width: 50), 
           Expanded( 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, 
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
+                // --- AQUÍ ESTÁ EL CAMBIO DE NOMBRE Y APELLIDO ---
                 Text(
-                  appState.firstName ?? 'Nombre Usuario',
+                  "${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}",
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -259,58 +261,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     color: AppColors.secondaryText, 
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStreakCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.buttonDark,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            spreadRadius: 0,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Image.asset(
-            'assets/saludo_carrot.png', 
-            height: 50,
-            width: 50,
-            errorBuilder: (_, __, ___) => const Icon(Icons.star_rounded, color: Colors.yellow, size: 40),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '¡Increíble!',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  'Llevas 100 dias generando recetas',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[300],
                   ),
                 ),
               ],

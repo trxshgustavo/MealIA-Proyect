@@ -5,9 +5,15 @@ from datetime import datetime
 # --- Inventory ---
 class InventoryItemBase(BaseModel):
     name: str
+    quantity: float = 1.0
+    unit: str = "Unidades"
 
 class InventoryItemCreate(InventoryItemBase):
     pass # Solo necesitamos el nombre para crearlo/incrementarlo
+
+class InventoryItemUpdate(BaseModel): # <--- NUEVO ESQUEMA PARA EL PUT
+    quantity: float
+    unit: str
 
 class InventoryItem(InventoryItemBase):
     id: int

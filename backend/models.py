@@ -24,12 +24,9 @@ class User(Base):
 class InventoryItem(Base):
     __tablename__ = "inventory_items"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, nullable=False) # ej: "pollo"
-    
-    # --- ¡CAMBIO IMPORTANTE! ---
-    # Aquí definimos la cantidad
-    quantity = Column(Integer, default=1) 
-    
+    name = Column(String, index=True, nullable=False) 
+    quantity = Column(Float, default=1.0)
+    unit = Column(String, default="Unidades")
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="inventory_items")
     

@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({Key? key}) : super(key: key);
+
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
@@ -12,8 +13,11 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _newFoodItemController = TextEditingController();
   
-  // 1. NUEVA VARIABLE DE ESTADO
+  // Variable para controlar la pantalla de carga
   bool _isLoading = false; 
+
+  // Lista de unidades disponibles para el selector
+  final List<String> _units = ['Unidades', 'Kg', 'g', 'L', 'ml', 'oz', 'lb', 'paquete'];
 
   @override
   void dispose() {
@@ -23,6 +27,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _addFoodItem() {
     if (_newFoodItemController.text.trim().isNotEmpty) {
+      // Al añadir, por defecto la AppState lo creará con cantidad 1 y unidad "Unidades"
       Provider.of<AppState>(context, listen: false).addFood(_newFoodItemController.text.trim());
       _newFoodItemController.clear();
     }
@@ -30,9 +35,119 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _removeFoodItem(String foodKey) {
     Provider.of<AppState>(context, listen: false).removeFood(foodKey);
-    String displayName = foodKey[0].toUpperCase() + foodKey.substring(1);
+    String displayName = foodKey.isNotEmpty 
+        ? foodKey[0].toUpperCase() + foodKey.substring(1) 
+        : foodKey;
+        
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$displayName eliminado!')),
+    );
+  }
+
+  // --- Diálogo para editar cantidad y unidad ---
+  Future<void> _showEditQuantityDialog(String foodKey, double currentQuantity, String currentUnit) async {
+    final TextEditingController amountController = TextEditingController(
+      text: currentQuantity > 0 
+          ? currentQuantity.toStringAsFixed(currentQuantity.truncateToDouble() == currentQuantity ? 0 : 2) 
+          : '',
+    );
+
+    // Validación: Si la unidad que viene de la BD no está en nuestra lista, usamos la primera por defecto.
+    String selectedUnit = _units.contains(currentUnit) ? currentUnit : _units[0];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                'Editar ${_capitalize(foodKey)}',
+                style: const TextStyle(color: AppColors.textDark),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Define la cantidad exacta:", style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      // Input de número
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          controller: amountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: _inputDecoration('Cant.').copyWith(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Selector de Unidad
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardDark,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedUnit,
+                              isExpanded: true,
+                              dropdownColor: Colors.white,
+                              icon: const Icon(Icons.arrow_drop_down, color: AppColors.textDark),
+                              items: _units.map((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value, style: const TextStyle(color: AppColors.textDark)),
+                                );
+                              }).toList(),
+                              onChanged: (newValue) {
+                                if (newValue != null) {
+                                  setDialogState(() => selectedUnit = newValue);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.buttonDark,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    final double? amount = double.tryParse(amountController.text.replaceAll(',', '.'));
+                    if (amount != null) {
+                      try {
+                        Provider.of<AppState>(context, listen: false).updateFood(foodKey, amount, selectedUnit);
+                      } catch (e) {
+                        print("Error llamando a updateFood: $e");
+                      }
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -59,7 +174,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  // 2. NUEVA FUNCIÓN PARA MANEJAR LA GENERACIÓN Y LA CARGA
+  // Lógica para generar menú con pantalla de carga
   Future<void> _handleGenerateMenu() async {
     final appState = Provider.of<AppState>(context, listen: false);
     
@@ -70,22 +185,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
       return;
     }
 
-    // Activar pantalla de carga
     setState(() {
       _isLoading = true;
     });
 
-    // Llamar a la IA
     await appState.generateMenuConIA();
 
     if (!mounted) return;
 
-    // Desactivar pantalla de carga
     setState(() {
       _isLoading = false;
     });
 
-    // Navegar al menú
     Navigator.pushNamed(context, '/menu');
   }
 
@@ -97,29 +208,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
-      
-      // 3. USAMOS UN STACK PARA SUPERPONER LA PANTALLA DE CARGA
       body: Stack(
         children: [
-          // --- CAPA 1: El contenido normal de la pantalla ---
+          // CAPA 1: Contenido Principal
           SafeArea(
             bottom: false, 
             child: Column(
               children: [
-                const SizedBox(height: 24),
-                Text(
-                  'Mi inventario',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 30),
                 Image.asset(
                   'assets/carrot.png',
-                  height: 100,
-                  width: 100,
+                  height: 180,
+                  width: 180,
                   errorBuilder: (_, __, ___) => const Icon(Icons.shopping_basket, size: 80, color: AppColors.textDark),
                 ),
                 const SizedBox(height: 20),
 
+                // Input para agregar nuevos items
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Row(
@@ -149,6 +254,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 const SizedBox(height: 20),
 
+                // Lista de items
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -178,7 +284,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   itemCount: itemKeys.length,
                                   itemBuilder: (context, index) {
                                     final itemKey = itemKeys[index];
-                                    final quantity = inventoryMap[itemKey] ?? 0;
+                                    final itemData = inventoryMap[itemKey];
+
+                                    // Lógica corregida: Extracción directa de datos
+                                    // Usamos operadores nulos (??) por seguridad
+                                    final double quantity = (itemData?['quantity'] ?? 0).toDouble();
+                                    final String unit = itemData?['unit'] ?? 'Unidades';
 
                                     return Card(
                                       color: AppColors.cardBackground, 
@@ -190,22 +301,38 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                           _capitalize(itemKey),
                                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textDark),
                                         ),
-                                        trailing: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.cardDark, 
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            "Cantidad: $quantity",
-                                            style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
+                                        // Botón para eliminar
+                                        leading: IconButton(
+                                          icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
+                                          onPressed: () => _removeFoodItem(itemKey),
+                                        ),
+                                        // Widget de cantidad y unidad (Clickable)
+                                        trailing: InkWell(
+                                          borderRadius: BorderRadius.circular(8),
+                                          onTap: () {
+                                            _showEditQuantityDialog(itemKey, quantity, unit);
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.cardDark,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.blueGrey.withOpacity(0.2)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  // Formato: 2.0 -> "2", 2.5 -> "2.5"
+                                                  "${quantity.truncateToDouble() == quantity ? quantity.toInt() : quantity} $unit",
+                                                  style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                const Icon(Icons.edit, size: 14, color: AppColors.textLight),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                        onTap: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Aquí se abrirá el editor de cantidad (próximo paso).')),
-                                          );
-                                        },
                                       ),
                                     );
                                   },
@@ -213,9 +340,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                               const SizedBox(height: 20),
                               
-                              // Botón Generar
+                              // Botón Generar Menú
                               ElevatedButton(
-                                onPressed: _isLoading ? null : _handleGenerateMenu, // Desactiva si está cargando
+                                onPressed: _isLoading ? null : _handleGenerateMenu,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.cardDark,
                                   foregroundColor: AppColors.textDark,
@@ -231,31 +358,30 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ),
 
-          // --- CAPA 2: La Pantalla de Carga (Solo visible si _isLoading es true) ---
+          // CAPA 2: Pantalla de Carga
           if (_isLoading)
             Container(
-              color: const Color.fromARGB(255, 255, 255, 255), // Fondo blanco total
+              color: Colors.white,
               width: double.infinity,
               height: double.infinity,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Aquí va tu "video png" (o GIF). 
-                  // Si no tienes uno, usa el 'assets/carrot.png' o cámbialo por tu GIF.
                   Image.asset(
-                    'assets/animation.gif', // <-- ¡CAMBIA ESTO POR TU GIF/VIDEO PNG!
-                    height: 450,
-                    width: 450,
+                    'assets/animation.gif', 
+                    height: 300,
+                    width: 300,
+                    // Fallback por si la animación falla
+                    errorBuilder: (_, __, ___) => const Icon(Icons.hourglass_bottom, size: 80, color: AppColors.textDark),
                   ),
-                  
-                  // Texto de carga
+                  const SizedBox(height: 20),
                   const Text(
-                    "Generando menú...",
+                    "Generando menú con IA...",
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textDark,
-                      decoration: TextDecoration.none, // Quita subrayado por si acaso
+                      decoration: TextDecoration.none,
                     ),
                   ),
                 ],
