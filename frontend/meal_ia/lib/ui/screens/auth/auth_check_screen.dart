@@ -4,9 +4,9 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 
 class AuthCheckScreen extends StatefulWidget {
-  const AuthCheckScreen({Key? key}) : super(key: key);
+  const AuthCheckScreen({super.key});
   @override
-  _AuthCheckScreenState createState() => _AuthCheckScreenState();
+  State<AuthCheckScreen> createState() => _AuthCheckScreenState();
 }
 class _AuthCheckScreenState extends State<AuthCheckScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
@@ -62,7 +62,7 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> with SingleTickerProv
               'assets/carrot.png',
               width: 150,
               height: 150,
-              errorBuilder: (_, __, ___) => const Icon(Icons.restaurant_menu, size: 120, color: AppColors.primaryText),
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.restaurant_menu, size: 120, color: AppColors.primaryText),
             ),
           ),
         ),

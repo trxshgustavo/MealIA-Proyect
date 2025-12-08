@@ -4,7 +4,7 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 
 class MenuScreen extends StatelessWidget {
-  const MenuScreen({Key? key}) : super(key: key);
+  const MenuScreen({super.key});
 
   // --- Widget para cada Tarjeta de Comida (Sin cambios) ---
   Widget _buildMealCard(
@@ -26,7 +26,7 @@ class MenuScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               spreadRadius: 0,
               blurRadius: 15,
               offset: const Offset(0, 5),
@@ -43,7 +43,7 @@ class MenuScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.15),
+                      color: iconColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(icon, size: 24, color: iconColor),
@@ -169,7 +169,7 @@ class MenuScreen extends StatelessWidget {
                                   height: 80,
                                   width: 80,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, size: 60),
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.restaurant, size: 60),
                                 ),
                                 const SizedBox(height: 10),
                                 const Text(
@@ -229,9 +229,9 @@ class MenuScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.blueGrey.withOpacity(0.05),
+                                color: Colors.blueGrey.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blueGrey.withOpacity(0.1)),
+                                border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.1)),
                               ),
                               child: Text(
                                 menu['note'],

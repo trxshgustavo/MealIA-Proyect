@@ -4,10 +4,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // NECESARIO PARA AUTH
+import '../config/api_config.dart';
 
 class AppState extends ChangeNotifier {
-  // OJO: Asegúrate de que esta IP sea la correcta de tu PC
-  final String _baseUrl = "http://10.136.180.35:8000"; 
+  // Asegúrate de que esta IP sea la correcta de tu PC
+  final String _baseUrl = ApiConfig.baseUrl; 
   
   final _storage = const FlutterSecureStorage();
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -15,6 +17,7 @@ class AppState extends ChangeNotifier {
     serverClientId: "970236848335-m9t5mjq1i9dbsacop9i49ve6k0eoc529.apps.googleusercontent.com",
   );
 
+  // Datos de Usuario
   String? firstName;
   String? lastName;
   DateTime? birthdate;
@@ -23,18 +26,23 @@ class AppState extends ChangeNotifier {
   String goal = 'Mantenimiento';
   String? photoUrl;
 
-  // --- CORRECCIÓN PRINCIPAL DE TIPO ---
-  // Antes era Map<String, int>, ahora es complejo para guardar unidades
-  Map<String, Map<String, dynamic>> _inventory = {};
+  // Inventario y Menú
+  final Map<String, Map<String, dynamic>> _inventory = {};
   Map<String, Map<String, dynamic>> get inventoryMap => _inventory;
   
   Map<String, dynamic>? generatedMenu;
   int totalCalories = 0;
 
+  // --- VERIFICACIÓN DE SESIÓN ---
   Future<bool> checkLoginStatus() async {
     await Future.delayed(const Duration(milliseconds: 1500));
     final token = await _storage.read(key: 'auth_token');
-    if (token == null) {
+    
+    // Verificación Doble: Si no hay token local O no hay usuario en Firebase,
+    // forzamos al usuario a loguearse de nuevo para reparar la sesión.
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+
+    if (token == null || firebaseUser == null) {
       return false;
     }
     return await _loadUserData(token);
@@ -42,7 +50,10 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     await _googleSignIn.signOut();
+    await FirebaseAuth.instance.signOut(); // Logout de Firebase
     await _storage.delete(key: 'auth_token');
+    
+    // Limpiar variables en memoria
     firstName = null;
     lastName = null;
     birthdate = null;
@@ -58,7 +69,7 @@ class AppState extends ChangeNotifier {
 
   Future<bool> _loadUserData(String token) async {
     try {
-      // 1. Cargar Usuario
+      // 1. Cargar Perfil
       final userResponse = await http.get(
         Uri.parse('$_baseUrl/users/me'),
         headers: {'Authorization': 'Bearer $token'},
@@ -85,59 +96,178 @@ class AppState extends ChangeNotifier {
       final List<dynamic> invData = jsonDecode(utf8.decode(invResponse.bodyBytes));
       _inventory.clear();
       
-      // --- CORRECCIÓN DE PARSEO ---
       for (var item in invData) {
         _inventory[item['name']] = {
-          'quantity': (item['quantity'] ?? 0).toDouble(), // Forzamos double
-          'unit': item['unit'] ?? 'Unidades',             // Leemos la unidad o por defecto 'Unidades'
+          'quantity': (item['quantity'] ?? 0).toDouble(),
+          'unit': item['unit'] ?? 'Unidades',
         };
       }
       notifyListeners();
       return true;
     } catch (e) {
-      print("Error en _loadUserData: $e");
+      // print("Error en _loadUserData: $e");
       return false;
     }
   }
 
+  // --- LOGIN CON AUTO-REPARACIÓN DE FIREBASE ---
   Future<String> login(String email, String password) async {
     final url = Uri.parse('$_baseUrl/token');
     try {
+      // 1. Login en Backend (FastAPI)
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {'username': email, 'password': password},
       );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['access_token'];
         await _storage.write(key: 'auth_token', value: token);
+        
+        // 2. LOGIN / CREACIÓN EN FIREBASE (Sincronización)
+        try {
+           await FirebaseAuth.instance.signInWithEmailAndPassword(
+             email: email, 
+             password: password
+           );
+           // print("Firebase: Login sincronizado correctamente.");
+        } on FirebaseAuthException catch (e) {
+           if (e.code == 'user-not-found') {
+             // print("Firebase: Usuario no encontrado. Creándolo para sincronizar...");
+             try {
+               await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                 email: email, 
+                 password: password
+               );
+               // print("Firebase: Usuario creado y sincronizado.");
+             } catch (createError) {
+               // print("Error creando en Firebase: $createError");
+             }
+           } else {
+             // print("Firebase Error (Login): ${e.code}");
+           }
+        }
+
+        // 3. Cargar datos finales
         final success = await _loadUserData(token);
         return success ? "OK" : "Error al cargar tus datos";
       } else {
         final data = jsonDecode(response.body);
-        return data['detail'] ?? 'Error desconocido';
+        return data['detail'] ?? 'Credenciales incorrectas';
       }
     } catch (e) {
-      return 'Error de red. ¿Está el servidor corriendo?';
+      return 'Error de conexión. Intenta más tarde.';
     }
   }
 
-  // --- MÉTODO NUEVO: ACTUALIZAR ALIMENTO (Requerido por InventoryScreen) ---
+  // --- REGISTRO ---
+  Future<String> register({
+    required String email,
+    required String password,
+    required String firstName,
+  }) async {
+    final url = Uri.parse('$_baseUrl/register');
+    try {
+      // 1. Crear en Backend
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'first_name': firstName,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // 2. Crear en Firebase (Intento silencioso)
+        try {
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: email, 
+            password: password
+          );
+        } catch (e) {
+          // print("Error Firebase Register (puede que ya exista): $e");
+        }
+
+        // 3. Iniciar sesión automáticamente
+        return await login(email, password);
+      } else {
+        final data = jsonDecode(response.body);
+        return data['detail'] ?? 'Error al registrar';
+      }
+    } catch (e) {
+      return 'Error de red al registrar.';
+    }
+  }
+
+  // --- GOOGLE LOGIN ---
+  Future<String> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return "Inicio de sesión cancelado";
+      
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? googleToken = googleAuth.idToken;
+      
+      // Sincronizar Firebase con Google Credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (googleToken == null) return "Error al obtener token de Google";
+
+      final url = Uri.parse('$_baseUrl/auth/google');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': googleToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final appToken = data['access_token'];
+        final bool isNewUser = data['is_new_user'] ?? false;
+        
+        await _storage.write(key: 'auth_token', value: appToken);
+        final success = await _loadUserData(appToken);
+        
+        if (!success) return "Error al cargar datos";
+        return isNewUser ? "OK_NEW" : "OK_EXISTING";
+      } else {
+        final data = jsonDecode(response.body);
+        return data['detail'] ?? 'Error de servidor';
+      }
+    } catch (e) {
+      // print("Error signInWithGoogle: $e");
+      return "Error: $e";
+    }
+  }
+
+  // --- GESTIÓN DE DATOS ---
+
+  void setPersonalData({String? firstName, String? lastName}) {
+    this.firstName = firstName ?? this.firstName;
+    this.lastName = lastName ?? this.lastName;
+    notifyListeners();
+  }
+
   Future<void> updateFood(String foodKey, double quantity, String unit) async {
-    // 1. Actualización Local (Optimista)
     _inventory[foodKey] = {
       'quantity': quantity,
       'unit': unit,
     };
     notifyListeners();
 
-    // 2. Actualización en Servidor
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return;
 
     try {
-      final response = await http.put(
+      await http.put(
         Uri.parse('$_baseUrl/inventory/$foodKey'), 
         headers: {
           'Content-Type': 'application/json',
@@ -148,12 +278,8 @@ class AppState extends ChangeNotifier {
           'unit': unit
         }),
       );
-
-      if (response.statusCode != 200) {
-        print("Error al guardar cambios en servidor: ${response.statusCode}");
-      }
     } catch (e) {
-      print("Error de red al actualizar comida: $e");
+      // print("Error actualizando comida: $e");
     }
   }
 
@@ -163,7 +289,6 @@ class AppState extends ChangeNotifier {
     String normalizedKey = food.trim().toLowerCase();
     if (normalizedKey.isEmpty) return;
     try {
-      // Al crear, enviamos valores por defecto
       final response = await http.post(
         Uri.parse('$_baseUrl/inventory'),
         headers: {
@@ -185,7 +310,7 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print("Error al añadir comida (red): $e");
+      // print("Error añadiendo comida: $e");
     }
   }
 
@@ -202,7 +327,7 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print("Error al remover comida (red): $e");
+      // print("Error borrando comida: $e");
     }
   }
 
@@ -241,74 +366,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- OTROS MÉTODOS EXISTENTES (Google, Fotos, Recetas) ---
-
-  Future<String> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return "Inicio de sesión cancelado";
-      
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final String? googleToken = googleAuth.idToken;
-      if (googleToken == null) return "Error al obtener el token de Google";
-
-      final url = Uri.parse('$_baseUrl/auth/google');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'token': googleToken}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final appToken = data['access_token'];
-        final bool isNewUser = data['is_new_user'] ?? false;
-        await _storage.write(key: 'auth_token', value: appToken);
-        final success = await _loadUserData(appToken);
-        if (!success) return "Error al cargar tus datos";
-        return isNewUser ? "OK_NEW" : "OK_EXISTING";
-      } else {
-        final data = jsonDecode(response.body);
-        return data['detail'] ?? 'Error de servidor';
-      }
-    } catch (e) {
-      print("Error en signInWithGoogle: $e");
-      return "Error: $e";
-    }
-  }
-
-  Future<String> register({
-    required String email,
-    required String password,
-    required String firstName,
-  }) async {
-    final url = Uri.parse('$_baseUrl/register');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'first_name': firstName,
-          'password': password,
-        }),
-      );
-      if (response.statusCode == 200) {
-        return await login(email, password);
-      } else {
-        final data = jsonDecode(response.body);
-        return data['detail'] ?? 'Error desconocido';
-      }
-    } catch (e) {
-      return 'Error de red al registrar.';
-    }
-  }
-
-  void setPersonalData({String? firstName, String? lastName}) {
-    this.firstName = firstName ?? this.firstName;
-    this.lastName = lastName ?? this.lastName;
-    notifyListeners();
-  }
-
   Future<bool> saveUserPhysicalData({
     String? firstName,
     String? lastName,
@@ -341,7 +398,7 @@ class AppState extends ChangeNotifier {
         this.height = data['height'];
         this.weight = data['weight'];
         this.birthdate = data['birthdate'] != null ? DateTime.parse(data['birthdate']) : null;
-        this.goal = data['goal'];
+        goal = data['goal'];
         notifyListeners();
         return true;
       } else {

@@ -4,7 +4,7 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart'; 
 
 class GoalsScreen extends StatelessWidget {
-  const GoalsScreen({Key? key}) : super(key: key);
+  const GoalsScreen({super.key});
   Widget _buildGoalCard(
     BuildContext context, {
     required String title,
@@ -78,7 +78,7 @@ class GoalsScreen extends StatelessWidget {
                 'assets/carrot.png',
                 height: 280,
                 width: 280,
-                errorBuilder: (_, __, ___) => const Icon(Icons.flag, size: 100, color: AppColors.primaryText),
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.flag, size: 100, color: AppColors.primaryText),
               ),
               const SizedBox(height: 20),
               
@@ -89,7 +89,7 @@ class GoalsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       spreadRadius: 0,
                       blurRadius: 10,
                       offset: const Offset(0, 4),

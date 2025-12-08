@@ -6,9 +6,9 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 
 class DataScreen extends StatefulWidget {
-  const DataScreen({Key? key}) : super(key: key);
+  const DataScreen({super.key});
   @override
-  _DataScreenState createState() => _DataScreenState();
+  State<DataScreen> createState() => _DataScreenState();
 }
 
 class _DataScreenState extends State<DataScreen> {
@@ -182,7 +182,7 @@ class _DataScreenState extends State<DataScreen> {
                 'assets/carrot.png',
                 height: 280,
                 width: 280,
-                errorBuilder: (_, __, ___) => const Icon(Icons.analytics, size: 100, color: AppColors.primaryText),
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.analytics, size: 100, color: AppColors.primaryText),
               ),
               const SizedBox(height: 20),
 
@@ -193,7 +193,7 @@ class _DataScreenState extends State<DataScreen> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       spreadRadius: 0,
                       blurRadius: 10,
                       offset: const Offset(0, 4),

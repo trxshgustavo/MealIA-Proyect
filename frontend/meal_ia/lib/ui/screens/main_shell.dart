@@ -6,7 +6,7 @@ import 'package:meal_ia/ui/screens/widgets/custom_animated_nav_bar.dart';
 import 'package:meal_ia/ui/screens/theme/app_colors.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({Key? key}) : super(key: key);
+  const MainShell({super.key});
 
   @override
   State<MainShell> createState() => _MainShellState();

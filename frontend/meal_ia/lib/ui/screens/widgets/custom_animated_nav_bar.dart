@@ -6,10 +6,10 @@ class CustomAnimatedNavBar extends StatelessWidget {
   final Function(int) onTap;
 
   const CustomAnimatedNavBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

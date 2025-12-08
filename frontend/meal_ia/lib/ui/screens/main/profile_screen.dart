@@ -6,9 +6,9 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
   @override
-  _ProfileScreenState createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
@@ -70,7 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } catch (e) {
-      print("Error en _pickImage: $e");
+      // print("Error en _pickImage: $e");
     }
   }
 
@@ -160,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSettingsItem(
                     title: 'Configuracion general',
                     onTap: () {
-                      // TODO: Navegar
+                      Navigator.pushNamed(context, '/settings');
                     },
                   ),
                   _buildSettingsItem(
@@ -213,7 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             spreadRadius: 0,
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -279,7 +279,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             spreadRadius: 0,
             blurRadius: 10,
             offset: const Offset(0, 4),

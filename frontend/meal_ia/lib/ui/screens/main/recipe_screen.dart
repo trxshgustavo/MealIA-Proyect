@@ -4,7 +4,7 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 
 class RecipeScreen extends StatelessWidget {
-  const RecipeScreen({Key? key}) : super(key: key);
+  const RecipeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +74,7 @@ class RecipeScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.accentColor.withOpacity(0.15),
+                          color: AppColors.accentColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -119,7 +119,7 @@ class RecipeScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -137,7 +137,7 @@ class RecipeScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       if (ingredients.isEmpty)
                         const Text("No hay ingredientes listados", style: TextStyle(color: Colors.grey)),
-                      ...ingredients.map((item) => _IngredientItem(text: item.toString())).toList(),
+                      ...ingredients.map((item) => _IngredientItem(text: item.toString())),
 
                       const SizedBox(height: 32),
                       const Divider(color: AppColors.inputFill),
@@ -174,7 +174,7 @@ class RecipeScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
           ],
         ),
         child: Row(
@@ -250,7 +250,7 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.accentColor.withOpacity(0.15),
+            color: AppColors.accentColor.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.accentColor, size: 22),

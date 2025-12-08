@@ -3,10 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-
 import 'core/providers/app_state.dart';
 import 'ui/screens/theme/app_colors.dart';
-
 import 'ui/screens/auth/auth_check_screen.dart';
 import 'ui/screens/auth/welcome_screen.dart';
 import 'ui/screens/auth/register_screen.dart';
@@ -18,7 +16,7 @@ import 'ui/screens/main/inventory_screen.dart';
 import 'ui/screens/main/menu_screen.dart';
 import 'ui/screens/main/recipe_screen.dart';
 import 'ui/screens/main/subscription_screen.dart';
-
+import 'ui/screens/main/settings_screen.dart';
 import 'ui/screens/main_shell.dart';
 
 Future<void> main() async {
@@ -35,7 +33,7 @@ Future<void> main() async {
 }
 
 class MealIAApp extends StatelessWidget {
-  const MealIAApp({Key? key}) : super(key: key);
+  const MealIAApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +78,7 @@ class MealIAApp extends StatelessWidget {
           '/menu': (_) => const MenuScreen(),
           '/recipe': (_) => const RecipeScreen(),
           '/subscription': (context) => const SubscriptionScreen(),
+          '/settings': (context) => const SettingsScreen(),
         },
       ),
     );

@@ -4,7 +4,7 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({Key? key}) : super(key: key);
+  const InventoryScreen({super.key});
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -136,7 +136,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       try {
                         Provider.of<AppState>(context, listen: false).updateFood(foodKey, amount, selectedUnit);
                       } catch (e) {
-                        print("Error llamando a updateFood: $e");
+                        // print("Error llamando a updateFood: $e");
                       }
                       Navigator.pop(context);
                     }
@@ -220,7 +220,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   'assets/carrot.png',
                   height: 180,
                   width: 180,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.shopping_basket, size: 80, color: AppColors.textDark),
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.shopping_basket, size: 80, color: AppColors.textDark),
                 ),
                 const SizedBox(height: 20),
 
@@ -317,7 +317,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                             decoration: BoxDecoration(
                                               color: AppColors.cardDark,
                                               borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: Colors.blueGrey.withOpacity(0.2)),
+                                              border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.2)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -372,7 +372,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     height: 300,
                     width: 300,
                     // Fallback por si la animación falla
-                    errorBuilder: (_, __, ___) => const Icon(Icons.hourglass_bottom, size: 80, color: AppColors.textDark),
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.hourglass_bottom, size: 80, color: AppColors.textDark),
                   ),
                   const SizedBox(height: 20),
                   const Text(
