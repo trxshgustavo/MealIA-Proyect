@@ -3,8 +3,69 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 
-class RecipeScreen extends StatelessWidget {
+class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
+
+  @override
+  State<RecipeScreen> createState() => _RecipeScreenState();
+}
+
+class _RecipeScreenState extends State<RecipeScreen> {
+  // Use local state to handle regeneration updates within this screen if needed
+  // However, since arguments come from Route, updating them might require
+  // careful state management or re-fetching.
+  // For simplicity, we'll assume regeneration updates the AppState or triggers a rebuild if we used a Provider consumer properly.
+  // Given the structure, we'll implement the logic to call AppState and show feedback.
+
+  bool _isRegenerating = false;
+
+  void _handleRegenerate(
+    String mealType,
+    Map<String, dynamic> currentRecipe,
+  ) async {
+    setState(() => _isRegenerating = true);
+
+    final appState = Provider.of<AppState>(context, listen: false);
+    final newRecipe = await appState.regenerateMeal(mealType, currentRecipe);
+
+    if (!mounted) return;
+
+    setState(() => _isRegenerating = false);
+
+    if (newRecipe != null) {
+      // Mock update: In a real app we might want to replace the current route or update state
+      // For this "preview", let's just push a replacement to show the new data clearly
+      // or update local state if we refactored to not rely solely on ModalRoute settings.
+
+      // Quick fix: Pop and Push with new args (simple visual refresh)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const RecipeScreen(),
+          settings: RouteSettings(
+            arguments: {...newRecipe, 'isPreview': true, 'mealType': mealType},
+          ),
+        ),
+      );
+    }
+  }
+
+  void _handleSave(
+    BuildContext context,
+    String mealType,
+    Map<String, dynamic> recipe,
+  ) {
+    Provider.of<AppState>(
+      context,
+      listen: false,
+    ).saveMealToDaily(mealType, recipe);
+    // Optional: Return to menu or stay?
+    // User requirement: "Save and generate". Probably stay or go back.
+    // Let's just give feedback.
+    // Optional: Return to menu or stay?
+    // User requirement: "Save and generate". Probably stay or go back.
+    // Let's just give feedback.
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,13 +77,21 @@ class RecipeScreen extends StatelessWidget {
     final List<dynamic> ingredients = recipeData?['ingredients'] ?? [];
     final List<dynamic> steps = recipeData?['steps'] ?? [];
 
+    // Logic flags
+    final bool isPreview = recipeData?['isPreview'] == true;
+    final String mealType = recipeData?['mealType'] ?? 'unknown';
+
     // Color de texto oscuro para la cabecera clara
     final Color headerTextColor = AppColors.primaryText;
+
+    if (_isRegenerating) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
       extendBodyBehindAppBar: true,
-      
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -39,7 +108,7 @@ class RecipeScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      
+
       body: Stack(
         children: [
           // 1. CABECERA HERO (CLARA Y LUMINOSA - DISEÑO CORRECTO)
@@ -51,10 +120,7 @@ class RecipeScreen extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white, 
-                  AppColors.cardBackground
-                ],
+                colors: [Colors.white, AppColors.cardBackground],
               ),
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(40),
@@ -72,7 +138,10 @@ class RecipeScreen extends StatelessWidget {
                     children: [
                       // Badge de Calorías (Estilo claro)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.accentColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
@@ -80,11 +149,18 @@ class RecipeScreen extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.local_fire_department_rounded, color: AppColors.accentColor, size: 20),
+                            const Icon(
+                              Icons.local_fire_department_rounded,
+                              color: AppColors.accentColor,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               "$calories kcal",
-                              style: TextStyle(color: headerTextColor, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                color: headerTextColor,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ],
                         ),
@@ -133,29 +209,46 @@ class RecipeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // --- SECCIÓN INGREDIENTES ---
-                      _SectionHeader(icon: Icons.shopping_basket_outlined, title: "Ingredientes"),
+                      const _SectionHeader(
+                        icon: Icons.shopping_basket_outlined,
+                        title: "Ingredientes",
+                      ),
                       const SizedBox(height: 16),
                       if (ingredients.isEmpty)
-                        const Text("No hay ingredientes listados", style: TextStyle(color: Colors.grey)),
-                      ...ingredients.map((item) => _IngredientItem(text: item.toString())),
+                        const Text(
+                          "No hay ingredientes listados",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ...ingredients.map(
+                        (item) => _IngredientItem(text: item.toString()),
+                      ),
 
                       const SizedBox(height: 32),
                       const Divider(color: AppColors.inputFill),
                       const SizedBox(height: 24),
 
                       // --- SECCIÓN PASOS ---
-                      _SectionHeader(icon: Icons.format_list_numbered_rounded, title: "Pasos de preparación"),
+                      const _SectionHeader(
+                        icon: Icons.format_list_numbered_rounded,
+                        title: "Pasos de preparación",
+                      ),
                       const SizedBox(height: 20),
                       if (steps.isEmpty)
-                        const Text("No hay pasos listados", style: TextStyle(color: Colors.grey)),
-                        
+                        const Text(
+                          "No hay pasos listados",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+
                       ListView.builder(
                         padding: EdgeInsets.zero,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: steps.length,
                         itemBuilder: (context, index) {
-                          return _StepItem(index: index + 1, text: steps[index].toString());
+                          return _StepItem(
+                            index: index + 1,
+                            text: steps[index].toString(),
+                          );
                         },
                       ),
                       const SizedBox(height: 100),
@@ -167,70 +260,80 @@ class RecipeScreen extends StatelessWidget {
           ),
         ],
       ),
-      
-      // BOTONES FLOTANTES INFERIORES (Estilo oscuro)
+
+      // BOTONES FLOTANTES INFERIORES
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.buttonDark),
-                  foregroundColor: AppColors.buttonDark,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: const Text("Volver"),
-              ),
-            ),
-            const SizedBox(width: 16),
-            
-            // --- BOTÓN GUARDAR CONECTADO ---
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  if (recipeData == null) return;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Guardando receta..."), duration: Duration(seconds: 1))
-                  );
-
-                  final appState = Provider.of<AppState>(context, listen: false);
-                  final success = await appState.saveRecipeToFavorites(recipeData);
-
-                  if (!context.mounted) return;
-
-                  if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("¡Receta guardada en favoritos!"), backgroundColor: Colors.green)
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Error: Ya guardaste esta receta o hubo un fallo."), backgroundColor: Colors.redAccent)
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.buttonDark,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                icon: const Icon(Icons.bookmark_border_rounded),
-                label: const Text("Guardar"),
-              ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
             ),
           ],
         ),
+        // DIFFERENT BUTTONS IF PREVIEW OR VIEW MODE
+        child: isPreview
+            ? Row(
+                // PREVIEW MODE (Generate Flow)
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _handleRegenerate(mealType, recipeData!),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Regenerar"),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.buttonDark),
+                        foregroundColor: AppColors.buttonDark,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          _handleSave(context, mealType, recipeData!),
+                      icon: const Icon(Icons.check),
+                      label: const Text("Guardar"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.buttonDark,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                // VIEW MODE (Calendar View) - Maybe just "Back" or "Favorite"
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.buttonDark),
+                        foregroundColor: AppColors.buttonDark,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text("Volver"),
+                    ),
+                  ),
+                  // KEEP FAVORITE BUTTON IF NEEDED OR REMOVE
+                ],
+              ),
       ),
     );
   }
@@ -280,12 +383,20 @@ class _IngredientItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_rounded, color: AppColors.accentColor, size: 20),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.accentColor,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 16, color: AppColors.secondaryText, height: 1.3),
+              style: const TextStyle(
+                fontSize: 16,
+                color: AppColors.secondaryText,
+                height: 1.3,
+              ),
             ),
           ),
         ],
@@ -311,12 +422,16 @@ class _StepItem extends StatelessWidget {
             height: 32,
             alignment: Alignment.center,
             decoration: const BoxDecoration(
-              color: AppColors.buttonDark, 
+              color: AppColors.buttonDark,
               shape: BoxShape.circle,
             ),
             child: Text(
               "$index",
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -329,7 +444,11 @@ class _StepItem extends StatelessWidget {
               ),
               child: Text(
                 text,
-                style: const TextStyle(fontSize: 16, color: AppColors.primaryText, height: 1.4),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.primaryText,
+                  height: 1.4,
+                ),
               ),
             ),
           ),

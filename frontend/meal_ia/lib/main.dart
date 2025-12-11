@@ -15,8 +15,8 @@ import 'ui/screens/onboarding/goals_screen.dart';
 import 'ui/screens/main/inventory_screen.dart';
 import 'ui/screens/main/menu_screen.dart';
 import 'ui/screens/main/recipe_screen.dart';
-import 'ui/screens/main/subscription_screen.dart';
-import 'ui/screens/main/settings_screen.dart';
+import 'ui/screens/main/subscription_screen.dart'; 
+
 import 'ui/screens/main_shell.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
@@ -86,7 +86,7 @@ class MealIAApp extends StatelessWidget {
           '/menu': (_) => const MenuScreen(),
           '/recipe': (_) => const RecipeScreen(),
           '/subscription': (context) => const SubscriptionScreen(),
-          '/settings': (context) => const SettingsScreen(),
+
         },
       ),
     );

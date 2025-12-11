@@ -267,7 +267,14 @@ class _DataScreenState extends State<DataScreen> {
                           ? const Center(child: CircularProgressIndicator())
                           : ElevatedButton(
                               onPressed: _saveData,
-                              child: const Text('Continuar'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.buttonDark,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              child: const Text('Continuar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                             )
                     ],
                   ),

@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // NECESARIO PARA AUTH
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
 import '../config/api_config.dart';
 
 class AppState extends ChangeNotifier {
@@ -39,10 +40,6 @@ class AppState extends ChangeNotifier {
   Future<bool> checkLoginStatus() async {
     await Future.delayed(const Duration(milliseconds: 1500));
     final token = await _storage.read(key: 'auth_token');
-
-    // Verificación Doble: Si no hay token local O no hay usuario en Firebase,
-    // forzamos al usuario a loguearse de nuevo para reparar la sesión.
-    final firebaseUser = FirebaseAuth.instance.currentUser;
 
     // Verificación Relajada: Si hay token (Backend), dejamos pasar.
     // Si falta Firebase, intentaremos reconectar después.
@@ -85,32 +82,73 @@ class AppState extends ChangeNotifier {
       email = userData['email']; // Capture email
       firstName = userData['first_name'];
       lastName = userData['last_name'];
-      height = userData['height'];
-      weight = userData['weight'];
+      // SAFE CASTING: Handle int or double from backend
+      height = (userData['height'] as num?)?.toDouble();
+      weight = (userData['weight'] as num?)?.toDouble();
+
       birthdate = userData['birthdate'] != null
           ? DateTime.parse(userData['birthdate'])
           : null;
-      goal = userData['goal'];
+
+      // PERSISTENCE READ: Goal
+      String? backendGoal = userData['goal'];
+      if (backendGoal == null || backendGoal == 'Mantenimiento') {
+        // Try local storage if backend is default/null, in case user changed it offline/recently
+        String? cachedGoal = await _storage.read(key: 'user_goal');
+        goal = cachedGoal ?? backendGoal ?? 'Mantenimiento';
+      } else {
+        goal = backendGoal;
+        // Update cache
+        await _storage.write(key: 'user_goal', value: goal);
+      }
+
+      // PERSISTENCE READ: Photo
       photoUrl = userData['photo_url'];
+      if (photoUrl == null) {
+        photoUrl = await _storage.read(key: 'profile_photo_url');
+      } else {
+        await _storage.write(key: 'profile_photo_url', value: photoUrl);
+      }
 
       // 2. Cargar Inventario
       final invResponse = await http.get(
         Uri.parse('$_baseUrl/inventory'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (invResponse.statusCode != 200) return false;
-
-      final List<dynamic> invData = jsonDecode(
-        utf8.decode(invResponse.bodyBytes),
-      );
-      _inventory.clear();
-
-      for (var item in invData) {
-        _inventory[item['name']] = {
-          'quantity': (item['quantity'] ?? 0).toDouble(),
-          'unit': item['unit'] ?? 'Unidades',
-        };
+      if (invResponse.statusCode == 200) {
+        final List<dynamic> invData = jsonDecode(
+          utf8.decode(invResponse.bodyBytes),
+        );
+        _inventory.clear();
+        for (var item in invData) {
+          _inventory[item['name']] = {
+            'quantity': (item['quantity'] as num?)?.toDouble() ?? 0.0,
+            'unit': item['unit'] ?? 'Unidades',
+          };
+        }
       }
+
+
+      // 3. Cargar Menú Diario (Firestore)
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+              
+          if (doc.exists && doc.data() != null) {
+            final data = doc.data()!;
+            if (data.containsKey('daily_menu')) {
+               savedDailyMenu = Map<String, dynamic>.from(data['daily_menu']);
+            }
+          }
+        }
+      } catch (e) {
+        // Ignorar fallo de Firestore
+      }
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -140,11 +178,23 @@ class AppState extends ChangeNotifier {
             email: email,
             password: password,
           );
+        } on FirebaseAuthException catch (e) {
+          // AUTO-REPAIR: Si no existe en Firebase pero sí en Backend, lo creamos.
+          if (e.code == 'user-not-found') {
+            try {
+              await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                email: email,
+                password: password,
+              );
+              // print("Usuario recreado en Firebase para sincronización.");
+            } catch (createError) {
+              // print("Error recreando usuario en Firebase: $createError");
+            }
+          } else {
+             // print("Firebase Login Falló (ignorando): ${e.code} - ${e.message}");
+          }
         } catch (e) {
-          // IGNORAR error de Firebase si el backend ya nos dio el token.
-          // Esto permite que el usuario entre con su contraseña "vieja" (del backend)
-          // aunque Firebase tenga la "nueva".
-          // print("Firebase Login Falló, pero Backend OK. Continuando...");
+           // print("Error genérico Firebase Login: $e");
         }
 
         // 3. LOGRADO: Guardamos token y cargamos user
@@ -406,7 +456,7 @@ class AppState extends ChangeNotifier {
     if (height != null) body['height'] = height;
     if (weight != null) body['weight'] = weight;
     try {
-      final response = await http.put(
+      final response = await http.patch(
         url,
         headers: {
           'Content-Type': 'application/json',
@@ -418,12 +468,14 @@ class AppState extends ChangeNotifier {
         final data = jsonDecode(response.body);
         this.firstName = data['first_name'];
         this.lastName = data['last_name'];
-        this.height = data['height'];
-        this.weight = data['weight'];
+        // SAFE CASTING: Handle int or double from backend response
+        this.height = (data['height'] as num?)?.toDouble();
+        this.weight = (data['weight'] as num?)?.toDouble();
+
         this.birthdate = data['birthdate'] != null
             ? DateTime.parse(data['birthdate'])
             : null;
-        goal = data['goal'];
+        goal = data['goal'] ?? 'Mantenimiento'; // Handle null goal
         notifyListeners();
         return true;
       } else {
@@ -439,7 +491,7 @@ class AppState extends ChangeNotifier {
     if (token == null) return false;
     final url = Uri.parse('$_baseUrl/users/me/data');
     try {
-      final response = await http.put(
+      final response = await http.patch(
         url,
         headers: {
           'Content-Type': 'application/json',
@@ -449,6 +501,8 @@ class AppState extends ChangeNotifier {
       );
       if (response.statusCode == 200) {
         this.goal = goal;
+        // PERSISTENCE: Save to local storage
+        await _storage.write(key: 'user_goal', value: goal);
         notifyListeners();
         return true;
       } else {
@@ -474,6 +528,12 @@ class AppState extends ChangeNotifier {
         var responseBody = await response.stream.bytesToString();
         var data = jsonDecode(responseBody);
         photoUrl = data['photo_url'];
+
+        // PERSISTENCE: Save to local storage
+        if (photoUrl != null) {
+          await _storage.write(key: 'profile_photo_url', value: photoUrl);
+        }
+
         notifyListeners();
         return true;
       } else {
@@ -581,5 +641,57 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       return "Error de conexión: $e";
     }
+  }
+
+  // --- DAILY MENU MANAGEMENT ---
+  String? token; // Token accessor
+  Map<String, dynamic>? savedDailyMenu; // Saved daily menu
+
+  void saveMealToDaily(String type, Map<String, dynamic> recipe) {
+    savedDailyMenu ??= {}; // Initialize if null
+    savedDailyMenu![type] = recipe;
+    notifyListeners();
+  }
+
+  Future<void> saveFullMenuToDaily(Map<String, dynamic> menu) async {
+    savedDailyMenu = Map.from(menu);
+    notifyListeners();
+
+    // Persistir en Firestore
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({'daily_menu': savedDailyMenu}, SetOptions(merge: true));
+      }
+    } catch (e) {
+      // print("Error guardando menú en Firestore: $e");
+    }
+  }
+
+  Future<Map<String, dynamic>?> regenerateMeal(
+    String type,
+    Map<String, dynamic> currentRecipe,
+  ) async {
+    // Mock implementation - simulates regeneration
+    await Future.delayed(const Duration(seconds: 2));
+
+    return {
+      'name': 'Nueva Receta de ${_capitalize(type)} Sorpresa',
+      'calories': (currentRecipe['calories'] ?? 500) + 50,
+      'ingredients': [
+        'Ingrediente Nuevo 1',
+        'Ingrediente Nuevo 2',
+        'Toque Secreto',
+      ],
+      'steps': ['Paso 1: Improvisar.', 'Paso 2: Disfrutar.'],
+    };
+  }
+
+  String _capitalize(String s) {
+    if (s.isEmpty) return "";
+    return s[0].toUpperCase() + s.substring(1);
   }
 }

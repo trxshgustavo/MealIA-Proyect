@@ -135,7 +135,14 @@ class GoalsScreen extends StatelessWidget {
                       onPressed: () {
                         Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
                       },
-                      child: const Text('Finalizar y continuar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.buttonDark,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Finalizar y continuar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     )
                   ],
                 ),

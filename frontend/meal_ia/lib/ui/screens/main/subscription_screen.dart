@@ -43,7 +43,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final String price = _isAnnual ? "\$25.000" : "\$2.500";
     final String period = _isAnnual ? "/ año" : "/ mes";
     final String savings = _isAnnual
-        ? "¡Ahorras un 20%!"
+        ? "¡Ahorras un 17%!"
         : "Puedes cancelar tu suscripcion cuando quieras";
 
     return Scaffold(
