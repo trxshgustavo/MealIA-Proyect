@@ -348,37 +348,47 @@ class _MenuScreenState extends State<MenuScreen> {
                         Expanded(
                           // flex: 1 by default
                           child: ElevatedButton(
-                            onPressed: _isSaving ? null : () async {
-                              setState(() => _isSaving = true);
-                              // debugPrint("Confirmar presionado");
-                              try {
-                                await app.saveFullMenuToDaily(menu);
-                                if (!context.mounted) return;
-                                
-                                Navigator.pushNamedAndRemoveUntil(
-                                  context,
-                                  '/main',
-                                  (route) => false,
-                                );
-                              } catch (e) {
-                                // debugPrint("Error en Confirmar: $e");
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error guardando: $e')),
-                                  );
-                                }
-                                // Navegar de todos modos para no bloquear
-                                if (context.mounted) {
-                                   Navigator.pushNamedAndRemoveUntil(
-                                    context,
-                                    '/main',
-                                    (route) => false,
-                                  );
-                                }
-                              } finally {
-                                if (mounted) setState(() => _isSaving = false);
-                              }
-                            },
+                            onPressed: _isSaving
+                                ? null
+                                : () async {
+                                    setState(() => _isSaving = true);
+                                    // debugPrint("Confirmar presionado");
+                                    try {
+                                      await app.saveFullMenuToDaily(menu);
+                                      if (!context.mounted) return;
+
+                                      Navigator.pushNamedAndRemoveUntil(
+                                        context,
+                                        '/main',
+                                        (route) => false,
+                                      );
+                                    } catch (e) {
+                                      // debugPrint("Error en Confirmar: $e");
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error guardando: $e',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      // Navegar de todos modos para no bloquear
+                                      if (context.mounted) {
+                                        Navigator.pushNamedAndRemoveUntil(
+                                          context,
+                                          '/main',
+                                          (route) => false,
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() => _isSaving = false);
+                                      }
+                                    }
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.accentColor,
                               foregroundColor: Colors.white,
@@ -388,20 +398,22 @@ class _MenuScreenState extends State<MenuScreen> {
                               ),
                               elevation: 4,
                             ),
-                            child: _isSaving 
-                              ? const SizedBox(
-                                  width: 20, 
-                                  height: 20, 
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                                )
-                              : const Text(
-                                  "Confirmar",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                            child: _isSaving
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    "Confirmar",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                          ),
                           ),
                         ),
                       ],

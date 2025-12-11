@@ -52,7 +52,7 @@ class CustomAnimatedNavBar extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.buttonDark.withOpacity(0.4),
+                        color: AppColors.buttonDark.withValues(alpha: 0.4),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -121,7 +121,7 @@ class CustomAnimatedNavBar extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isSelected
-                  ? Colors.grey.withOpacity(0.2) // Subtle grey highlight
+                  ? Colors.grey.withValues(alpha: 0.2) // Subtle grey highlight
                   : Colors.transparent,
             ),
             child: Icon(

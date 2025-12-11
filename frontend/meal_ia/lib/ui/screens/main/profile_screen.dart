@@ -18,9 +18,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _picker = ImagePicker();
 
   // --- ESTADO LOCAL (Migrado de Settings) ---
-  bool _notificationsEnabled = true;
-  bool _emailUpdates = false;
-  String _selectedLanguage = 'Español';
 
   // Controladores de texto para el formulario
   final TextEditingController _currentPassController = TextEditingController();
@@ -176,7 +173,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     if (_newPassController.text.length < 6) {
-      _showMessage("La contraseña debe tener al menos 6 caracteres", isError: true);
+      _showMessage(
+        "La contraseña debe tener al menos 6 caracteres",
+        isError: true,
+      );
       return;
     }
 
@@ -201,8 +201,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             user = FirebaseAuth.instance.currentUser;
           } catch (e) {
             String errorMsg = "La contraseña no coincide con la de Firebase.";
-             if (e is FirebaseAuthException) {
-              if (e.code == 'wrong-password' || e.code == 'INVALID_LOGIN_CREDENTIALS') {
+            if (e is FirebaseAuthException) {
+              if (e.code == 'wrong-password' ||
+                  e.code == 'INVALID_LOGIN_CREDENTIALS') {
                 errorMsg = "Contraseña actual incorrecta.";
               }
             }
@@ -213,9 +214,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
 
-      if (user == null) throw FirebaseAuthException(code: 'no-user', message: 'No hay usuario activo.');
+      if (user == null) {
+        throw FirebaseAuthException(
+          code: 'no-user',
+          message: 'No hay usuario activo.',
+        );
+      }
       final email = user.email;
-      if (email == null) throw FirebaseAuthException(code: 'no-email', message: 'Usuario sin email');
+      if (email == null) {
+        throw FirebaseAuthException(
+          code: 'no-email',
+          message: 'Usuario sin email',
+        );
+      }
 
       AuthCredential credential = EmailAuthProvider.credential(
         email: email,
@@ -224,11 +235,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       await user.reauthenticateWithCredential(credential);
       await user.updatePassword(_newPassController.text.trim());
-      
-      final backendResult = await appState.updateBackendPassword(_newPassController.text.trim());
+
+      final backendResult = await appState.updateBackendPassword(
+        _newPassController.text.trim(),
+      );
 
       if (backendResult != "OK") {
-        _showMessage("Actualizado en Firebase pero falló en servidor: $backendResult", isError: true);
+        _showMessage(
+          "Actualizado en Firebase pero falló en servidor: $backendResult",
+          isError: true,
+        );
       }
 
       if (mounted) Navigator.pop(context); // Cierra Carga
@@ -264,9 +280,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showChangePasswordDialog() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      bool hasPasswordProvider = user.providerData.any((u) => u.providerId == 'password');
+      bool hasPasswordProvider = user.providerData.any(
+        (u) => u.providerId == 'password',
+      );
       if (!hasPasswordProvider) {
-        _showMessage("Iniciaste sesión con red social. No puedes cambiar contraseña aquí.", isError: true);
+        _showMessage(
+          "Iniciaste sesión con red social. No puedes cambiar contraseña aquí.",
+          isError: true,
+        );
         return;
       }
     }
@@ -276,7 +297,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -288,16 +311,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text("Cambiar Contraseña",
-                 textAlign: TextAlign.center,
-                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textDark)
+                const Text(
+                  "Cambiar Contraseña",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
                 ),
                 const SizedBox(height: 20),
-                _buildPasswordField(controller: _currentPassController, label: "Contraseña actual", icon: Icons.lock_outline),
+                _buildPasswordField(
+                  controller: _currentPassController,
+                  label: "Contraseña actual",
+                  icon: Icons.lock_outline,
+                ),
                 const SizedBox(height: 15),
-                _buildPasswordField(controller: _newPassController, label: "Nueva contraseña", icon: Icons.vpn_key_outlined),
+                _buildPasswordField(
+                  controller: _newPassController,
+                  label: "Nueva contraseña",
+                  icon: Icons.vpn_key_outlined,
+                ),
                 const SizedBox(height: 15),
-                _buildPasswordField(controller: _confirmPassController, label: "Confirmar nueva", icon: Icons.check_circle_outline),
+                _buildPasswordField(
+                  controller: _confirmPassController,
+                  label: "Confirmar nueva",
+                  icon: Icons.check_circle_outline,
+                ),
                 const SizedBox(height: 30),
                 Row(
                   children: [
@@ -311,8 +351,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: _changePassword,
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonDark),
-                        child: const Text("Actualizar", style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonDark,
+                        ),
+                        child: const Text(
+                          "Actualizar",
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
                   ],
@@ -325,7 +370,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPasswordField({required TextEditingController controller, required String label, required IconData icon}) {
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
     return TextField(
       controller: controller,
       obscureText: true,
@@ -334,35 +383,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         prefixIcon: Icon(icon, color: Colors.grey),
         filled: true,
         fillColor: Colors.grey[50],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      ),
-    );
-  }
-
-  void _showLanguageDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Text("🇪🇸", style: TextStyle(fontSize: 24)),
-                title: const Text("Español"),
-                trailing: _selectedLanguage == 'Español' ? const Icon(Icons.check) : null,
-                onTap: () { setState(() => _selectedLanguage = 'Español'); Navigator.pop(context); },
-              ),
-              ListTile(
-                leading: const Text("🇺🇸", style: TextStyle(fontSize: 24)),
-                title: const Text("English"),
-                trailing: _selectedLanguage == 'English' ? const Icon(Icons.check) : null,
-                onTap: () { setState(() => _selectedLanguage = 'English'); Navigator.pop(context); },
-              ),
-            ],
-          ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
     );
@@ -405,9 +428,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildSettingsCard(
                 context,
                 children: [
-                  _buildSettingsItem(title: 'Términos y Condiciones', onTap: () => _openLegal(context, 'Términos', 'terms_and_conditions.md')),
-                  _buildSettingsItem(title: 'Política de Privacidad', onTap: () => _openLegal(context, 'Privacidad', 'privacy_policy.md')),
-                  _buildSettingsItem(title: 'Descargo de Responsabilidad', onTap: () => _openLegal(context, 'Descargo', 'disclaimer.md')),
+                  _buildSettingsItem(
+                    title: 'Términos y Condiciones',
+                    onTap: () => _openLegal(
+                      context,
+                      'Términos',
+                      'terms_and_conditions.md',
+                    ),
+                  ),
+                  _buildSettingsItem(
+                    title: 'Política de Privacidad',
+                    onTap: () =>
+                        _openLegal(context, 'Privacidad', 'privacy_policy.md'),
+                  ),
+                  _buildSettingsItem(
+                    title: 'Descargo de Responsabilidad',
+                    onTap: () =>
+                        _openLegal(context, 'Descargo', 'disclaimer.md'),
+                  ),
                 ],
               ),
 
@@ -415,7 +453,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildSettingsCard(
                 context,
                 children: [
-                   _buildSettingsItem(title: 'Cerrar Sesión', onTap: _logout, isDestructive: true),
+                  _buildSettingsItem(
+                    title: 'Cerrar Sesión',
+                    onTap: _logout,
+                    isDestructive: true,
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -427,7 +469,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _openLegal(BuildContext context, String title, String file) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => LegalScreen(title: title, mdFileName: file)));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LegalScreen(title: title, mdFileName: file),
+      ),
+    );
   }
 
   Widget _buildUserInfoCard(BuildContext context, AppState appState) {
@@ -438,7 +485,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -450,7 +503,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundImage: _imageFile != null
                   ? FileImage(_imageFile!) as ImageProvider
                   : (appState.photoUrl != null && appState.photoUrl!.isNotEmpty)
-                  ? NetworkImage(appState.photoUrl!, headers: appState.token != null ? {'Authorization': 'Bearer ${appState.token}'} : null)
+                  ? NetworkImage(
+                      appState.photoUrl!,
+                      headers: appState.token != null
+                          ? {'Authorization': 'Bearer ${appState.token}'}
+                          : null,
+                    )
                   : null,
             ),
           ),
@@ -459,8 +517,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
-                Text(appState.goal, style: const TextStyle(fontSize: 16, color: AppColors.secondaryText)),
+                Text(
+                  "${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}",
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
+                  ),
+                ),
+                Text(
+                  appState.goal,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
               ],
             ),
           ),
@@ -469,40 +540,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSettingsCard(BuildContext context, {required List<Widget> children}) {
+  Widget _buildSettingsCard(
+    BuildContext context, {
+    required List<Widget> children,
+  }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: List.generate(children.length, (index) {
           if (index == 0) return children[index];
-          return Column(children: [const Divider(height: 1, indent: 16, endIndent: 16), children[index]]);
+          return Column(
+            children: [
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              children[index],
+            ],
+          );
         }),
       ),
     );
   }
 
-  Widget _buildSettingsItem({required String title, required VoidCallback onTap, bool isDestructive = false, String? subtitle}) {
+  Widget _buildSettingsItem({
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+    String? subtitle,
+  }) {
     return ListTile(
-      title: Text(title, style: TextStyle(color: isDestructive ? Colors.redAccent : AppColors.primaryText, fontSize: 16, fontWeight: FontWeight.w500)),
-      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)) : null,
-      trailing: Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.secondaryText),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isDestructive ? Colors.redAccent : AppColors.primaryText,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            )
+          : null,
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: AppColors.secondaryText,
+      ),
       onTap: onTap,
-    );
-  }
-
-  Widget _buildSwitchTile({required IconData icon, required String title, required bool value, required ValueChanged<bool> onChanged}) {
-    return SwitchListTile(
-      secondary: Icon(icon, color: value ? AppColors.buttonDark : Colors.grey),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      value: value,
-      activeColor: AppColors.buttonDark,
-      onChanged: onChanged,
     );
   }
 }

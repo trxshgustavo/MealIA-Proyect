@@ -109,11 +109,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             decimal: true,
                           ),
                           decoration: InputDecoration(
-                             labelText: 'Cant.',
-                             filled: true,
-                             fillColor: AppColors.cardBackground,
-                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)
+                            labelText: 'Cant.',
+                            filled: true,
+                            fillColor: AppColors.cardBackground,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -176,7 +182,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                   ),
                   onPressed: () {
                     final double? amount = double.tryParse(
@@ -189,7 +198,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           listen: false,
                         ).updateFood(foodKey, amount, selectedUnit);
                       } catch (e) {
-                         // ignore: avoid_print
+                        // ignore: avoid_print
                         // print("Error llamando a updateFood: $e");
                       }
                       Navigator.pop(context);
@@ -197,7 +206,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   },
                   child: const Text(
                     'Guardar',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -212,7 +224,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     if (s.isEmpty) return "";
     return s[0].toUpperCase() + s.substring(1);
   }
-
 
   // Lógica para generar menú con pantalla de carga
   Future<void> _handleGenerateMenu() async {
@@ -248,7 +259,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   Image.asset(
+                  Image.asset(
                     'assets/animation.gif',
                     height: 300,
                     width: 300,
@@ -298,232 +309,279 @@ class _InventoryScreenState extends State<InventoryScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Header ---
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Mi Despensa",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryText,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                ],
-              ),
-            ),
-            
-            // --- Search / Add Bar ---
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  )
-                ],
-              ),
-              child: TextField(
-                controller: _newFoodItemController,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-                decoration: InputDecoration(
-                  hintText: "Agrega los ingredientes que tienes en casa.",
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.secondaryText),
-                  suffixIcon: IconButton(
-                    icon: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.buttonDark,
-                        shape: BoxShape.circle,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Header ---
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Mi Despensa",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryText,
+                        letterSpacing: -0.5,
                       ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 20),
                     ),
-                    onPressed: _addFoodItem,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    const SizedBox(height: 4),
+                  ],
                 ),
-                onSubmitted: (_) => _addFoodItem(),
               ),
-            ),
 
-            // --- Inventory List ---
-            Expanded(
-              child: itemKeys.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.kitchen_outlined, size: 80, color: Colors.grey[300]),
-                          const SizedBox(height: 16),
-                          Text(
-                            "Tu despensa está vacía",
-                            style: TextStyle(
-                              fontSize: 18, 
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w600
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Agrega ingredientes para comenzar.",
-                            style: TextStyle(
-                              fontSize: 14, 
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                        ],
+              // --- Search / Add Bar ---
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _newFoodItemController,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  decoration: InputDecoration(
+                    hintText: "Agrega los ingredientes que tienes en casa.",
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.secondaryText,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.buttonDark,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(24, 10, 24, 100), // Padding bottom for button
-                      itemCount: itemKeys.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final itemKey = itemKeys[index];
-                        final itemData = inventoryMap[itemKey];
-                        final double quantity = (itemData?['quantity'] ?? 0).toDouble();
-                        final String unit = itemData?['unit'] ?? 'Unidades';
+                      onPressed: _addFoodItem,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onSubmitted: (_) => _addFoodItem(),
+                ),
+              ),
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.03),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
+              // --- Inventory List ---
+              Expanded(
+                child: itemKeys.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.kitchen_outlined,
+                              size: 80,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Tu despensa está vacía",
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[500],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Agrega ingredientes para comenzar.",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(
+                          24,
+                          10,
+                          24,
+                          100,
+                        ), // Padding bottom for button
+                        itemCount: itemKeys.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final itemKey = itemKeys[index];
+                          final itemData = inventoryMap[itemKey];
+                          final double quantity = (itemData?['quantity'] ?? 0)
+                              .toDouble();
+                          final String unit = itemData?['unit'] ?? 'Unidades';
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                _showEditQuantityDialog(itemKey, quantity, unit);
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                child: Row(
-                                  children: [
-                                    // Icon Placeholder or specific icon logic
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.accentColor.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(Icons.check_circle_outline, color: AppColors.accentColor, size: 20),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Text(
-                                        _capitalize(itemKey),
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.primaryText,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  _showEditQuantityDialog(
+                                    itemKey,
+                                    quantity,
+                                    unit,
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // Icon Placeholder or specific icon logic
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentColor
+                                              .withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_circle_outline,
+                                          color: AppColors.accentColor,
+                                          size: 20,
                                         ),
                                       ),
-                                    ),
-                                    // Quantity Badge
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.cardBackground,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        "${quantity.truncateToDouble() == quantity ? quantity.toInt() : quantity} $unit",
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textDark,
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Text(
+                                          _capitalize(itemKey),
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primaryText,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // Delete Action
-                                    IconButton(
-                                      icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
-                                      onPressed: () => _removeFoodItem(itemKey),
-                                      splashRadius: 20,
-                                      constraints: const BoxConstraints(),
-                                      padding: const EdgeInsets.all(8),
-                                    )
-                                  ],
+                                      // Quantity Badge
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.cardBackground,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          "${quantity.truncateToDouble() == quantity ? quantity.toInt() : quantity} $unit",
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textDark,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // Delete Action
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.close_rounded,
+                                          size: 18,
+                                          color: Colors.grey,
+                                        ),
+                                        onPressed: () =>
+                                            _removeFoodItem(itemKey),
+                                        splashRadius: 20,
+                                        constraints: const BoxConstraints(),
+                                        padding: const EdgeInsets.all(8),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      // --- Floating Action Button area for Generate ---
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: itemKeys.isNotEmpty ? Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Container(
-          width: double.infinity,
-          height: 60,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.buttonDark.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
-          child: ElevatedButton(
-            onPressed: _handleGenerateMenu,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.buttonDark,
-              shadowColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.auto_awesome, color: Colors.white),
-                SizedBox(width: 10),
-                Text(
-                  "Generar Menú Saludable",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+        ),
+        // --- Floating Action Button area for Generate ---
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: itemKeys.isNotEmpty
+            ? Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.buttonDark.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _handleGenerateMenu,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.buttonDark,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.auto_awesome, color: Colors.white),
+                        SizedBox(width: 10),
+                        Text(
+                          "Generar Menú Saludable",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ) : null,
+              )
+            : null,
       ),
     );
   }
