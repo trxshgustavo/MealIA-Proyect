@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles 
 from sqlalchemy.orm import Session
@@ -17,9 +18,12 @@ from openai import OpenAI
 # Cargar variables de entorno
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
-# Imports locales
-from . import models, schemas, security, database 
-from .database import engine, get_db
+# Imports locales (sin imports relativos para uvicorn directo)
+import models
+import schemas
+import security
+import database
+from database import engine, get_db
 
 # Configuración OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -28,6 +32,39 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 database.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Meal.IA Backend")
+
+# --- CONFIGURACIÓN CORS ---
+# Función para validar orígenes dinámicos de localhost
+def cors_origin_validator(origin: str) -> bool:
+    """Permite localhost y 127.0.0.1 con cualquier puerto"""
+    if not origin:
+        return False
+    # Permitir cualquier puerto de localhost o 127.0.0.1
+    if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+        return True
+    # Permitir emulador Android
+    if origin.startswith("http://10.0.2.2"):
+        return True
+    # Permitir producción
+    if origin == "https://mealia-proyect-1.onrender.com":
+        return True
+    # Permitir origen adicional desde .env
+    extra_origin = os.getenv("CORS_ORIGIN")
+    if extra_origin and origin == extra_origin:
+        return True
+    return False
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",  # Permite localhost/127.0.0.1 con cualquier puerto
+    allow_origins=[
+        "http://10.0.2.2:8000",  # Emulador Android
+        "https://mealia-proyect-1.onrender.com",  # Producción
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configuración de carpetas
 os.makedirs("uploads", exist_ok=True) 
@@ -40,6 +77,17 @@ class GoogleLoginResponse(schemas.Token):
 
 class PhotoResponse(BaseModel):
     photo_url: str
+
+
+# --- ENDPOINT DE SALUD PARA DIAGNÓSTICO ---
+@app.get("/health")
+def health_check():
+    """Endpoint simple para verificar que el servidor está corriendo"""
+    return {
+        "status": "ok",
+        "message": "Backend is running",
+        "version": "1.0.0"
+    }
 
 # --- CÁLCULO DE CALORÍAS ---
 def calculate_target_calories(user: models.User) -> int:

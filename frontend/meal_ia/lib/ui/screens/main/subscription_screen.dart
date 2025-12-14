@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -39,6 +40,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final verticalPadding = ScreenUtils.getResponsiveVerticalPadding(context);
+
     // Variables de precio
     final String price = _isAnnual ? "\$25.000" : "\$2.500";
     final String period = _isAnnual ? "/ año" : "/ mes";
@@ -115,7 +121,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             // --- 2. SECCIÓN INFERIOR (PAGO) ---
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(30, 40, 30, 40),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                verticalPadding,
+                horizontalPadding,
+                verticalPadding,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.vertical(
