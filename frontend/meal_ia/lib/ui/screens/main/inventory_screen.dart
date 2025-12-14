@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/data/food_database.dart';
 import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -310,6 +311,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final appState = Provider.of<AppState>(context);
     final inventoryMap = appState.inventoryMap;
     final itemKeys = inventoryMap.keys.toList();
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final titleFontSize = ScreenUtils.getTitleFontSize(
+      context,
+      defaultSize: 28.0,
+    );
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -322,14 +330,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
             children: [
               // --- Header ---
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  20,
+                  horizontalPadding,
+                  10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Mi Despensa",
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: titleFontSize,
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryText,
                         letterSpacing: -0.5,
@@ -342,8 +355,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
               // --- Search / Add Bar ---
               Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 24,
+                margin: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
@@ -438,8 +451,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             color: Colors.white,
                             child: Container(
                               width:
-                                  MediaQuery.of(context).size.width -
-                                  48, // Match input width
+                                  ScreenUtils.getWidth(context) -
+                                  (horizontalPadding * 2), // Match input width
                               constraints: const BoxConstraints(maxHeight: 250),
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -647,10 +660,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: itemKeys.isNotEmpty
             ? Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: Container(
                   width: double.infinity,
-                  height: 60,
+                  height: ScreenUtils.isSmallScreen(context) ? 56 : 60,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
@@ -670,15 +683,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.auto_awesome, color: Colors.white),
-                        SizedBox(width: 10),
+                        const Icon(Icons.auto_awesome, color: Colors.white),
+                        SizedBox(
+                          width: ScreenUtils.getElementSpacing(
+                            context,
+                            defaultSpacing: 10.0,
+                          ),
+                        ),
                         Text(
                           "Generemos nuestro menú",
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: ScreenUtils.getButtonFontSize(context),
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),

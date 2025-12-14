@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 import '../legal/legal_screen.dart';
+import '../../../utils/screen_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -303,16 +304,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(
+              ScreenUtils.getResponsiveHorizontalPadding(context),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   "Cambiar Contraseña",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: ScreenUtils.getSubtitleFontSize(context),
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
                   ),
@@ -475,10 +478,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildUserInfoCard(BuildContext context, AppState appState) {
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final verticalPadding = ScreenUtils.getResponsiveVerticalPadding(context);
+    final isSmallScreen = ScreenUtils.isSmallScreen(context);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      padding: EdgeInsets.all(horizontalPadding),
+      margin: EdgeInsets.fromLTRB(
+        horizontalPadding * 0.67,
+        horizontalPadding * 0.67,
+        horizontalPadding * 0.67,
+        verticalPadding * 0.67,
+      ),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
@@ -495,7 +509,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           GestureDetector(
             onTap: _uploadPhoto,
             child: CircleAvatar(
-              radius: 70,
+              radius: isSmallScreen ? 50 : 70,
               backgroundColor: AppColors.cardDark,
               backgroundImage: _imageFile != null
                   ? FileImage(_imageFile!) as ImageProvider
@@ -511,16 +525,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   "${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}",
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 18 : 22,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
                 ),
                 Text(
                   appState.goal,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
                     color: AppColors.secondaryText,
                   ),
                 ),
@@ -536,8 +550,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     BuildContext context, {
     required List<Widget> children,
   }) {
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final verticalSpacing = ScreenUtils.getVerticalSpacing(
+      context,
+      defaultSpacing: 10.0,
+    );
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      margin: EdgeInsets.symmetric(
+        horizontal: horizontalPadding * 0.67,
+        vertical: verticalSpacing * 0.5,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),

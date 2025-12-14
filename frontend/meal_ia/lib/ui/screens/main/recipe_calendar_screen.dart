@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 import 'recipe_screen.dart';
+import '../../../utils/screen_utils.dart';
 
 class RecipeCalendarScreen extends StatefulWidget {
   const RecipeCalendarScreen({super.key});
@@ -57,27 +58,38 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final titleFontSize = ScreenUtils.getTitleFontSize(
+      context,
+      defaultSize: 28.0,
+    );
 
-    // FIX: Get menu specifically for the selected date
     final dailyMenu = appState.getMenuForDate(_selectedDate);
     final isToday = _isSameDay(_selectedDate, DateTime.now());
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // Very light cool grey
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                20,
+                horizontalPadding,
+                20,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     "Plan de Comidas",
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: titleFontSize,
                       fontWeight: FontWeight.w800,
                       color: AppColors.textDark,
                       letterSpacing: -0.5,
@@ -100,7 +112,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             SizedBox(
               height: 90,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 scrollDirection: Axis.horizontal,
                 itemCount: _weekDays.length,
                 separatorBuilder: (context, index) => const SizedBox(width: 12),
@@ -133,7 +145,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(horizontalPadding),
                   child: _buildMealList(context, dailyMenu, isToday),
                 ),
               ),

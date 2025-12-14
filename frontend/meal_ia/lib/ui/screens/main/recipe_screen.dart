@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart';
 
 class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
@@ -75,6 +76,10 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+
     final Map<String, dynamic>? recipeData =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
@@ -138,7 +143,12 @@ class _RecipeScreenState extends State<RecipeScreen> {
                 // Zanahoria a color, visible
                 // Contenido de la cabecera
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 100, 24, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    100,
+                    horizontalPadding,
+                    0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -193,7 +203,12 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
           // 2. TARJETA FLOTANTE (Blanca)
           Container(
-            margin: const EdgeInsets.fromLTRB(16, 260, 16, 0),
+            margin: EdgeInsets.fromLTRB(
+              horizontalPadding * 0.67,
+              260,
+              horizontalPadding * 0.67,
+              0,
+            ),
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -210,7 +225,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(30),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(horizontalPadding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -269,7 +284,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
       // BOTONES FLOTANTES INFERIORES
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(horizontalPadding),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
