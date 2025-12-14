@@ -44,11 +44,13 @@ Este directorio contiene archivos `.env` con variables de entorno sensibles nece
 Para verificar que tu configuración es correcta:
 
 ```bash
-# Activa el entorno virtual
-venv\Scripts\activate  # Windows
-source venv/bin/activate  # Mac/Linux
+# El entorno virtual (.venv) se activa automáticamente en VS Code
+# Si necesitas activarlo manualmente:
+.\.venv\Scripts\activate  # Windows (desde la raíz del proyecto)
+source .venv/bin/activate  # Mac/Linux (desde la raíz del proyecto)
 
-# Intenta iniciar el servidor
+# Navega al backend e inicia el servidor
+cd backend
 uvicorn main:app --reload
 ```
 

@@ -51,22 +51,31 @@ Asegúrate de tener instalado lo siguiente:
     cd backend
     ```
 
-2.  **Crea y activa el entorno virtual**:
+2.  **Crear entorno virtual (solo primera vez)**:
+    
+    El proyecto usa `.venv` en la raíz del workspace. Si no existe, créalo así:
+    
     ```bash
-    # Crear (solo la primera vez)
-    python -m venv venv
-
-    # Activar (cada vez que trabajes)
-    # Windows (CMD/PowerShell)
-    venv\Scripts\activate
-    # Mac/Linux (Git Bash)
-    source venv/bin/activate
+    # Desde la raíz del proyecto (MealIA-Proyect_fork/)
+    python -m venv .venv
+    ```
+    
+    **Auto-activación en VS Code:**
+    - VS Code activará automáticamente `.venv` al abrir nuevas terminales
+    - Si no se activa, abre Command Palette (Ctrl+Shift+P) → "Python: Select Interpreter" → elige `.venv`
+    
+    **Activación manual (si es necesario):**
+    ```bash
+    # Windows (PowerShell/CMD)
+    .\.venv\Scripts\activate
+    # Mac/Linux/Git Bash
+    source .venv/bin/activate
     ```
 
 3.  **Instala las dependencias**:
     ```bash
     # Instalar desde el archivo requirements.txt del directorio raíz
-    pip install -r ../requirements.txt
+    pip install -r requirements.txt
     ```
     
     **Dependencias principales incluidas:**
