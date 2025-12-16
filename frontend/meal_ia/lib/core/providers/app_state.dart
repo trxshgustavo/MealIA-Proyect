@@ -36,6 +36,9 @@ class AppState extends ChangeNotifier {
   Map<String, dynamic>? generatedMenu;
   int totalCalories = 0;
 
+  // --- HELPERS ---
+  String? get currentUserId => FirebaseAuth.instance.currentUser?.uid;
+
   // --- VERIFICACIÓN DE SESIÓN ---
   Future<bool> checkLoginStatus() async {
     await Future.delayed(const Duration(milliseconds: 1500));
@@ -75,6 +78,32 @@ class AppState extends ChangeNotifier {
 
   Future<bool> _loadUserData(String token) async {
     try {
+      // 0. PRE-LOAD FROM LOCAL CACHE (Offline Support)
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          String? cachedProfile = await _storage.read(
+            key: 'user_profile_cache_${user.uid}',
+          );
+          if (cachedProfile != null) {
+            final data = jsonDecode(cachedProfile);
+            email = data['email'];
+            firstName = data['first_name'];
+            lastName = data['last_name'];
+            height = (data['height'] as num?)?.toDouble();
+            weight = (data['weight'] as num?)?.toDouble();
+            birthdate = data['birthdate'] != null
+                ? DateTime.tryParse(data['birthdate'])
+                : null;
+            photoUrl = data['photo_url'];
+            goal = data['goal'] ?? 'Mantenimiento';
+            debugPrint("Loaded Profile from Cache for ${user.uid}");
+          }
+        } catch (e) {
+          debugPrint("Error loading profile cache: $e");
+        }
+      }
+
       // 1. Cargar Perfil desde Backend
       String? backendGoal;
 
@@ -89,6 +118,7 @@ class AppState extends ChangeNotifier {
         if (userResponse.statusCode == 200) {
           final userData = jsonDecode(utf8.decode(userResponse.bodyBytes));
 
+          // UPDATE MEMORY
           email = userData['email'];
           firstName = userData['first_name'];
           lastName = userData['last_name'];
@@ -101,6 +131,24 @@ class AppState extends ChangeNotifier {
 
           backendGoal = userData['goal'];
           photoUrl = userData['photo_url'];
+
+          // UPDATE CACHE
+          if (user != null) {
+            final cacheData = {
+              'email': email,
+              'first_name': firstName,
+              'last_name': lastName,
+              'height': height,
+              'weight': weight,
+              'birthdate': birthdate?.toIso8601String(),
+              'photo_url': photoUrl,
+              'goal': backendGoal,
+            };
+            await _storage.write(
+              key: 'user_profile_cache_${user.uid}',
+              value: jsonEncode(cacheData),
+            );
+          }
         } else {
           debugPrint("Backend /users/me returned ${userResponse.statusCode}");
         }
@@ -108,9 +156,11 @@ class AppState extends ChangeNotifier {
         debugPrint("Error loading basic profile from backend: $e");
       }
 
+      // ... Firestore Fallback follows ...
+
       // --- FIRESTORE BACKUP READ (ALWAYS RUNS TO FILL GAPS) ---
       // Runs if backend failed OR if backend data was incomplete.
-      final user = FirebaseAuth.instance.currentUser;
+      // Already defiend user above.
       if (user != null) {
         try {
           final doc = await FirebaseFirestore.instance
@@ -123,19 +173,18 @@ class AppState extends ChangeNotifier {
 
             // Sync Email/Name if missing (e.g. backend down)
             if (email == null && user.email != null) email = user.email;
-            if (firstName == null && data.containsKey('first_name'))
+            if (firstName == null && data.containsKey('first_name')) {
               firstName = data['first_name'];
-            if (lastName == null && data.containsKey('last_name'))
+            }
+            if (lastName == null && data.containsKey('last_name')) {
               lastName = data['last_name'];
+            }
 
             // Recuperar Meta
             if (backendGoal == null || backendGoal == 'Mantenimiento') {
               if (data.containsKey('goal')) {
                 backendGoal = data['goal'];
-                await _storage.write(
-                  key: 'user_goal_${user.uid}',
-                  value: backendGoal,
-                );
+                // We do NOT write to storage here yet, we wait for final reconciliation
               }
             }
 
@@ -143,10 +192,8 @@ class AppState extends ChangeNotifier {
             if (photoUrl == null) {
               if (data.containsKey('photo_url')) {
                 photoUrl = data['photo_url'];
-                await _storage.write(
-                  key: 'profile_photo_url_${user.uid}',
-                  value: photoUrl,
-                );
+                photoUrl = data['photo_url'];
+                // We do NOT write to storage here yet, we wait for final reconciliation
               }
             }
 
@@ -168,71 +215,135 @@ class AppState extends ChangeNotifier {
       // -----------------------------
 
       // FINAL GOAL LOGIC (Backend vs Cache vs Default)
-      // Use UID-scoped key if user is logged in
-      String goalKey = 'user_goal';
-      if (user != null) goalKey = 'user_goal_${user.uid}';
-
-      if (backendGoal == null || backendGoal == 'Mantenimiento') {
-        String? cachedGoal = await _storage.read(key: goalKey);
-        // Fallback for migration: check old key? No, better to defaults.
-        goal = cachedGoal ?? backendGoal ?? 'Mantenimiento';
+      // STRICT: Only load from UID-scoped key.
+      if (user != null) {
+        String goalKey = 'user_goal_${user.uid}';
+        if (backendGoal == null || backendGoal == 'Mantenimiento') {
+          String? cachedGoal = await _storage.read(key: goalKey);
+          goal = cachedGoal ?? 'Mantenimiento';
+        } else {
+          goal = backendGoal; // Lint fix: Removed !
+          await _storage.write(key: goalKey, value: goal);
+        }
       } else {
-        goal = backendGoal; // We know its not null/mantenimiento-ish
-        await _storage.write(key: goalKey, value: goal);
+        // Should not happen if we enforce login, but fail safe
+        goal = 'Mantenimiento';
       }
 
       // FINAL PHOTO LOGIC
-      String photoKey = 'profile_photo_url';
-      if (user != null) photoKey = 'profile_photo_url_${user.uid}';
+      if (user != null) {
+        String photoKey = 'profile_photo_url_${user.uid}';
 
-      if (photoUrl == null) {
-        photoUrl = await _storage.read(key: photoKey);
-      } else {
-        await _storage.write(key: photoKey, value: photoUrl);
+        if (photoUrl == null) {
+          String? cachedPhoto = await _storage.read(key: photoKey);
+          if (cachedPhoto != null) {
+            photoUrl = cachedPhoto;
+            debugPrint("Loaded photoUrl from Local Storage: $photoUrl");
+          }
+        }
+
+        if (photoUrl != null) {
+          await _storage.write(key: photoKey, value: photoUrl);
+        }
       }
 
-      // 2. Cargar Inventario (Non-critical)
-      try {
-        final invResponse = await http
-            .get(
-              Uri.parse('$_baseUrl/inventory'),
-              headers: {'Authorization': 'Bearer $token'},
-            )
-            .timeout(const Duration(seconds: 20));
-        if (invResponse.statusCode == 200) {
-          final List<dynamic> invData = jsonDecode(
-            utf8.decode(invResponse.bodyBytes),
-          );
-          _inventory.clear();
-          for (var item in invData) {
-            final double qty = (item['quantity'] as num?)?.toDouble() ?? 0.0;
-            final String unit = item['unit'] ?? 'Unidades';
+      // 2. Cargar Inventario (Cache + Network)
+      if (user != null) {
+        String inventoryKey = 'inventory_cache_${user.uid}';
 
-            _inventory[item['name']] = {'quantity': qty, 'unit': unit};
+        // A. Load from Cache first
+        try {
+          String? cachedInv = await _storage.read(key: inventoryKey);
+          if (cachedInv != null) {
+            final Map<String, dynamic> decoded = jsonDecode(cachedInv);
+            _inventory.clear();
+            decoded.forEach((key, value) {
+              _inventory[key] = Map<String, dynamic>.from(value);
+            });
+            debugPrint(
+              "Loaded Inventory from Cache: ${_inventory.length} items.",
+            );
+          }
+        } catch (e) {
+          debugPrint("Error loading inventory cache: $e");
+        }
 
-            // DB SANITIZATION: Check for floats (e.g. 4.5) which crash backend
-            if (qty % 1 != 0) {
-              // Found a float! 4.5 -> 5
-              // We must fix it in the DB immediately.
-              final int fixedQty = qty.round();
+        // B. Fetch from Network
+        try {
+          debugPrint("_loadUserData: Fetching Inventory...");
+          final invResponse = await http
+              .get(
+                Uri.parse('$_baseUrl/inventory'),
+                headers: {'Authorization': 'Bearer $token'},
+              )
+              .timeout(const Duration(seconds: 10));
+
+          if (invResponse.statusCode == 200) {
+            final List<dynamic> data = jsonDecode(invResponse.body);
+            // Verify if server indicates "empty" or just we have data.
+            // Usually we SHOULD trust server.
+            _inventory.clear();
+            for (var item in data) {
+              _inventory[item['name']] = {
+                'quantity': (item['quantity'] ?? 0).toDouble(),
+                'unit': item['unit'] ?? 'Unidades',
+              };
+            }
+            debugPrint(
+              "_loadUserData: Inventory Fetched. Count: ${_inventory.length}",
+            );
+
+            // Update Cache
+            await _storage.write(
+              key: inventoryKey,
+              value: jsonEncode(_inventory),
+            );
+          } else if (invResponse.statusCode == 500) {
+            debugPrint(
+              "_loadUserData: Inventory Failed: ${invResponse.statusCode}",
+            );
+            await _blindRepairCriticalItems(token);
+          }
+        } catch (e) {
+          debugPrint("Error saving goal: $e");
+        }
+
+        // C. Fetch from Firestore (Sync/Backup)
+        try {
+          debugPrint("Fetching Inventory from Firestore...");
+          final invSnap = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('inventory')
+              .get();
+
+          if (invSnap.docs.isNotEmpty) {
+            bool cacheUpdateNeeded = false;
+            for (var doc in invSnap.docs) {
+              final data = doc.data();
+              final name = doc.id;
+              // Add if not present (Merge strategy)
+              if (!_inventory.containsKey(name)) {
+                _inventory[name] = {
+                  'quantity': (data['quantity'] as num?)?.toDouble() ?? 0.0,
+                  'unit': data['unit'] ?? 'Unidades',
+                };
+                cacheUpdateNeeded = true;
+              }
+            }
+            if (cacheUpdateNeeded) {
               debugPrint(
-                "SANITIZING DB: Fixing ${item['name']} $qty -> $fixedQty",
+                "Inventory merged with Firestore. Total: ${_inventory.length}",
               );
-              updateFood(item['name'], fixedQty.toDouble(), unit);
-              // Note: updateFood sends as double, but backend receives e.g. 5.0
-              // wait, updateFood sends `{'quantity': quantity, ...}`
-              // If I send 5.0, does it serializer accept it?
-              // The Validation error was "got a number with a fractional part". 5.0 should be ok?
-              // Or should I cast to int in updateFood?
+              await _storage.write(
+                key: inventoryKey,
+                value: jsonEncode(_inventory),
+              );
             }
           }
-        } else if (invResponse.statusCode == 500) {
-          // AUTO-REPAIR: Backend crashed (likely due to float data).
-          // We blindly reset common suspects to Integer=1 to unblock the list.
-          await _blindRepairCriticalItems(token);
+        } catch (e) {
+          debugPrint("Error loading inventory from Firestore: $e");
         }
-      } catch (e) {
-        debugPrint("Error loading inventory (ignoring): $e");
       }
 
       // 3. Cargar HISTORIAL de Menús (Local + Firestore) (Non-critical)
@@ -248,6 +359,9 @@ class AppState extends ChangeNotifier {
           decoded.forEach((key, value) {
             _mealCalendar[key] = Map<String, dynamic>.from(value);
           });
+          debugPrint(
+            "Loaded Local Calendar with ${_mealCalendar.length} entries.",
+          );
         }
 
         // --- FIRESTORE ---
@@ -255,6 +369,10 @@ class AppState extends ChangeNotifier {
           // Obtener colección 'daily_menus'
           final now = DateTime.now();
           final startDate = now.subtract(const Duration(days: 30));
+
+          debugPrint(
+            "Fetching Firestore menus since ${_formatDate(startDate)} for user ${user.uid}",
+          );
 
           final querySnapshot = await FirebaseFirestore.instance
               .collection('users')
@@ -265,6 +383,8 @@ class AppState extends ChangeNotifier {
                 isGreaterThanOrEqualTo: _formatDate(startDate),
               )
               .get();
+
+          debugPrint("Firestore returned ${querySnapshot.docs.length} menus.");
 
           for (var doc in querySnapshot.docs) {
             final dateKey = doc.id; // YYYY-MM-DD
@@ -295,10 +415,23 @@ class AppState extends ChangeNotifier {
         return false;
       }
 
+      // STRICT CHECK: User MUST have a UID for us to trust the session
+      if (user == null) {
+        debugPrint("Critical: No Firebase User found. Failing Login.");
+        return false;
+      }
+
       return true;
     } catch (e) {
       debugPrint("Critical Error in _loadUserData: $e");
       return false;
+    }
+  }
+
+  Future<void> refreshAppData() async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token != null) {
+      await _loadUserData(token);
     }
   }
 
@@ -452,18 +585,19 @@ class AppState extends ChangeNotifier {
         // we can force populate the missing bits to allow login!
         if (!success) {
           // We are in Google Login. We KNOW the email and name.
-          if (this.email == null) this.email = googleUser.email;
-          if (this.firstName == null) {
+          email ??= googleUser.email;
+          if (firstName == null) {
             final nameParts = (googleUser.displayName ?? '').split(' ');
-            if (nameParts.isNotEmpty) this.firstName = nameParts.first;
-            if (nameParts.length > 1)
-              this.lastName = nameParts.sublist(1).join(' ');
+            if (nameParts.isNotEmpty) firstName = nameParts.first;
+            if (nameParts.length > 1) {
+              lastName = nameParts.sublist(1).join(' ');
+            }
           }
 
           // Retry strict check Logic locally? Or just assume OK if we have data now?
           // Strict check in _loadUserData returns false.
           // If we manually filled them, we are good.
-          if (this.email != null && this.firstName != null) {
+          if (email != null && firstName != null) {
             success = true;
             notifyListeners();
           }
@@ -506,6 +640,41 @@ class AppState extends ChangeNotifier {
 
   // --- GESTIÓN DE DATOS ---
 
+  // FIRESTORE INVENTORY HELPERS
+  Future<void> _syncInventoryItemToFirestore(
+    String name,
+    double quantity,
+    String unit,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('inventory')
+          .doc(name)
+          .set({'quantity': quantity, 'unit': unit}, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing item '$name' to Firestore: $e");
+    }
+  }
+
+  Future<void> _deleteInventoryItemFromFirestore(String name) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('inventory')
+          .doc(name)
+          .delete();
+    } catch (e) {
+      debugPrint("Error deleting item '$name' from Firestore: $e");
+    }
+  }
+
   void setPersonalData({String? firstName, String? lastName}) {
     this.firstName = firstName ?? this.firstName;
     this.lastName = lastName ?? this.lastName;
@@ -513,13 +682,41 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> updateFood(String foodKey, double quantity, String unit) async {
+    // 1. OPTIMISTIC UPDATE
     _inventory[foodKey] = {'quantity': quantity, 'unit': unit};
+
+    // CACHE UPDATE
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _storage.write(
+        key: 'inventory_cache_${user.uid}',
+        value: jsonEncode(_inventory),
+      );
+      // FIRESTORE SYNC
+      _syncInventoryItemToFirestore(foodKey, quantity, unit);
+    }
+
     notifyListeners();
 
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return;
 
     try {
+      // PREVENT BACKEND 500: normalize
+      dynamic backendQuantity = quantity;
+      String backendUnit = unit;
+
+      String baseUnit = _getBaseUnitFor(unit);
+      if (baseUnit == 'g' || baseUnit == 'ml') {
+        backendQuantity = _convertToBase(quantity, unit).round();
+        backendUnit = baseUnit;
+      } else {
+        backendQuantity = quantity.round();
+      }
+
+      // Safety check: Backend often rejects 0
+      if (backendQuantity == 0) backendQuantity = 1;
+
       await http
           .put(
             Uri.parse('$_baseUrl/inventory/$foodKey'),
@@ -527,7 +724,10 @@ class AppState extends ChangeNotifier {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
             },
-            body: jsonEncode({'quantity': quantity.round(), 'unit': unit}),
+            body: jsonEncode({
+              'quantity': backendQuantity,
+              'unit': backendUnit,
+            }),
           )
           .timeout(const Duration(seconds: 10));
     } catch (e) {
@@ -557,6 +757,7 @@ class AppState extends ChangeNotifier {
       'manzana',
       'banana',
       'naranja',
+      'banana',
     ];
 
     debugPrint(
@@ -585,12 +786,87 @@ class AppState extends ChangeNotifier {
     debugPrint("BLIND REPAIR COMPLETE. Inventory should be unblocked.");
   }
 
-  Future<void> addFood(String food) async {
-    final token = await _storage.read(key: 'auth_token');
-    if (token == null) return;
+  Future<bool> addFood(
+    String food, {
+    double quantity = 1.0,
+    String unit = 'Unidades',
+  }) async {
     String normalizedKey = food.trim().toLowerCase();
-    if (normalizedKey.isEmpty) return;
+    if (normalizedKey.isEmpty) return false;
+
+    // CHECK FOR EXISTING ITEM TO ACCUMULATE
+    if (_inventory.containsKey(normalizedKey)) {
+      try {
+        final currentData = _inventory[normalizedKey];
+        double currentQty = (currentData?['quantity'] as num? ?? 0).toDouble();
+        String currentUnit = currentData?['unit'] ?? 'Unidades';
+
+        // Convert both to base to safely sum
+        double currentBase = _convertToBase(currentQty, currentUnit);
+        double newBase = _convertToBase(quantity, unit);
+        double totalBase = currentBase + newBase;
+
+        String targetUnit = _getBaseUnitFor(currentUnit);
+        // If unknown or compatible, stick to base.
+        // If the user was using "Kg" and we add "g", target is "g".
+        // This effectively upgrades storage to the refined unit.
+
+        debugPrint(
+          "addFood ACCUMULATING: $normalizedKey. Old: $currentQty $currentUnit. New: $quantity $unit. TotalBase: $totalBase $targetUnit",
+        );
+
+        // Use updateFood (which handles optimistic + normalization)
+        await updateFood(normalizedKey, totalBase, targetUnit);
+        return true;
+      } catch (e) {
+        debugPrint("Error accumulating food: $e. Fallback to overwrite.");
+        // Fallback to processing as new if accumulation fails logic (unlikely)
+      }
+    }
+
+    // 1. OPTIMISTIC UPDATE (New Item)
+    _inventory[normalizedKey] = {'quantity': quantity, 'unit': unit};
+
+    // CACHE UPDATE
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _storage.write(
+        key: 'inventory_cache_${user.uid}',
+        value: jsonEncode(_inventory),
+      );
+      // FIRESTORE SYNC
+      _syncInventoryItemToFirestore(normalizedKey, quantity, unit);
+    }
+
+    notifyListeners();
+
+    debugPrint("addFood OPTIMISTIC: Added $normalizedKey locally.");
+
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) {
+      debugPrint("addFood: NO TOKEN - Item kept local only.");
+      return true; // Return true because it IS added locally
+    }
+
     try {
+      // PREVENT BACKEND 500: normalize to integer base units
+      dynamic backendQuantity = quantity;
+      String backendUnit = unit;
+
+      String baseUnit = _getBaseUnitFor(unit);
+      if (baseUnit == 'g' || baseUnit == 'ml') {
+        backendQuantity = _convertToBase(quantity, unit).round();
+        backendUnit = baseUnit;
+      } else {
+        // Unidades or unknown: Round to int
+        backendQuantity = quantity.round();
+      }
+
+      // Safety check: Backend often rejects 0
+      if (backendQuantity == 0) backendQuantity = 1;
+
+      debugPrint("addFood sending: $backendQuantity $backendUnit");
+
       final response = await http
           .post(
             Uri.parse('$_baseUrl/inventory'),
@@ -600,21 +876,34 @@ class AppState extends ChangeNotifier {
             },
             body: jsonEncode({
               'name': normalizedKey,
-              'quantity': 1.0,
-              'unit': 'Unidades',
+              'quantity': backendQuantity,
+              'unit': backendUnit,
             }),
           )
           .timeout(const Duration(seconds: 10));
+
+      debugPrint("addFood API Response: ${response.statusCode}");
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        _inventory[normalizedKey] = {
-          'quantity': (data['quantity'] ?? 1).toDouble(),
-          'unit': data['unit'] ?? 'Unidades',
-        };
-        notifyListeners();
+        if (data['quantity'] != null) {
+          // Sync with server response
+          _inventory[normalizedKey] = {
+            'quantity': (data['quantity'] as num).toDouble(),
+            'unit': data['unit'] ?? backendUnit,
+          };
+          notifyListeners();
+        }
+        return true;
+      } else {
+        debugPrint(
+          "addFood FAILED persistence: ${response.statusCode} - ${response.body}",
+        );
+        return false; // Backend rejected it explicitly
       }
     } catch (e) {
-      // print("Error añadiendo comida: $e");
+      debugPrint("addFood ERROR: $e");
+      return false; // Exception
     }
   }
 
@@ -630,6 +919,16 @@ class AppState extends ChangeNotifier {
           .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         _inventory.remove(foodKey);
+        // CACHE UPDATE
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          _storage.write(
+            key: 'inventory_cache_${user.uid}',
+            value: jsonEncode(_inventory),
+          );
+          // FIRESTORE SYNC
+          _deleteInventoryItemFromFirestore(foodKey);
+        }
         notifyListeners();
       }
     } catch (e) {
@@ -734,14 +1033,16 @@ class AppState extends ChangeNotifier {
 
     try {
       // BACKEND FIX: Use PUT instead of PATCH (405 Method Not Allowed)
-      final response = await http.put(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      );
+      final response = await http
+          .put(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -771,10 +1072,41 @@ class AppState extends ChangeNotifier {
               await FirebaseFirestore.instance
                   .collection('users')
                   .doc(user.uid)
-                  .set(firestoreData, SetOptions(merge: true));
+                  .set(firestoreData, SetOptions(merge: true))
+                  .timeout(const Duration(seconds: 10));
             }
           } catch (fsError) {
             debugPrint("Error syncing physical data to Firestore: $fsError");
+          }
+        }
+
+        // UPDATE CACHE (Profile Persistence)
+        if (user != null) {
+          try {
+            String? currentCacheStr = await _storage.read(
+              key: 'user_profile_cache_${user.uid}',
+            );
+            Map<String, dynamic> cacheData = {};
+            if (currentCacheStr != null) {
+              cacheData = jsonDecode(currentCacheStr);
+            }
+            // Update with current class state (which was just updated from backend)
+            if (firstName != null) cacheData['first_name'] = firstName;
+            if (lastName != null) cacheData['last_name'] = lastName;
+            if (height != null) cacheData['height'] = height;
+            if (weight != null) cacheData['weight'] = weight;
+            if (birthdate != null)
+              cacheData['birthdate'] = birthdate.toIso8601String();
+            cacheData['goal'] = goal;
+            if (photoUrl != null) cacheData['photo_url'] = photoUrl;
+            if (email != null) cacheData['email'] = email;
+
+            await _storage.write(
+              key: 'user_profile_cache_${user.uid}',
+              value: jsonEncode(cacheData),
+            );
+          } catch (e) {
+            debugPrint("Error updating profile cache: $e");
           }
         }
 
@@ -822,8 +1154,7 @@ class AppState extends ChangeNotifier {
             debugPrint("Firestore Goal Sync Error: $e");
           }
         } else {
-          // Fallback for weird edge case (no firebase user but active token?)
-          await _storage.write(key: 'user_goal', value: goal);
+          debugPrint("Warning: No user found to save goal locally properly.");
         }
 
         notifyListeners();
@@ -853,16 +1184,17 @@ class AppState extends ChangeNotifier {
         photoUrl = data['photo_url'];
 
         // PERSISTENCE: Save to local storage
-        if (photoUrl != null) {
-          await _storage.write(key: 'profile_photo_url', value: photoUrl);
-
+        final user = FirebaseAuth.instance.currentUser;
+        if (photoUrl != null && user != null) {
+          await _storage.write(
+            key: 'profile_photo_url_${user.uid}',
+            value: photoUrl,
+          );
           // FIRESTORE SYNC: Save Photo URL
-          final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
-            FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-              'photo_url': photoUrl,
-            }, SetOptions(merge: true));
-          }
+          // user is known non-null here
+          FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'photo_url': photoUrl,
+          }, SetOptions(merge: true));
         }
 
         notifyListeners();
@@ -990,6 +1322,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> saveMenuForDate(DateTime date, Map<String, dynamic> menu) async {
     final dateKey = _formatDate(date);
+    debugPrint("Saving menu for $dateKey. Items: ${menu.keys}");
 
     // 1. Memory Update - Ensure strict type
     _mealCalendar[dateKey] = Map<String, dynamic>.from(menu);
@@ -997,6 +1330,7 @@ class AppState extends ChangeNotifier {
 
     // 2. Persistence: Local Storage (Full Calendar)
     try {
+      debugPrint("Saving calendar to Local Storage...");
       await _storage.write(
         key: 'meal_calendar_local',
         value: jsonEncode(_mealCalendar),
@@ -1008,6 +1342,10 @@ class AppState extends ChangeNotifier {
     // 3. Persistence: Firestore (Subcollection)
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      debugPrint(
+        "Saving menu to Firestore: users/${user.uid}/daily_menus/$dateKey",
+      );
+
       FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -1018,11 +1356,17 @@ class AppState extends ChangeNotifier {
             SetOptions(merge: true),
           ) // Guardamos el mapa directo como documento
           .then(
-            (_) => debugPrint("Menú del día $dateKey guardado en Firestore"),
+            (_) => debugPrint(
+              "Menú del día $dateKey guardado en Firestore EXITOSAMENTE",
+            ),
           )
           .catchError(
             (e) => debugPrint("Error guardando menú en Firestore: $e"),
           );
+    } else {
+      debugPrint(
+        "WARNING: No Firebase User found. Menu NOT saved to Firestore.",
+      );
     }
 
     // 4. Inventory Deduction (Only if saving for TODAY to avoid double deduction on old dates)
@@ -1079,8 +1423,7 @@ class AppState extends ChangeNotifier {
         // Maybe Unit is inside the name part or missing (Count)
         // E.g. "2 Huevos" -> Unit="u"
         ingredientName =
-            match.group(3) ??
-            (match.group(2) ?? '') + ' ' + (match.group(3) ?? '');
+            match.group(3) ?? "${match.group(2) ?? ''} ${match.group(3) ?? ''}";
         ingredientName = ingredientName.trim();
       }
     }
@@ -1147,8 +1490,9 @@ class AppState extends ChangeNotifier {
             qtyToSend = resultBase.round(); // 'u' must be int.
             unitToSend =
                 currentData['unit']; // Keep original name if it was 'Huevos' etc, actually _getBase returns 'u' for unknown.
-            if (unitToSend == 'u')
+            if (unitToSend == 'u') {
               unitToSend = currentData['unit']; // if it was 'Unidades' keep it.
+            }
           } else {
             // For Mass/Vol, we use the base value (g or ml)
             qtyToSend = resultBase.round();

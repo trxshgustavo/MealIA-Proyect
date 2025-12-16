@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/data/food_database.dart';
 import '../theme/app_colors.dart';
+import '../../screens/main/food_scanner_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -35,16 +36,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
     super.dispose();
   }
 
-  void _addFoodItem() {
-    if (_newFoodItemController.text.trim().isNotEmpty) {
-      // Al añadir, por defecto la AppState lo creará con cantidad 1 y unidad "Unidades"
-      Provider.of<AppState>(
+  Future<void> _addFoodItem() async {
+    final text = _newFoodItemController.text.trim();
+    if (text.isNotEmpty) {
+      _newFoodItemController.clear();
+      _autocompleteController?.clear();
+      FocusScope.of(context).unfocus(); // Close keyboard
+
+      // Show loading indicator or optimistic add is handled by provider
+      final success = await Provider.of<AppState>(
         context,
         listen: false,
-      ).addFood(_newFoodItemController.text.trim());
-      _newFoodItemController.clear();
-      // Also clear the autocomplete visual controller if it exists
-      _autocompleteController?.clear();
+      ).addFood(text);
+
+      if (!mounted) return;
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "⚠️ Se agregó localmente, pero falló la sincronización.",
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 
@@ -351,7 +367,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),
@@ -405,10 +421,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 ),
                               ),
                               onPressed: () {
-                                // Sync text before adding
-                                _newFoodItemController.text =
-                                    textEditingController.text;
-                                _addFoodItem();
+                                if (textEditingController.text
+                                    .trim()
+                                    .isNotEmpty) {
+                                  // Sync text before adding
+                                  _newFoodItemController.text =
+                                      textEditingController.text;
+                                  _addFoodItem();
+                                } else {
+                                  // Show options to scan or type
+                                  _showAddOptions(focusNode);
+                                }
                               },
                             ),
                             border: InputBorder.none,
@@ -417,10 +440,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             ),
                           ),
                           onSubmitted: (String value) {
-                            _newFoodItemController.text =
-                                value; // Force value just in case
-                            _addFoodItem();
-                            focusNode.requestFocus();
+                            if (value.trim().isNotEmpty) {
+                              _newFoodItemController.text = value;
+                              _addFoodItem();
+                              focusNode.requestFocus(); // Keep focus
+                            }
                           },
                         );
                       },
@@ -690,6 +714,150 @@ class _InventoryScreenState extends State<InventoryScreen> {
               )
             : null,
       ),
+    );
+  }
+
+  void _showAddOptions(FocusNode focusNode) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Agregar Alimento",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: AppColors.accentColor,
+                  ),
+                ),
+                title: const Text(
+                  "Escanear Refrigerador",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text("Usa la cámara para detectar alimentos"),
+                onTap: () async {
+                  Navigator.pop(sheetContext); // Close modal
+                  // Navigate to Scanner
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FoodScannerScreen(),
+                    ),
+                  );
+
+                  if (!mounted) return;
+
+                  if (result != null && result is List) {
+                    final appState = Provider.of<AppState>(
+                      context,
+                      listen: false,
+                    );
+
+                    // Show loading loading
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Guardando alimentos..."),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+
+                    int addedCount = 0;
+                    int failedCount = 0;
+
+                    for (var item in result) {
+                      bool success = false;
+                      if (item is ScannedFood) {
+                        debugPrint(
+                          "InventoryScreen: Adding ScannedFood ${item.name}",
+                        );
+                        success = await appState.addFood(
+                          item.name,
+                          quantity: item.quantity,
+                          unit: item.unit,
+                        );
+                      } else if (item is String) {
+                        debugPrint("InventoryScreen: Adding String $item");
+                        success = await appState.addFood(item);
+                      } else {
+                        debugPrint(
+                          "InventoryScreen: Unknown item type ${item.runtimeType}",
+                        );
+                      }
+
+                      if (success) {
+                        addedCount++;
+                      } else {
+                        failedCount++;
+                      }
+                    }
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      String msg =
+                          "Se agregaron $addedCount alimentos correctamente.";
+                      if (failedCount > 0) {
+                        msg += " ($failedCount fallaron)";
+                      }
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(msg),
+                          backgroundColor: failedCount > 0
+                              ? Colors.orange
+                              : null,
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.keyboard, color: Colors.black54),
+                ),
+                title: const Text(
+                  "Escribir Manualmente",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text("Busca o escribe el nombre"),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  focusNode.requestFocus();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
