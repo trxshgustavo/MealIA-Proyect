@@ -19,7 +19,7 @@ class _DataScreenState extends State<DataScreen> {
   double _currentWeight = 70.5;
   final _dateCtl = TextEditingController();
   bool _isLoading = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -81,10 +81,10 @@ class _DataScreenState extends State<DataScreen> {
             TextButton(
               child: const Text('OK'),
               onPressed: () {
-                setState(() {}); 
+                setState(() {});
                 Navigator.of(context).pop();
               },
-            )
+            ),
           ],
         );
       },
@@ -117,7 +117,7 @@ class _DataScreenState extends State<DataScreen> {
                 setState(() {});
                 Navigator.of(context).pop();
               },
-            )
+            ),
           ],
         );
       },
@@ -126,27 +126,43 @@ class _DataScreenState extends State<DataScreen> {
 
   Future<void> _saveData() async {
     setState(() => _isLoading = true);
-    final appState = Provider.of<AppState>(context, listen: false);
-    final lastName = Provider.of<AppState>(context, listen: false).lastName;
-    
-    final success = await appState.saveUserPhysicalData(
-      firstName: appState.firstName, 
-      lastName: lastName, 
-      birthdate: _birthdate,
-      height: _currentHeight / 100.0,
-      weight: _currentWeight,
-    );
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    if (success) {
-      Navigator.pushNamed(context, '/goals');
-    } else {
+
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final lastName = Provider.of<AppState>(context, listen: false).lastName;
+
+      final success = await appState.saveUserPhysicalData(
+        firstName: appState.firstName,
+        lastName: lastName,
+        birthdate: _birthdate,
+        height: _currentHeight / 100.0,
+        weight: _currentWeight,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.pushNamed(context, '/goals');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al guardar tus datos. Intenta de nuevo.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error al guardar tus datos. Intenta de nuevo.'),
+        SnackBar(
+          content: Text('Error inesperado: ${e.toString()}'),
           backgroundColor: Colors.redAccent,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -163,7 +179,9 @@ class _DataScreenState extends State<DataScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primaryColor), // Borde en foco
+        borderSide: const BorderSide(
+          color: AppColors.primaryColor,
+        ), // Borde en foco
       ),
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
     );
@@ -177,7 +195,7 @@ class _DataScreenState extends State<DataScreen> {
     final formPadding = ScreenUtils.getFormPadding(context);
 
     return Scaffold(
-      backgroundColor: AppColors.cardBackground, 
+      backgroundColor: AppColors.cardBackground,
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -214,24 +232,38 @@ class _DataScreenState extends State<DataScreen> {
                   key: _formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch, // Para el botón
+                    crossAxisAlignment:
+                        CrossAxisAlignment.stretch, // Para el botón
                     children: [
                       const Text(
                         'Cuéntanos sobre ti',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
+                        ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       TextFormField(
                         controller: _dateCtl,
                         readOnly: true,
-                        decoration: _inputDecoration('Fecha de nacimiento (Opcional)', Icons.calendar_today),
+                        decoration: _inputDecoration(
+                          'Fecha de nacimiento (Opcional)',
+                          Icons.calendar_today,
+                        ),
                         onTap: _pickDate,
                       ),
                       const SizedBox(height: 20),
 
-                      Text('Altura', style: TextStyle(fontSize: 16, color: AppColors.secondaryText)),
+                      Text(
+                        'Altura',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       InkWell(
                         onTap: _pickHeight,
@@ -245,14 +277,24 @@ class _DataScreenState extends State<DataScreen> {
                           child: Center(
                             child: Text(
                               "$_currentHeight cm",
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryText,
+                              ),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 20),
 
-                      Text('Peso', style: TextStyle(fontSize: 16, color: AppColors.secondaryText)),
+                      Text(
+                        'Peso',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       InkWell(
                         onTap: _pickWeight,
@@ -266,13 +308,17 @@ class _DataScreenState extends State<DataScreen> {
                           child: Center(
                             child: Text(
                               "${_currentWeight.toStringAsFixed(1)} kg",
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryText,
+                              ),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       _isLoading
                           ? const Center(child: CircularProgressIndicator())
                           : ElevatedButton(
@@ -282,7 +328,17 @@ class _DataScreenState extends State<DataScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                              ),
+                              child: const Text(
+                                'Continuar',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                               child: const Text('Continuar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                             )

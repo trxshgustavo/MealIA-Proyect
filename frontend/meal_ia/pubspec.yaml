@@ -26,6 +26,10 @@ dependencies:
   video_player: ^2.8.1
   firebase_auth: ^4.20.0
   cloud_firestore: ^4.17.5
+  camera: ^0.10.6
+  permission_handler: ^12.0.1
+  path_provider: ^2.1.5
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
@@ -45,6 +49,7 @@ flutter:
     - assets/animation1_transparent.gif
     - assets/saludo.gif
     - assets/legal/
+    - assets/ml/
 
 flutter_launcher_icons:
   android: "launcher_icon"
