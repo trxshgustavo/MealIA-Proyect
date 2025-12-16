@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -250,11 +251,15 @@ class _MenuScreenState extends State<MenuScreen> {
                   // 1. Contenido Scrollable (Ocupa todo el espacio posible)
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0,
-                        vertical: 10.0,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: ScreenUtils.getResponsiveHorizontalPadding(context),
+                        vertical: ScreenUtils.getResponsiveVerticalPadding(context) * 0.5,
                       ),
-                      child: Column(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: ScreenUtils.getMaxContainerWidth(context),
+                        ),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Center(
@@ -365,6 +370,7 @@ class _MenuScreenState extends State<MenuScreen> {
                           // Quitamos el SizedBox grande final aquí porque el botón está abajo
                           const SizedBox(height: 20),
                         ],
+                        ),
                       ),
                     ),
                   ),
@@ -372,7 +378,12 @@ class _MenuScreenState extends State<MenuScreen> {
                   // 2. Botones de Acción
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 30),
+                    padding: EdgeInsets.fromLTRB(
+                      ScreenUtils.getResponsiveHorizontalPadding(context), 
+                      ScreenUtils.getResponsiveVerticalPadding(context) * 0.5, 
+                      ScreenUtils.getResponsiveHorizontalPadding(context), 
+                      ScreenUtils.getResponsiveVerticalPadding(context),
+                    ),
                     decoration: const BoxDecoration(
                       color: AppColors.cardBackground,
                     ),

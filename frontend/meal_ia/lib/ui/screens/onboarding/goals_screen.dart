@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
-import '../theme/app_colors.dart'; 
+import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart'; 
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -65,25 +66,34 @@ class GoalsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageSize = ScreenUtils.getResponsiveImageSize(context, baseSize: 280.0);
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(context);
+    final verticalSpacing = ScreenUtils.getVerticalSpacing(context, defaultSpacing: 20.0);
+    final formPadding = ScreenUtils.getFormPadding(context);
+
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
       body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Image.asset(
-                'assets/carrot.png',
-                height: 280,
-                width: 280,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.flag, size: 100, color: AppColors.primaryText),
-              ),
-              const SizedBox(height: 20),
-              
-              Container(
-                padding: const EdgeInsets.all(20.0), // Padding interno de la tarjeta
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ScreenUtils.getMaxContainerWidth(context),
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(horizontalPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Image.asset(
+                  'assets/carrot.png',
+                  height: imageSize,
+                  width: imageSize,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.flag, size: 100, color: AppColors.primaryText),
+                ),
+                SizedBox(height: verticalSpacing),
+                
+                Container(
+                  padding: formPadding, // Padding interno de la tarjeta
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -151,6 +161,6 @@ class GoalsScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }
