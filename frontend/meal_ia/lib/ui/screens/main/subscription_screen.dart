@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_colors.dart';
 
 class SubscriptionScreen extends StatefulWidget {
@@ -58,11 +59,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 children: [
                   // Fondo decorativo
                   Positioned(
-                    top: -80,
-                    right: -80,
+                    top: -60.h,
+                    right: -80.w,
                     child: Container(
-                      width: 300,
-                      height: 300,
+                      width: 200.w,
+                      height: 200.w,
                       decoration: BoxDecoration(
                         color: activeColor.withValues(alpha: 0.05),
                         shape: BoxShape.circle,
@@ -86,21 +87,21 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
                       // INDICADORES (Puntitos)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 30.0),
+                        padding: EdgeInsets.only(bottom: 20.0.h),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
                             _slides.length,
                             (index) => AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              height: 6,
-                              width: _currentPage == index ? 24 : 6,
+                              margin: EdgeInsets.symmetric(horizontal: 4.w),
+                              height: 6.h,
+                              width: _currentPage == index ? 24.w : 6.w,
                               decoration: BoxDecoration(
                                 color: _currentPage == index
                                     ? activeColor
                                     : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(3),
+                                borderRadius: BorderRadius.circular(3.r),
                               ),
                             ),
                           ),
@@ -112,20 +113,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ),
             ),
 
-            // --- 2. SECCIÓN INFERIOR (PAGO) ---
+            // --- 2. SECCIÓN INFERIO LEX (PAGO) ---
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(30, 40, 30, 40),
+              padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 20.h),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 30,
-                    offset: const Offset(0, -10),
+                    blurRadius: 30.r,
+                    offset: Offset(0, -10.h),
                   ),
                 ],
               ),
@@ -135,7 +134,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   // Toggle Mensual / Anual
                   _buildPricingToggle(),
 
-                  const SizedBox(height: 30),
+                  SizedBox(height: 20.h),
 
                   // Precio Animado
                   AnimatedSwitcher(
@@ -151,28 +150,29 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             Text(
                               price,
                               style: TextStyle(
-                                fontSize: 42,
+                                fontSize: 24.sp,
                                 fontWeight: FontWeight.w900,
                                 color: darkText,
                                 letterSpacing: -1,
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4.w),
                             Text(
                               period,
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14.sp,
                                 color: Colors.grey[500],
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 5),
+                        SizedBox(height: 5.h),
                         Text(
                           savings,
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13.sp,
                             color: _isAnnual
                                 ? Colors.green[600]
                                 : Colors.grey[400],
@@ -183,12 +183,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  SizedBox(height: 20.h),
 
                   // Botón de Acción
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 50.h,
                     child: ElevatedButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,13 +202,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         elevation: 8,
                         shadowColor: activeColor.withValues(alpha: 0.3),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(16.r),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         "Comenzar Ahora",
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 15.sp,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -216,7 +216,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 15),
+                  SizedBox(height: 10.h),
                   TextButton(
                     onPressed: () {
                       Navigator.pop(context);
@@ -225,10 +225,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       foregroundColor:
                           Colors.grey[500], // Color gris sutil al presionar
                     ),
-                    child: const Text(
+                    child: Text(
                       "Seguir con el plan actual",
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors
                             .grey, // Texto gris para indicar secundario// Opcional: subrayado
@@ -247,10 +247,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildPricingToggle() {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
         color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(14.r),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -271,15 +271,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(10.r),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
+                    blurRadius: 4.r,
                   ),
                 ]
               : [],
@@ -297,35 +297,35 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildSlide(Map<String, dynamic> slide) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.symmetric(horizontal: 40.w),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(35),
+            padding: EdgeInsets.all(25.w),
             decoration: BoxDecoration(
               color: activeColor.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(slide['icon'], size: 70, color: activeColor),
+            child: Icon(slide['icon'], size: 50.sp, color: activeColor),
           ),
-          const SizedBox(height: 25),
+          SizedBox(height: 12.h),
           Text(
             slide['title'],
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 26,
+              fontSize: 16.sp,
               fontWeight: FontWeight.w900,
               color: darkText,
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 8.h),
           Text(
             slide['desc'],
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 13.sp,
               color: Colors.grey[600],
               height: 1.4,
             ),

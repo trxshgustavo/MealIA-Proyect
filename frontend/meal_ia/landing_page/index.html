@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MealIA - Nutrición Inteligente</title>
+    <meta name="description" content="Tu nutricionista de bolsillo con Inteligencia Artificial. Escanea, analiza y mejora tu alimentación.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Animation Library -->
+    <script src="https://unpkg.com/scrollreveal"></script>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="#" class="logo">
+                <span class="logo-icon"><i class="fa-solid fa-leaf"></i></span>
+                Meal<span class="highlight">IA</span>
+            </a>
+            
+            <div class="nav-links">
+                <a href="#como-funciona">¿Cómo funciona?</a>
+                <a href="#beneficios">Beneficios</a>
+                <a href="#testimonios">Testimonios</a>
+            </div>
+
+            <div class="nav-actions">
+                <a href="#" class="btn btn-primary">Descargar App</a>
+            </div>
+            
+            <button class="mobile-menu-btn">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-container">
+            <div class="hero-content">
+                <div class="badge-new">
+                    <i class="fa-solid fa-sparkles"></i>
+                    <span>Nueva Versión 2.0 con IA Avanzada</span>
+                </div>
+                <h1>Comer sano nunca fue tan <span class="text-gradient">visual</span> e <span class="text-gradient-orange">inteligente</span>.</h1>
+                <p>Olvídate de contar calorías manualmente. Simplemente toma una foto y deja que MealIA analice tus alimentos, macros y progreso al instante.</p>
+                
+                <div class="hero-btns">
+                    <a href="#" class="btn btn-primary btn-lg">
+                        <i class="fa-brands fa-apple"></i> App Store
+                    </a>
+                    <a href="#" class="btn btn-secondary btn-lg">
+                        <i class="fa-brands fa-google-play"></i> Google Play
+                    </a>
+                </div>
+
+                <div class="user-avatars">
+                    <div class="avatars">
+                        <img src="https://i.pravatar.cc/100?img=1" alt="User">
+                        <img src="https://i.pravatar.cc/100?img=5" alt="User">
+                        <img src="https://i.pravatar.cc/100?img=8" alt="User">
+                        <img src="https://i.pravatar.cc/100?img=9" alt="User">
+                    </div>
+                    <p>Más de <strong>10,000+</strong> usuarios felices</p>
+                </div>
+            </div>
+
+            <div class="hero-image">
+                <div class="circle-bg"></div>
+                <img src="hero_phone_mockup.png" alt="MealIA App Interface" class="phone-mockup">
+                
+                <!-- Floating Cards -->
+                <div class="float-card card-1">
+                    <div class="icon-box icon-protein">🥩</div>
+                    <div class="card-text">
+                        <span>Proteína</span>
+                        <strong>32g</strong>
+                    </div>
+                </div>
+                <div class="float-card card-2">
+                    <div class="icon-box icon-cals">🔥</div>
+                    <div class="card-text">
+                        <span>Calorías</span>
+                        <strong>450 kcal</strong>
+                    </div>
+                </div>
+                <div class="float-card card-3">
+                    <div class="icon-box icon-check">✅</div>
+                    <div class="card-text">
+                        <span>Objetivo</span>
+                        <strong>Cumplido</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Logistics / How it works -->
+    <section id="como-funciona" class="steps-section">
+        <div class="container">
+            <div class="section-header text-center">
+                <h2 class="section-title">Tu nutrición en 3 pasos</h2>
+                <p class="section-subtitle">La tecnología más avanzada para simplificar tu vida saludable.</p>
+            </div>
+
+            <div class="steps-grid">
+                <!-- Step 1 -->
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <div class="step-icon">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <h3>Captura tu comida</h3>
+                    <p>Usa la cámara de MealIA para tomar una foto a tu plato. Nuestra IA reconoce ingredientes al instante.</p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <div class="step-icon">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <h3>Análisis Inteligente</h3>
+                    <p>Obtén un desglose detallado de macronutrientes, calorías y calidad nutricional en segundos.</p>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <div class="step-icon">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <h3>Mejora tu Progreso</h3>
+                    <p>Registra tus comidas automáticamente y recibe recomendaciones personalizadas para tus metas.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Bento Grid -->
+    <section id="beneficios" class="features-section">
+        <div class="container">
+            <div class="features-grid">
+                <div class="feature-card large-card text-white bg-orange">
+                    <div class="feature-content">
+                        <h3>Reconocimiento de IA Superior</h3>
+                        <p>Nuestra tecnología distingue entre miles de alimentos cocinados y crudos con una precisión del 98%.</p>
+                        <a href="#" class="link-arrow">Ver demo <i class="fa-solid fa-arrow-right"></i></a>
+                    </div>
+                    <div class="feature-visual visual-scan">
+                        <i class="fa-solid fa-expand"></i>
+                    </div>
+                </div>
+
+                <div class="feature-card bg-cream">
+                    <div class="feature-icon icon-leaf"><i class="fa-solid fa-carrot"></i></div>
+                    <h3>Vegano & Keto</h3>
+                    <p>Modos especializados para todo tipo de dietas.</p>
+                </div>
+
+                <div class="feature-card bg-brown text-white">
+                    <div class="feature-icon icon-water"><i class="fa-solid fa-droplet"></i></div>
+                    <h3>Hidratación</h3>
+                    <p>Recordatorios inteligentes para beber agua.</p>
+                </div>
+
+                <div class="feature-card wide-card bg-white border-subtle">
+                    <div class="feature-content-row">
+                        <div class="text">
+                            <h3>Escáner de Código de Barras</h3>
+                            <p>¿Comida envasada? Escanea el código y listo. Base de datos con +2M de productos.</p>
+                        </div>
+                        <div class="icon-big">
+                            <i class="fa-solid fa-barcode"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community / Testimonials -->
+    <section id="testimonios" class="testimonials-section">
+        <div class="container">
+            <div class="section-header text-center">
+                <h2>Lo que dicen nuestros usuarios</h2>
+            </div>
+            
+            <div class="reviews-scroller">
+                <div class="review-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"¡Increíble! Nunca pensé que contar macros fuera tan fácil. La estética es hermosa."</p>
+                    <div class="user-info">
+                        <img src="https://i.pravatar.cc/100?img=12" alt="Sofia">
+                        <div>
+                            <h4>Sofía M.</h4>
+                            <span>Perdió 5kg en 2 meses</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"La mejor app de nutrición que he probado. El diseño color café/naranja me encanta, relaja la vista."</p>
+                    <div class="user-info">
+                        <img src="https://i.pravatar.cc/100?img=33" alt="Carlos">
+                        <div>
+                            <h4>Carlos R.</h4>
+                            <span>Atleta Crossfit</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card">
+                    <div class="stars">★★★★★</div>
+                    <p>"MealIA cambió mi relación con la comida. Es muy intuitiva y rápida."</p>
+                    <div class="user-info">
+                        <img src="https://i.pravatar.cc/100?img=47" alt="Ana">
+                        <div>
+                            <h4>Ana P.</h4>
+                            <span>Vegetariana</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA / Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="cta-box">
+                <h2>Empieza tu cambio hoy</h2>
+                <p>Descarga MealIA gratis y toma el control de tu nutrición.</p>
+                <div class="footer-btns">
+                    <button class="btn btn-white">
+                        <i class="fa-brands fa-apple"></i> iOS
+                    </button>
+                    <button class="btn btn-white">
+                        <i class="fa-brands fa-android"></i> Android
+                    </button>
+                </div>
+            </div>
+
+            <div class="footer-links-row">
+                <div class="brand">
+                    <span class="logo-icon"><i class="fa-solid fa-leaf"></i></span>
+                    <strong>MealIA</strong>
+                    <p class="copyright">© 2024 MealIA Inc. Todos los derechos reservados.</p>
+                </div>
+                <div class="socials">
+                    <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#"><i class="fa-brands fa-tiktok"></i></a>
+                    <a href="#"><i class="fa-brands fa-twitter"></i></a>
+                </div>
+                <div class="legal">
+                    <a href="#">Privacidad</a>
+                    <a href="#">Términos</a>
+                    <a href="#">Soporte</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Initialize ScrollReveal
+        ScrollReveal().reveal('.hero-content', { delay: 200, distance: '50px', origin: 'bottom' });
+        ScrollReveal().reveal('.hero-image', { delay: 400, distance: '50px', origin: 'bottom' });
+        ScrollReveal().reveal('.step-card', { interval: 200, distance: '30px', origin: 'bottom' });
+        ScrollReveal().reveal('.feature-card', { interval: 100, scale: 0.95 });
+    </script>
+</body>
+</html>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -40,19 +41,19 @@ class _MenuScreenState extends State<MenuScreen> {
                 children: [
                   Image.asset(
                     'assets/animation1_transparent.gif',
-                    height: 430,
-                    width: 430,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
+                    height: 430.h,
+                    width: 430.w,
+                    errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.hourglass_bottom,
-                      size: 80,
+                      size: 80.sp,
                       color: AppColors.textDark,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                  Text(
                     "Regenerando menú...",
                     style: TextStyle(
-                      fontSize: 25,
+                      fontSize: 25.sp,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textDark,
                       decoration: TextDecoration.none,
@@ -78,6 +79,7 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   // --- Widget para cada Tarjeta de Comida (Sin cambios) ---
+  // --- Widget para cada Tarjeta de Comida (Refinado) ---
   Widget _buildMealCard(
     BuildContext context, {
     required String title,
@@ -91,58 +93,64 @@ class _MenuScreenState extends State<MenuScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: EdgeInsets.only(bottom: 12.h), // Reducido de 16
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(
+            20.r,
+          ), // Radio sutilmente reducido
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.03), // Sombra más sutil
               spreadRadius: 0,
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              blurRadius: 10.r, // Reducido de 15
+              offset: Offset(0, 4.h), // Offset reducido
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: EdgeInsets.all(16.0.w), // Padding interno reducido de 20
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: EdgeInsets.all(8.w), // Reducido de 10
                     decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.15),
+                      color: iconColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(icon, size: 24, color: iconColor),
+                    child: Icon(
+                      icon,
+                      size: 20.sp,
+                      color: iconColor,
+                    ), // Icono más pequeño
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 10.w),
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 15.sp, // Reducido de 16
                         fontWeight: FontWeight.bold,
                         color: AppColors.secondaryText,
                       ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 5.h,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.cardBackground,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(15.r),
                     ),
                     child: Text(
                       "$calories kcal",
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: 12.sp, // Reducido
                         fontWeight: FontWeight.bold,
                         color: AppColors.primaryText,
                       ),
@@ -150,24 +158,30 @@ class _MenuScreenState extends State<MenuScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Divider(height: 1, color: AppColors.inputFill),
-              const SizedBox(height: 16),
+              SizedBox(height: 12.h), // Espacio reducido
+              const Divider(
+                height: 1,
+                color: AppColors.inputFill,
+                thickness: 0.5,
+              ),
+              SizedBox(height: 12.h),
               Text(
                 mealName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                style: TextStyle(
+                  fontSize: 17.sp, // Reducido de 18
+                  fontWeight: FontWeight.w700,
                   color: AppColors.primaryText,
+                  height: 1.2,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 6.h),
               if (items.isEmpty)
-                const Text(
+                Text(
                   'Sin ingredientes listados',
                   style: TextStyle(
                     fontStyle: FontStyle.italic,
                     color: Colors.grey,
+                    fontSize: 13.sp,
                   ),
                 )
               else
@@ -176,23 +190,25 @@ class _MenuScreenState extends State<MenuScreen> {
                   children: items
                       .map(
                         (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4.0),
+                          padding: const EdgeInsets.only(bottom: 2.0),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 "• ",
                                 style: TextStyle(
                                   color: AppColors.accentColor,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 14.sp,
                                 ),
                               ),
                               Expanded(
                                 child: Text(
                                   '$item',
-                                  style: const TextStyle(
-                                    fontSize: 15,
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
                                     color: AppColors.textDark,
+                                    height: 1.3,
                                   ),
                                 ),
                               ),
@@ -216,14 +232,6 @@ class _MenuScreenState extends State<MenuScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
-      appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: AppColors.cardBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        foregroundColor: AppColors.primaryText,
-        iconTheme: const IconThemeData(color: AppColors.primaryText, size: 32),
-      ),
       body: SafeArea(
         bottom: false,
         child: menu == null
@@ -233,13 +241,13 @@ class _MenuScreenState extends State<MenuScreen> {
                   children: [
                     Icon(
                       Icons.restaurant_menu,
-                      size: 80,
+                      size: 60.sp,
                       color: Colors.grey[300],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
+                    SizedBox(height: 16.h),
+                    Text(
                       'Aún no hay menú generado',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                      style: TextStyle(fontSize: 16.sp, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -247,49 +255,51 @@ class _MenuScreenState extends State<MenuScreen> {
             // --- CAMBIO DE ESTRUCTURA PRINCIPAL ---
             : Column(
                 children: [
-                  // 1. Contenido Scrollable (Ocupa todo el espacio posible)
+                  // 1. Contenido Scrollable
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0,
-                        vertical: 10.0,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.0.w,
+                        vertical: 10.0.h,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // HEADER "Total de Hoy" COMPACTO
                           Center(
                             child: Column(
                               children: [
                                 Image.asset(
                                   'assets/carrot.png',
-                                  height: 140,
-                                  width: 140,
+                                  height: 140.h, // Reducido de 140
+                                  width: 140.w,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.restaurant, size: 60),
+                                      Icon(Icons.restaurant, size: 40.sp),
                                 ),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  'Total de Hoy',
+                                SizedBox(height: 8.h),
+                                Text(
+                                  'Total calorias de hoy',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 13.sp,
                                     color: AppColors.secondaryText,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 Text(
                                   "${app.totalCalories} kcal",
-                                  style: const TextStyle(
-                                    fontSize: 36,
+                                  style: TextStyle(
+                                    fontSize: 32.sp, // Reducido de 36
                                     fontWeight: FontWeight.w900,
                                     color: AppColors.primaryText,
                                     letterSpacing: -1.0,
+                                    height: 1.4,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 30),
+                          SizedBox(height: 24.h), // Reducido de 30
 
                           _buildMealCard(
                             context,
@@ -340,11 +350,11 @@ class _MenuScreenState extends State<MenuScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: 16.h),
 
                           if (menu['note'] != null)
                             Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: EdgeInsets.all(12.w),
                               decoration: BoxDecoration(
                                 color: Colors.blueGrey.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(12),
@@ -355,97 +365,92 @@ class _MenuScreenState extends State<MenuScreen> {
                               child: Text(
                                 menu['note'],
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontStyle: FontStyle.italic,
                                   color: AppColors.secondaryText,
-                                  fontSize: 14,
+                                  fontSize: 13.sp,
                                 ),
                               ),
                             ),
-                          // Quitamos el SizedBox grande final aquí porque el botón está abajo
-                          const SizedBox(height: 20),
+                          SizedBox(height: 16.h),
+
+                          // --- MOVED BUTTONS HERE ---
+                          SizedBox(height: 20.h),
                         ],
                       ),
                     ),
                   ),
 
-                  // 2. Botones de Acción
+                  // 2. Botones de Acción (Compactos)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 30),
-                    decoration: const BoxDecoration(
+                    padding: EdgeInsets.fromLTRB(20.w, 10.h, 20.w, 20.h),
+                    decoration: BoxDecoration(
                       color: AppColors.cardBackground,
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade100),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        // Regenerate/Edit Button (Secondary - Left)
+                        // Regenerate
                         Expanded(
                           child: OutlinedButton(
-                            onPressed:
-                                _handleRegenerate, // FIX: In-place regeneration
+                            onPressed: _handleRegenerate,
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primaryText,
                               side: const BorderSide(
                                 color: AppColors.textLight,
+                                width: 1,
                               ),
-                              minimumSize: const Size(0, 50),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
+                              padding: EdgeInsets.symmetric(vertical: 14.h),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(12.r),
                               ),
                             ),
-                            child: const Column(
-                              // Using Column for tight icon+text stacking or Row
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.refresh, size: 20),
+                                Icon(Icons.refresh, size: 18.sp),
+                                SizedBox(width: 8.w),
                                 Text(
                                   'Regenerar',
-                                  style: TextStyle(fontSize: 12),
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12.w),
+                        // Confirm
                         Expanded(
-                          // flex: 1 by default
                           child: ElevatedButton(
                             onPressed: _isSaving
                                 ? null
                                 : () async {
                                     setState(() => _isSaving = true);
-                                    // debugPrint("Confirmar presionado");
                                     try {
-                                      // FIX: Save for Today specifically
                                       await app.saveMenuForDate(
                                         DateTime.now(),
                                         menu,
                                       );
                                       if (!context.mounted) return;
-
                                       Navigator.pushNamedAndRemoveUntil(
                                         context,
                                         '/main',
                                         (route) => false,
                                       );
                                     } catch (e) {
-                                      // debugPrint("Error en Confirmar: $e");
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Error guardando: $e',
-                                            ),
-                                          ),
+                                          SnackBar(content: Text('Error: $e')),
                                         );
-                                      }
-                                      // Navegar de todos modos para no bloquear
-                                      if (context.mounted) {
+                                        // Aún así navegamos
                                         Navigator.pushNamedAndRemoveUntil(
                                           context,
                                           '/main',
@@ -461,25 +466,25 @@ class _MenuScreenState extends State<MenuScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.buttonDark,
                               foregroundColor: Colors.white,
-                              minimumSize: const Size(0, 50),
+                              elevation: 0,
+                              padding: EdgeInsets.symmetric(vertical: 14.h),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(12.r),
                               ),
-                              elevation: 4,
                             ),
                             child: _isSaving
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
+                                ? SizedBox(
+                                    width: 20.w,
+                                    height: 20.h,
+                                    child: const CircularProgressIndicator(
                                       color: Colors.white,
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text(
+                                : Text(
                                     "Confirmar",
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 14.sp,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

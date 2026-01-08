@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 import '../legal/legal_screen.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -60,11 +61,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _imageFile = imageFile;
         });
 
-        final success = await appState.uploadProfilePicture(imageFile);
+        final errorMsg = await appState.uploadProfilePicture(imageFile);
 
         if (!mounted) return;
 
-        if (success) {
+        if (errorMsg == null) {
           setState(() {
             _imageFile = null;
           });
@@ -79,9 +80,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _imageFile = null;
           });
           scaffoldMessenger.showSnackBar(
-            const SnackBar(
-              content: Text('Error al subir la foto'),
+            SnackBar(
+              content: Text(errorMsg), // Muestra el error específico (ej: 404)
               backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 5),
             ),
           );
         }
@@ -297,27 +299,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
         ),
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(24.0.w),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   "Cambiar Contraseña",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20.h),
                 _buildPasswordField(
                   controller: _currentPassController,
                   label: "Contraseña actual",
@@ -335,7 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: "Confirmar nueva",
                   icon: Icons.check_circle_outline,
                 ),
-                const SizedBox(height: 30),
+                SizedBox(height: 30.h),
                 Row(
                   children: [
                     Expanded(
@@ -344,7 +346,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: const Text("Cancelar"),
                       ),
                     ),
-                    const SizedBox(width: 15),
+                    SizedBox(width: 15.w),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: _changePassword,
@@ -381,7 +383,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         filled: true,
         fillColor: Colors.grey[50],
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
           borderSide: BorderSide.none,
         ),
       ),
@@ -394,7 +396,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final appState = Provider.of<AppState>(context);
 
     return Scaffold(
-      backgroundColor: AppColors.cardBackground,
+      backgroundColor: AppColors
+          .cardBackground, // Changed from AppColors.background (white) for contrast
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -457,12 +460,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+
+              // 6. DANGER ZONE
+              _buildSettingsCard(
+                context,
+                children: [
+                  _buildSettingsItem(
+                    title: 'Eliminar Mi Cuenta',
+                    onTap: _confirmDeleteAccount,
+                    isDestructive: true,
+                    subtitle: "Esta acción es irreversible",
+                  ),
+                ],
+              ),
+              SizedBox(height: 90.h),
             ],
           ),
         ),
       ),
     );
+  }
+
+  void _confirmDeleteAccount() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("¿Eliminar Cuenta Permanetemente?"),
+        content: const Text(
+          "Estás a punto de borrar todos tus datos, incluyendo inventario, menús y perfil. \n\nEsta acción NO se puede deshacer.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(context); // Cerrar diálogo
+              _executeAccountDeletion();
+            },
+            child: const Text(
+              "Eliminar Todo",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _executeAccountDeletion() async {
+    // Show Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Colors.redAccent),
+      ),
+    );
+
+    final appState = Provider.of<AppState>(context, listen: false);
+    final success = await appState.deleteAccount();
+
+    if (!mounted) return;
+    Navigator.pop(context); // Pop Loading
+
+    if (success) {
+      // Navigate to Login
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    } else {
+      // Show Error (Likely Re-Auth needed)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Error: Por seguridad, inicia sesión nuevamente antes de eliminar tu cuenta.",
+          ),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   void _openLegal(BuildContext context, String title, String file) {
@@ -477,16 +555,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildUserInfoCard(BuildContext context, AppState appState) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      padding: EdgeInsets.all(20.w), // Reducido de 24
+      margin: EdgeInsets.fromLTRB(
+        16.w,
+        16.h,
+        16.w,
+        16.h,
+      ), // Margen inferior reducido
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24.r), // Standardized radius
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.04), // Sombra más sutil
+            blurRadius: 15.r,
+            offset: Offset(0, 5.h),
           ),
         ],
       ),
@@ -494,34 +577,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           GestureDetector(
             onTap: _uploadPhoto,
-            child: CircleAvatar(
-              radius: 70,
-              backgroundColor: AppColors.cardDark,
-              backgroundImage: _imageFile != null
-                  ? FileImage(_imageFile!) as ImageProvider
-                  : (appState.photoUrl != null && appState.photoUrl!.isNotEmpty)
-                  ? NetworkImage(appState.photoUrl!)
-                  : null,
+            child: Stack(
+              children: [
+                Container(
+                  width: 100.r,
+                  height: 100.r,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.cardDark,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: ClipOval(
+                    child: _imageFile != null
+                        ? Image.file(
+                            _imageFile!,
+                            fit: BoxFit.cover,
+                            width: 100.r,
+                            height: 100.r,
+                          )
+                        : (appState.photoUrl != null &&
+                              appState.photoUrl!.isNotEmpty)
+                        ? Image.network(
+                            appState.photoUrl!,
+                            fit: BoxFit.cover,
+                            width: 100.r,
+                            height: 100.r,
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint("Error loading profile image: $error");
+                              return Container(
+                                color: AppColors.cardDark,
+                                child: Icon(
+                                  Icons.person_off, // Distinct icon for error
+                                  size: 40.r,
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
+                          )
+                        : Icon(Icons.person, size: 50.r, color: Colors.white),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.buttonDark,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.camera_alt,
+                      size: 14.sp,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 20),
+          SizedBox(width: 20.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}",
-                  style: const TextStyle(
-                    fontSize: 22,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18.sp, // Reducido de 22
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
                 ),
+                SizedBox(height: 4.h),
                 Text(
                   appState.goal,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14.sp, // Reducido de 16
                     color: AppColors.secondaryText,
+                    height: 1.3,
                   ),
                 ),
               ],
@@ -536,31 +689,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     BuildContext context, {
     required List<Widget> children,
   }) {
+    // Interleave dividers between children
+    final List<Widget> separatedChildren = [];
+    for (int i = 0; i < children.length; i++) {
+      separatedChildren.add(children[i]);
+      if (i < children.length - 1) {
+        separatedChildren.add(
+          const Divider(height: 1, indent: 16, endIndent: 16),
+        );
+      }
+    }
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      margin: EdgeInsets.symmetric(
+        horizontal: 16.w,
+        vertical: 8.h,
+      ), // Margen vertical reducido
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16.r), // Reducido
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.02), // Sombra muy sutil
+            blurRadius: 8.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: List.generate(children.length, (index) {
-          if (index == 0) return children[index];
-          return Column(
-            children: [
-              const Divider(height: 1, indent: 16, endIndent: 16),
-              children[index],
-            ],
-          );
-        }),
-      ),
+      child: Column(children: separatedChildren),
     );
   }
 
@@ -571,24 +728,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? subtitle,
   }) {
     return ListTile(
+      visualDensity: VisualDensity.compact, // Helps with compactness
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: 16.w,
+        vertical: 4.h,
+      ), // Tight vertical padding
       title: Text(
         title,
         style: TextStyle(
           color: isDestructive ? Colors.redAccent : AppColors.primaryText,
-          fontSize: 16,
+          fontSize: 15.sp, // Kept small font
           fontWeight: FontWeight.w500,
         ),
       ),
       subtitle: subtitle != null
           ? Text(
               subtitle,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(color: Colors.grey, fontSize: 12.sp),
             )
           : null,
       trailing: Icon(
         Icons.arrow_forward_ios,
-        size: 16,
-        color: AppColors.secondaryText,
+        size: 14.sp, // Small arrow
+        color: Colors.grey.shade300,
       ),
       onTap: onTap,
     );

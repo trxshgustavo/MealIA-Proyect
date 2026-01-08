@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,20 +23,20 @@ class _LoginScreenState extends State<LoginScreen> {
       filled: true,
       fillColor: AppColors.inputFill,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.primaryColor),
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
     );
   }
 
   Future<void> _submitLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Ocultar teclado al presionar el botón
     FocusScope.of(context).unfocus();
 
@@ -43,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      
+
       final result = await appState.login(
         _emailCtl.text.trim(),
         _passwordCtl.text.trim(),
@@ -64,7 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -75,9 +79,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final result = await appState.signInWithGoogle();
-      
+
       if (!mounted) return;
-      
+
       setState(() => _isLoading = false);
 
       if (result == "OK_EXISTING") {
@@ -110,135 +114,198 @@ class _LoginScreenState extends State<LoginScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          // 2. CORRECCIÓN: Evita que aparezca el "rectángulo" (sombra/color) al hacer scroll
-          scrolledUnderElevation: 0, 
-          surfaceTintColor: Colors.transparent,
-          
-          iconTheme: const IconThemeData(color: Colors.black54), 
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.0.w),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(height: 30.h), // Top spacing reduced
 
-                const Text(
-                  '¡Bienvenid@ a Meal.IA!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.primaryText,
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 80),
-
-                Image.asset(
-                  'assets/carrot.png',
-                  height: 300,
-                  width: 300,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, color: AppColors.primaryText),
-                ),
-                const SizedBox(height: 80),
-
-                Container(
-                  padding: const EdgeInsets.all(24.0),
-                  decoration: BoxDecoration(
-                      color: AppColors.formBackground,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.2),
-                          spreadRadius: 5,
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        )
-                      ]
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text(
-                          'Bienvenido de vuelta',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.primaryText,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
+                      Text(
+                        '¡Bienvenid@ a Meal.IA!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.primaryText,
+                          fontSize: 28.sp, // Reduced font slightly
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 10.h), // Reduced spacing
+                      // Flexible container
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        height: MediaQuery.of(context).viewInsets.bottom > 0
+                            ? 0
+                            : 0.25.sh,
+                        child: Center(
+                          child: Image.asset(
+                            'assets/carrot.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.error,
+                                  color: AppColors.primaryText,
+                                ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                      ),
+                      SizedBox(height: 10.h),
 
-                        ElevatedButton.icon(
-                          icon: Image.asset('assets/google_logo.png', height: 22.0, width: 22.0,
-                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, color: Colors.black)),
-                          label: const Text('Ingresar con Google'),
-                          onPressed: _isLoading ? null : _submitGoogleLogin,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black87,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: BorderSide(color: Colors.grey[300]!)
+                      // Form Container
+                      Container(
+                        padding: EdgeInsets.all(20.0.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.formBackground,
+                          borderRadius: BorderRadius.circular(20.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.2),
+                              spreadRadius: 5.r,
+                              blurRadius: 15.r,
+                              offset: Offset(0, 5.h),
+                            ),
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Bienvenido de vuelta',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.primaryText,
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              ElevatedButton.icon(
+                                icon: Image.asset(
+                                  'assets/google_logo.png',
+                                  height: 20.0.h,
+                                  width: 20.0.w,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(
+                                        Icons.g_mobiledata,
+                                        color: Colors.black,
+                                      ),
+                                ),
+                                label: const Text('Ingresar con Google'),
+                                onPressed: _isLoading
+                                    ? null
+                                    : _submitGoogleLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.black87,
+                                  padding: EdgeInsets.symmetric(vertical: 10.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  side: BorderSide(color: Colors.grey[300]!),
+                                ),
+                              ),
+                              SizedBox(height: 12.h),
+
+                              const Text(
+                                'O ingresa con tu correo',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.secondaryText,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              SizedBox(height: 12.h),
+
+                              TextFormField(
+                                controller: _emailCtl,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: _inputDecoration(
+                                  'Correo Electrónico',
+                                ),
+                                style: const TextStyle(
+                                  color: AppColors.primaryText,
+                                ),
+                                validator: (v) =>
+                                    (v == null || !v.contains('@'))
+                                    ? 'Correo no válido'
+                                    : null,
+                              ),
+                              SizedBox(height: 10.h),
+
+                              TextFormField(
+                                controller: _passwordCtl,
+                                obscureText: true,
+                                decoration: _inputDecoration('Contraseña'),
+                                style: const TextStyle(
+                                  color: AppColors.primaryText,
+                                ),
+                                validator: (v) => (v == null || v.isEmpty)
+                                    ? 'Ingresa tu contraseña'
+                                    : null,
+                              ),
+                              SizedBox(height: 16.h),
+
+                              _isLoading
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  : ElevatedButton(
+                                      onPressed: _submitLogin,
+                                      style: ElevatedButton.styleFrom(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 12.h,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Ingresar',
+                                        style: TextStyle(fontSize: 16.sp),
+                                      ),
+                                    ),
+
+                              TextButton(
+                                onPressed: () async {
+                                  // Close keyboard to prevent auto-focus on return
+                                  FocusScope.of(context).unfocus();
+                                  await Future.delayed(
+                                    const Duration(milliseconds: 200),
+                                  );
+                                  if (context.mounted) {
+                                    Navigator.pushNamed(context, '/register');
+                                  }
+                                },
+                                child: const Text(
+                                  '¿No tienes cuenta? Regístrate aquí',
+                                  style: TextStyle(
+                                    color: AppColors.secondaryText,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: AppColors.secondaryText,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-
-                        const Text(
-                          'O ingresa con tu correo',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.secondaryText),
-                        ),
-                        const SizedBox(height: 16),
-
-                        TextFormField(
-                          controller: _emailCtl,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: _inputDecoration('Correo Electrónico'),
-                          style: const TextStyle(color: AppColors.primaryText),
-                          validator: (v) => (v == null || !v.contains('@')) ? 'Correo no válido' : null,
-                        ),
-                        const SizedBox(height: 12),
-
-                        TextFormField(
-                          controller: _passwordCtl,
-                          obscureText: true,
-                          decoration: _inputDecoration('Contraseña'),
-                          style: const TextStyle(color: AppColors.primaryText),
-                          validator: (v) => (v == null || v.isEmpty) ? 'Ingresa tu contraseña' : null,
-                        ),
-                        const SizedBox(height: 24),
-
-                        _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : ElevatedButton(
-                          onPressed: _submitLogin,
-                          child: const Text('Ingresar', style: TextStyle(fontSize: 16)),
-                        ),
-
-                        TextButton(
-                          onPressed: () => Navigator.pushNamed(context, '/register'),
-                          child: const Text(
-                            '¿No tienes cuenta? Regístrate aquí',
-                            style: TextStyle(color: AppColors.secondaryText, decoration: TextDecoration.underline, decorationColor: AppColors.secondaryText),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 20.h), // Bottom spacing
+                    ],
                   ),
                 ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

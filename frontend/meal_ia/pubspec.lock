@@ -225,6 +225,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.9.3+5"
+  firebase_app_check:
+    dependency: "direct main"
+    description:
+      name: firebase_app_check
+      sha256: aac3b42cdf804b10cb1085c9902e5d1ef2f30e7cfc0c504e6f47519713d86829
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.2+7"
+  firebase_app_check_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_app_check_platform_interface
+      sha256: d0b9e4676ee7a272160b989a9a899d6469e336fe3624b3935cdae77a476f00d1
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0+29"
+  firebase_app_check_web:
+    dependency: transitive
+    description:
+      name: firebase_app_check_web
+      sha256: f5359ba62111e4b28e5f1477b7c5c560dcfabe1ccc9e02e65ebdb428eda204ad
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2+7"
   firebase_auth:
     dependency: "direct main"
     description:
@@ -273,6 +297,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.17.5"
+  firebase_storage:
+    dependency: "direct main"
+    description:
+      name: firebase_storage
+      sha256: "2ae478ceec9f458c1bcbf0ee3e0100e4e909708979e83f16d5d9fba35a5b42c1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "11.7.7"
+  firebase_storage_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_storage_platform_interface
+      sha256: "4e18662e6a66e2e0e181c06f94707de06d5097d70cfe2b5141bf64660c5b5da9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.22"
+  firebase_storage_web:
+    dependency: transitive
+    description:
+      name: firebase_storage_web
+      sha256: "3a44aacd38a372efb159f6fe36bb4a7d79823949383816457fd43d3d47602a53"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.9.7"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -318,6 +366,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.33"
+  flutter_screenutil:
+    dependency: "direct main"
+    description:
+      name: flutter_screenutil
+      sha256: "8239210dd68bee6b0577aa4a090890342d04a136ce1c81f98ee513fc0ce891de"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.9.3"
   flutter_secure_storage:
     dependency: "direct main"
     description:

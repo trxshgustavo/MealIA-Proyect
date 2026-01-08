@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -8,7 +9,8 @@ class WelcomeScreen extends StatefulWidget {
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -23,13 +25,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       duration: const Duration(milliseconds: 1000),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _controller.forward();
   }
@@ -46,62 +50,70 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(horizontal: 40.0.w),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(),
+              Spacer(flex: 1),
 
               // --- Título ---
               FadeTransition(
                 opacity: _fadeAnimation,
-                child: const Text(
-                  '¡Hola!\n¡Bienvenid@ a MealApp!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.primaryText,
-                    fontSize: 50,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 60),
-
-              // --- Subtítulo ---
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: const Text(
-                  "Soy 'Meal.IA' y te estaré ayudando a planificar \ntus menús para que cumplas tus objetivos",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.secondaryText,
-                    fontSize: 20,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 100),
-
-              // --- IMAGEN GIF (Mucho más simple y estable) ---
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: SizedBox(
-                    height: 350,
-                    // Flutter maneja los GIFs automáticamente como imágenes
-                    child: Image.asset(
-                      'assets/saludo_carrot.png',
-                      height: 350,
-                      fit: BoxFit.contain, // Ajusta para que se vea completa
-                      // Opcional: Esto evita parpadeos si el gif es pesado
-                      gaplessPlayback: true, 
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '¡Hola Bienvenid@\n a Meal.IA!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.primaryText,
+                      fontSize: 45.sp, // Reduced base size
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-              const Spacer(),
+              SizedBox(height: 50.h), // Adaptive space
+              // --- Subtítulo ---
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    "Soy 'Meal.IA' y te estaré ayudando a planificar\n tus menús para que cumplas tus objetivos",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.secondaryText,
+                      fontSize: 15.sp, // Reduced base size
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              ),
+
+              Spacer(flex: 2), // Flexible space instead of fixed height
+              // --- IMAGEN GIF ---
+              Expanded(
+                flex: 4,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: Image.asset(
+                        'assets/saludo_carrot.png',
+                        fit: BoxFit.contain,
+                        gaplessPlayback: true,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(Icons.image, size: 30, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              Spacer(flex: 2),
 
               // --- Botón "Comencemos" ---
               FadeTransition(
@@ -115,26 +127,29 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.inputFill,
                       foregroundColor: AppColors.primaryText,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(30.r),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           'Comencemos',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        SizedBox(width: 10),
-                        Icon(Icons.arrow_forward),
+                        SizedBox(width: 12.w),
+                        const Icon(Icons.arrow_forward, size: 24),
                       ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
+              SizedBox(height: 30.h),
             ],
           ),
         ),

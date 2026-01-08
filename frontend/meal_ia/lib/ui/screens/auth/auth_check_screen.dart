@@ -1,14 +1,17 @@
+import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
-import '../theme/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AuthCheckScreen extends StatefulWidget {
   const AuthCheckScreen({super.key});
   @override
   State<AuthCheckScreen> createState() => _AuthCheckScreenState();
 }
-class _AuthCheckScreenState extends State<AuthCheckScreen> with SingleTickerProviderStateMixin {
+
+class _AuthCheckScreenState extends State<AuthCheckScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -24,7 +27,10 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> with SingleTickerProv
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
     _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOutBack),
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOutBack,
+      ),
     );
     _animationController.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -45,7 +51,7 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> with SingleTickerProv
     if (isLoggedIn) {
       Navigator.pushReplacementNamed(context, '/main');
     } else {
-      Navigator.pushReplacementNamed(context, '/');
+      Navigator.pushReplacementNamed(context, '/login');
     }
   }
 
@@ -60,9 +66,13 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> with SingleTickerProv
             scale: _scaleAnimation,
             child: Image.asset(
               'assets/carrot.png',
-              width: 150,
-              height: 150,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.restaurant_menu, size: 120, color: AppColors.primaryText),
+              width: 150.w,
+              height: 150.h,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.restaurant_menu,
+                size: 120.sp,
+                color: AppColors.primaryText,
+              ),
             ),
           ),
         ),

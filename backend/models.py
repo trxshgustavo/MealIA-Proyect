@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, JSON 
 from sqlalchemy.orm import relationship
-from .database import Base # Crearemos este archivo en el siguiente paso
+from database import Base # Crearemos este archivo en el siguiente paso
 
 class User(Base):
     __tablename__ = "users"

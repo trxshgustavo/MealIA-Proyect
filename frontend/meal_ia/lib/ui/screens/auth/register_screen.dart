@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,13 +13,13 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controladores
   final _firstNameCtl = TextEditingController();
   final _lastNameCtl = TextEditingController();
   final _emailCtl = TextEditingController();
   final _passwordCtl = TextEditingController();
-  
+
   bool _isLoading = false;
 
   // Decoración consistente con el Login (ahora con iconos)
@@ -29,28 +31,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
       filled: true,
       fillColor: AppColors.inputFill,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: AppColors.primaryColor),
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
     );
   }
 
   Future<void> _submitRegister() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // 1. Ocultar teclado
     FocusScope.of(context).unfocus();
-    
+
     setState(() => _isLoading = true);
 
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      
+
       // 2. Registro en Firebase
       final result = await appState.register(
         email: _emailCtl.text.trim(),
@@ -66,7 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           firstName: _firstNameCtl.text.trim(),
           lastName: _lastNameCtl.text.trim(),
         );
-        
+
         // Navegar al flujo de datos (Onboarding)
         Navigator.pushNamed(context, '/data');
       } else {
@@ -128,156 +130,246 @@ class _RegisterScreenState extends State<RegisterScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          // Evita el tinte de color al hacer scroll
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
-          // Icono oscuro para que se vea el botón "Atrás"
-          iconTheme: const IconThemeData(color: Colors.black54),
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+        body: CustomScrollView(
+          physics: const ClampingScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.0.w),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(height: 40.h), // Top spacing
 
-                const Text(
-                  '¡Empecemos!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.primaryText,
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                // Imagen más pequeña para dar espacio al formulario largo
-                Image.asset(
-                  'assets/carrot.png',
-                  height: 180, 
-                  width: 180,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, color: AppColors.primaryText),
-                ),
-                const SizedBox(height: 40),
-
-                Container(
-                  padding: const EdgeInsets.all(24.0),
-                  decoration: BoxDecoration(
-                      color: AppColors.formBackground,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.2),
-                          spreadRadius: 5,
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        )
-                      ]
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text(
-                          'Regístrate para comenzar',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.primaryText,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        ElevatedButton.icon(
-                          icon: Image.asset('assets/google_logo.png', height: 22.0, width: 22.0,
-                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, color: Colors.black)),
-                          label: const Text('Registrarse con Google'),
-                          onPressed: _isLoading ? null : _submitGoogleLogin,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black87,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: BorderSide(color: Colors.grey[300]!)
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'O regístrate con tu correo',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.secondaryText),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // --- CAMPOS DE TEXTO ---
-                        
-                        TextFormField(
-                          controller: _emailCtl,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: _inputDecoration('Correo Electrónico', Icons.email_outlined),
-                          style: const TextStyle(color: AppColors.primaryText),
-                          validator: (v) => (v == null || !v.contains('@')) ? 'Correo no válido' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        TextFormField(
-                          controller: _passwordCtl,
-                          obscureText: true,
-                          decoration: _inputDecoration('Contraseña', Icons.lock_outline),
-                          style: const TextStyle(color: AppColors.primaryText),
-                          validator: (v) => (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        // Fila para Nombre y Apellido (Opcional: los dejé en columna para seguridad en pantallas chicas)
-                        TextFormField(
-                          controller: _firstNameCtl,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: _inputDecoration('Nombre', Icons.person_outline),
-                          style: const TextStyle(color: AppColors.primaryText),
-                          validator: (v) => (v == null || v.isEmpty) ? 'Ingresa tu nombre' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        TextFormField(
-                          controller: _lastNameCtl,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: _inputDecoration('Apellido', Icons.person_outline),
-                          style: const TextStyle(color: AppColors.primaryText),
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : ElevatedButton(
-                          onPressed: _submitRegister,
-                          child: const Text('Registrar y Continuar', style: TextStyle(fontSize: 16)),
-                        ),
-
-                        TextButton(
-                          onPressed: () => Navigator.pop(context), // Vuelve a Login
-                          child: const Text(
-                            '¿Ya tienes cuenta? Inicia sesión',
-                            style: TextStyle(color: AppColors.secondaryText, decoration: TextDecoration.underline, decorationColor: AppColors.secondaryText),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      '¡Empecemos!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.primaryText,
+                        fontSize: 32.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
+                    SizedBox(height: 10.h),
+
+                    // Flexible image or fixed relative height
+                    SizedBox(
+                      height: 0.2.sh, // 20% of screen height
+                      child: Center(
+                        child: Image.asset(
+                          'assets/carrot.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.error,
+                                color: AppColors.primaryText,
+                              ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+
+                    // Form Container
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 16.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.formBackground,
+                        borderRadius: BorderRadius.circular(20.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.2),
+                            spreadRadius: 5.r,
+                            blurRadius: 15.r,
+                            offset: Offset(0, 5.h),
+                          ),
+                        ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Regístrate para comenzar',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.primaryText,
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+
+                            ElevatedButton.icon(
+                              icon: Image.asset(
+                                'assets/google_logo.png',
+                                height: 20.0.h,
+                                width: 20.0.w,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.g_mobiledata,
+                                      color: Colors.black,
+                                    ),
+                              ),
+                              label: const Text('Registrarse con Google'),
+                              onPressed: _isLoading ? null : _submitGoogleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black87,
+                                padding: EdgeInsets.symmetric(vertical: 10.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                side: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+
+                            const Text(
+                              'O regístrate con tu correo',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.secondaryText,
+                                fontSize: 12,
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+
+                            // Fields compacted
+                            TextFormField(
+                              controller: _emailCtl,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: _inputDecoration(
+                                'Correo',
+                                Icons.email_outlined,
+                              ),
+                              style: const TextStyle(
+                                color: AppColors.primaryText,
+                                fontSize: 14,
+                              ),
+                              validator: (v) => (v == null || !v.contains('@'))
+                                  ? 'Correo no válido'
+                                  : null,
+                            ),
+                            SizedBox(height: 8.h),
+
+                            TextFormField(
+                              controller: _passwordCtl,
+                              obscureText: true,
+                              decoration: _inputDecoration(
+                                'Contraseña',
+                                Icons.lock_outline,
+                              ),
+                              style: const TextStyle(
+                                color: AppColors.primaryText,
+                                fontSize: 14,
+                              ),
+                              validator: (v) => (v == null || v.length < 6)
+                                  ? 'Mínimo 6 caracteres'
+                                  : null,
+                            ),
+                            SizedBox(height: 8.h),
+
+                            // Fila para Nombre y Apellido
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _firstNameCtl,
+                                    textCapitalization:
+                                        TextCapitalization.words,
+                                    decoration: _inputDecoration(
+                                      'Nombre',
+                                      Icons.person_outline,
+                                    ),
+                                    style: const TextStyle(
+                                      color: AppColors.primaryText,
+                                      fontSize: 14,
+                                    ),
+                                    validator: (v) => (v == null || v.isEmpty)
+                                        ? 'Requerido'
+                                        : null,
+                                  ),
+                                ),
+                                SizedBox(width: 10.w),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _lastNameCtl,
+                                    textCapitalization:
+                                        TextCapitalization.words,
+                                    decoration: _inputDecoration(
+                                      'Apellido',
+                                      Icons.person_outline,
+                                    ),
+                                    style: const TextStyle(
+                                      color: AppColors.primaryText,
+                                      fontSize: 14,
+                                    ),
+                                    validator: (v) => (v == null || v.isEmpty)
+                                        ? 'Requerido'
+                                        : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 16.h),
+
+                            _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : ElevatedButton(
+                                    onPressed: _submitRegister,
+                                    style: ElevatedButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 12.h,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Registrar y Continuar',
+                                      style: TextStyle(fontSize: 16.sp),
+                                    ),
+                                  ),
+
+                            TextButton(
+                              onPressed: () async {
+                                FocusScope.of(context).unfocus();
+                                await SystemChannels.textInput.invokeMethod(
+                                  'TextInput.hide',
+                                );
+                                await Future.delayed(
+                                  const Duration(milliseconds: 200),
+                                );
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: const Text(
+                                '¿Ya tienes cuenta? Inicia sesión',
+                                style: TextStyle(
+                                  color: AppColors.secondaryText,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: AppColors.secondaryText,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+                  ],
                 ),
-                const SizedBox(height: 20),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

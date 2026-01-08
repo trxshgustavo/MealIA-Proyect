@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_colors.dart';
 
 class CustomAnimatedNavBar extends StatelessWidget {
@@ -13,88 +14,74 @@ class CustomAnimatedNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double barHeight = 70;
-    const double barMarginHorizontal = 20;
+    // Responsive dimensions
+    final double barHeight = 70.h;
+    final double barMarginHorizontal = 10.w;
 
-    const double bigCircleSize = 75; // Slightly larger than bar
-    const double normalIconSize = 30;
-    const double bigIconSize = 40;
+    final double bigCircleSize = 85.h; // Relativo a la altura para consistencia
+    final double normalIconSize = 30.sp;
+    final double bigIconSize = 40.sp;
 
     return Container(
       height: barHeight,
-      margin: const EdgeInsets.symmetric(
+      margin: EdgeInsets.symmetric(
         horizontal: barMarginHorizontal,
-        vertical: 15,
+        vertical: 15.h,
       ),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 255, 255, 255),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(barHeight / 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Permanent Big Circle for Middle Button (Inventory)
-          // We position it manually in the center
-          Positioned(
-            top:
-                (barHeight - bigCircleSize) /
-                2, // Centered vertically relative to bar, but potentially overflowing
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: () => onTap(1),
-                child: Container(
-                  width: bigCircleSize,
-                  height: bigCircleSize,
-                  decoration: BoxDecoration(
-                    color: AppColors.buttonDark,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.buttonDark.withValues(alpha: 0.4),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+          // Left: Plan
+          _buildNavItem(
+            icon: Icons.calendar_month_outlined,
+            index: 0,
+            selectedIndex: selectedIndex,
+            onTap: onTap,
+            iconSize: normalIconSize,
+          ),
+
+          // Center: Add Button (Aligned)
+          GestureDetector(
+            onTap: () => onTap(1),
+            child: Container(
+              width: bigCircleSize,
+              height: bigCircleSize,
+              decoration: BoxDecoration(
+                color: AppColors.buttonDark,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.buttonDark.withValues(alpha: 0.4),
+                    blurRadius: 10.r,
+                    offset: Offset(0, 5.h),
                   ),
-                  child: Center(
-                    child: Icon(
-                      Icons.add,
-                      size: bigIconSize,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                ],
+                // No border
+              ),
+              child: Center(
+                child: Icon(Icons.add, size: bigIconSize, color: Colors.white),
               ),
             ),
           ),
 
-          // Icons Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // Left: Plan
-              _buildNavItem(
-                icon: Icons.calendar_month_outlined,
-                index: 0,
-                selectedIndex: selectedIndex,
-                onTap: onTap,
-                iconSize: normalIconSize,
-              ),
-
-              // Spacer for the middle button
-              const Expanded(child: SizedBox()),
-
-              // Right: Profile
-              _buildNavItem(
-                icon: Icons.person_outline,
-                index: 2,
-                selectedIndex: selectedIndex,
-                onTap: onTap,
-                iconSize: normalIconSize,
-              ),
-            ],
+          // Right: Profile
+          _buildNavItem(
+            icon: Icons.person_outline,
+            index: 2,
+            selectedIndex: selectedIndex,
+            onTap: onTap,
+            iconSize: normalIconSize,
           ),
         ],
       ),
@@ -116,8 +103,9 @@ class CustomAnimatedNavBar extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: Center(
           child: Container(
-            width: 50,
-            height: 50,
+            width: 60.w,
+            height: 60
+                .w, // Keep it square based on width or height scale? .w usually safe for small tap targets
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isSelected
@@ -127,10 +115,7 @@ class CustomAnimatedNavBar extends StatelessWidget {
             child: Icon(
               icon,
               size: iconSize,
-              color: isSelected
-                  ? AppColors.buttonDark
-                  : AppColors
-                        .textDark, // Dark color if selected, otherwise textDark
+              color: isSelected ? AppColors.buttonDark : AppColors.textDark,
             ),
           ),
         ),

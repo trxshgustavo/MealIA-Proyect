@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_colors.dart';
 import 'recipe_screen.dart';
 
@@ -44,12 +45,17 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     BuildContext context,
     Map<String, dynamic> mealData,
     String mealType,
+    String timeString,
   ) {
+    // Create a mutable copy to safe inject time
+    final args = Map<String, dynamic>.from(mealData);
+    args['time'] = timeString;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const RecipeScreen(),
-        settings: RouteSettings(arguments: mealData),
+        settings: RouteSettings(arguments: args),
       ),
     );
   }
@@ -63,31 +69,36 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     final isToday = _isSameDay(_selectedDate, DateTime.now());
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // Very light cool grey
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+              padding: EdgeInsets.fromLTRB(
+                20.w,
+                16.h,
+                20.w,
+                10.h,
+              ), // Espaciado reducido
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     "Plan de Comidas",
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 24.sp, // Reducido de 20
                       fontWeight: FontWeight.w800,
                       color: AppColors.textDark,
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 2.h),
                   Text(
                     _getFullDateLabel(_selectedDate),
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14.sp, // Reducido de 16
                       color: AppColors.textLight,
                       fontWeight: FontWeight.w500,
                     ),
@@ -97,43 +108,44 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             ),
 
             // Horizontal Calendar Strip
-            SizedBox(
-              height: 90,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                scrollDirection: Axis.horizontal,
-                itemCount: _weekDays.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final date = _weekDays[index];
-                  final isSelected = _isSameDay(date, _selectedDate);
-                  return _buildDateBubble(date, isSelected);
-                },
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 15.w),
+              child: SizedBox(
+                height: 70.h, // Reducido de 70
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _weekDays.length,
+                  separatorBuilder: (context, index) =>
+                      SizedBox(width: 10.w), // Reducido
+                  itemBuilder: (context, index) {
+                    final date = _weekDays[index];
+                    final isSelected = _isSameDay(date, _selectedDate);
+                    return _buildDateBubble(date, isSelected);
+                  },
+                ),
               ),
             ),
 
-            const SizedBox(height: 20),
-
+            SizedBox(height: 16.h), // Espacio reducido de 16
             // Content Body
             Expanded(
               child: Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                margin: EdgeInsets.symmetric(horizontal: 15.w),
+                decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
+                  borderRadius: BorderRadius.circular(30.r),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black12,
-                      blurRadius: 20,
-                      offset: Offset(0, -5),
+                      blurRadius: 15.r, // Sombra reducida
+                      offset: Offset(4.h, 4.h),
                     ),
                   ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 100.h),
                   child: _buildMealList(context, dailyMenu, isToday),
                 ),
               ),
@@ -149,20 +161,20 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
       onTap: () => _onDateSelected(date),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 65,
+        width: 58.w, // Ancho reducido de 65
         decoration: BoxDecoration(
           color: isSelected ? AppColors.buttonDark : Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16.r), // Radio ajustado
           border: Border.all(
             color: isSelected ? Colors.transparent : Colors.grey.shade200,
-            width: 1.5,
+            width: 1.5.w,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     color: AppColors.buttonDark.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    blurRadius: 6.r, // Sombra reducida
+                    offset: Offset(0, 3.h),
                   ),
                 ]
               : [],
@@ -174,16 +186,16 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
               _getDayShortName(date.weekday),
               style: TextStyle(
                 color: isSelected ? Colors.white70 : AppColors.textLight,
-                fontSize: 13,
+                fontSize: 12.sp, // Reducido de 13
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 4.h), // Espacio reducido
             Text(
               date.day.toString(),
               style: TextStyle(
                 color: isSelected ? Colors.white : AppColors.textDark,
-                fontSize: 20,
+                fontSize: 18.sp, // Reducido de 20
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -200,15 +212,14 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
   ) {
     // 1. Data Exists -> Show Menu (Always, for any date)
     if (menu != null && menu.isNotEmpty) {
-      return ListView(
-        physics: const BouncingScrollPhysics(),
+      return Column(
         children: [
           _buildSectionHeader(
             isToday
                 ? "Tu Menú de Hoy"
                 : "Menú del ${_getDayShortName(_selectedDate.weekday)} ${_selectedDate.day}",
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 12.h), // Reducido de 20
           if (menu['breakfast'] != null)
             _buildMealCard(
               context,
@@ -233,8 +244,6 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
               menu['dinner'],
               Colors.indigoAccent,
             ),
-
-          const SizedBox(height: 80), // Bottom padding for navbar
         ],
       );
     }
@@ -250,27 +259,27 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(16.w), // Reducido
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.lock_clock_outlined,
-                size: 40,
+                size: 32.sp, // Reducido de 40
                 color: Colors.grey,
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 12.h),
+            Text(
               "Plan Futuro",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16.sp, // Reducido de 18
                 fontWeight: FontWeight.bold,
                 color: AppColors.textDark,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 6.h),
             const Text(
               "Los menús futuros se generarán\nautomáticamente o son Premium.",
               textAlign: TextAlign.center,
@@ -288,27 +297,27 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(16.w), // Reducido
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.history_toggle_off_outlined,
-                size: 40,
+                size: 32.sp, // Reducido
                 color: Colors.grey,
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 12.h),
+            Text(
               "Sin registro",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textDark,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 6.h),
             const Text(
               "No hay recetas guardadas\npara este día.",
               textAlign: TextAlign.center,
@@ -325,32 +334,32 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(16.w), // Reducido
             decoration: BoxDecoration(
               color: AppColors.accentColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.soup_kitchen_outlined,
-              size: 48,
+              size: 40.sp, // Reducido de 48
               color: AppColors.accentColor,
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
+          SizedBox(height: 20.h),
+          Text(
             "¡Hora de planificar!",
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18.sp, // Reducido
               fontWeight: FontWeight.bold,
               color: AppColors.textDark,
             ),
           ),
-          const SizedBox(height: 10),
-          const Text(
+          SizedBox(height: 8.h),
+          Text(
             "Ve a tu Inventario y genera\ntu menú para hoy.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 14.sp, // Reducido
               color: AppColors.textLight,
               height: 1.5,
             ),
@@ -365,14 +374,13 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 18,
+          style: TextStyle(
+            fontSize: 16.sp, // Reducido de 18
             fontWeight: FontWeight.bold,
             color: AppColors.textDark,
           ),
         ),
         const Spacer(),
-        // Optional: Add "See Nutritional Info" button here
       ],
     );
   }
@@ -397,24 +405,27 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
       title = mealData;
     }
 
+    final String timeString = _calculatePrepTime(mealData);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
+      padding: EdgeInsets.only(bottom: 8.0.h), // Reducido de 12
       child: GestureDetector(
         onTap: () => _navigateToRecipe(
           context,
           mealData is Map<String, dynamic> ? mealData : {},
           timeLabel,
+          timeString,
         ),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20.r), // Reducido de 24
             border: Border.all(color: Colors.grey.shade100),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                color: Colors.black.withValues(alpha: 0.03), // Sombra más sutil
+                blurRadius: 10.r, // Reducido
+                offset: Offset(0, 5.h), // Reducido
               ),
             ],
           ),
@@ -422,51 +433,51 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             children: [
               // Top Strip with Icon and Time
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16.w,
+                  vertical: 8.h,
+                ), // Vertical reducido de 10
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.08),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20.r),
+                    topRight: Radius.circular(20.r),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(icon, size: 18, color: accentColor),
-                    const SizedBox(width: 8),
+                    Icon(icon, size: 16.sp, color: accentColor), // Reducido
+                    SizedBox(width: 8.w),
                     Text(
                       timeLabel,
                       style: TextStyle(
                         color: accentColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 12.sp, // Reducido
                       ),
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w, // Reducido
+                        vertical: 3.h, // Reducido
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.access_time_filled,
-                            size: 10,
+                            size: 10.sp,
                             color: Colors.grey,
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4.w),
                           Text(
-                            _calculatePrepTime(mealData),
-                            style: const TextStyle(
-                              fontSize: 10,
+                            timeString,
+                            style: TextStyle(
+                              fontSize: 10.sp,
                               fontWeight: FontWeight.bold,
                               color: Colors.grey,
                             ),
@@ -479,22 +490,26 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
               ),
               // Content
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(12.w), // Reducido de 16
                 child: Row(
                   children: [
                     // Meal Image Placeholder
                     Container(
-                      width: 70,
-                      height: 70,
+                      width: 50.w, // Reducido de 60
+                      height: 50.w,
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14.r), // Reducido
                       ),
-                      child: const Center(
-                        child: Icon(Icons.restaurant, color: Colors.grey),
+                      child: Center(
+                        child: Icon(
+                          Icons.restaurant,
+                          color: Colors.grey,
+                          size: 20.sp,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 14.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,34 +518,34 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                             title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 17,
+                            style: TextStyle(
+                              fontSize: 15.sp, // Reducido de 17
                               fontWeight: FontWeight.bold,
                               color: AppColors.textDark,
                               height: 1.2,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 4.h),
                           Text(
                             description,
-                            style: const TextStyle(
-                              fontSize: 13,
+                            style: TextStyle(
+                              fontSize: 12.sp, // Reducido de 13
                               color: AppColors.textLight,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 6.h),
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.local_fire_department,
-                                size: 14,
+                                size: 12.sp, // Reducido
                                 color: Colors.orange,
                               ),
-                              const SizedBox(width: 4),
+                              SizedBox(width: 4.w),
                               Text(
                                 calories,
-                                style: const TextStyle(
-                                  fontSize: 12,
+                                style: TextStyle(
+                                  fontSize: 11.sp, // Reducido
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textLight,
                                 ),

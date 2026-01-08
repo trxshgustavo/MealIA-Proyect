@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/data/food_database.dart';
 import '../theme/app_colors.dart';
+// import '../../screens/main/food_scanner_screen.dart'; // No longer needed if we don't link it here directly? Wait, the modal uses it.
 import '../../screens/main/food_scanner_screen.dart';
+
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -66,13 +69,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _removeFoodItem(String foodKey) {
     Provider.of<AppState>(context, listen: false).removeFood(foodKey);
-    String displayName = foodKey.isNotEmpty
-        ? foodKey[0].toUpperCase() + foodKey.substring(1)
-        : foodKey;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$displayName eliminado!')));
   }
 
   // --- Diálogo para editar cantidad y unidad ---
@@ -103,23 +99,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
               backgroundColor: Colors.white,
               surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(24.r),
               ),
               title: Text(
                 'Editar ${_capitalize(foodKey)}',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textDark,
                   fontWeight: FontWeight.bold,
+                  fontSize: 20.sp,
                 ),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     "Define la cantidad exacta:",
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                    style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   Row(
                     children: [
                       // Input de número
@@ -135,12 +132,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             filled: true,
                             fillColor: AppColors.cardBackground,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12.r),
                               borderSide: BorderSide.none,
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 14.h,
                             ),
                           ),
                         ),
@@ -223,6 +220,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         // ignore: avoid_print
                         // print("Error llamando a updateFood: $e");
                       }
+                      FocusScope.of(
+                        context,
+                      ).unfocus(); // Close keyboard explicitly
                       Navigator.pop(context);
                     }
                   },
@@ -283,19 +283,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 children: [
                   Image.asset(
                     'assets/animation1_transparent.gif',
-                    height: 430,
-                    width: 430,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
+                    height: 400.h,
+                    width: 400.w,
+                    errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.hourglass_bottom,
-                      size: 80,
+                      size: 80.sp,
                       color: AppColors.textDark,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  const Text(
+                  const SizedBox(height: 0),
+                  Text(
                     "Generando menú con IA...",
                     style: TextStyle(
-                      fontSize: 25,
+                      fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textDark,
                       decoration: TextDecoration.none,
@@ -330,6 +330,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: AppColors.background,
         body: SafeArea(
           bottom: false,
@@ -338,38 +339,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
             children: [
               // --- Header ---
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+                padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 8.h), // Reducido
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Mi Despensa",
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 24.sp, // Reducido de 22
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryText,
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
                   ],
                 ),
               ),
 
               // --- Search / Add Bar ---
               Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 10,
-                ),
+                margin: EdgeInsets.symmetric(
+                  horizontal: 10.w,
+                  vertical: 8.h,
+                ), // Márgenes ajustados
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14.r), // Radio ajustado
+                  border: Border.all(color: Colors.grey.shade200, width: 1.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
+                      color: Colors.black.withValues(
+                        alpha: 0.08,
+                      ), // Sombra más marcada
+                      blurRadius: 15.r,
+                      offset: Offset(0, 5.h),
                     ),
                   ],
                 ),
@@ -391,59 +394,62 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         FocusNode focusNode,
                         VoidCallback onFieldSubmitted,
                       ) {
-                        // Sync the local controller with the Autocomplete controller
-                        // so we can clear it or read from it manually if needed.
                         _autocompleteController = textEditingController;
 
                         return TextField(
                           controller: textEditingController,
                           focusNode: focusNode,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 14.sp,
+                          ),
                           decoration: InputDecoration(
                             hintText:
-                                "Agrega los ingredientes que tienes en casa.",
-                            hintStyle: TextStyle(color: Colors.grey[400]),
-                            prefixIcon: const Icon(
+                                "Agrega tus ingredientes...", // Texto más corto
+                            hintStyle: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 15.sp,
+                            ),
+                            prefixIcon: Icon(
                               Icons.search,
                               color: AppColors.secondaryText,
+                              size: 25.sp, // Icono más pequeño
                             ),
                             suffixIcon: IconButton(
                               icon: Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(6), // Reducido
                                 decoration: const BoxDecoration(
                                   color: AppColors.buttonDark,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.add,
                                   color: Colors.white,
-                                  size: 20,
+                                  size: 30.sp, // Reducido
                                 ),
                               ),
                               onPressed: () {
                                 if (textEditingController.text
                                     .trim()
                                     .isNotEmpty) {
-                                  // Sync text before adding
                                   _newFoodItemController.text =
                                       textEditingController.text;
                                   _addFoodItem();
                                 } else {
-                                  // Show options to scan or type
                                   _showAddOptions(focusNode);
                                 }
                               },
                             ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 16,
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 14.h, // Altura reducida
                             ),
                           ),
                           onSubmitted: (String value) {
                             if (value.trim().isNotEmpty) {
                               _newFoodItemController.text = value;
                               _addFoodItem();
-                              focusNode.requestFocus(); // Keep focus
+                              focusNode.requestFocus();
                             }
                           },
                         );
@@ -458,16 +464,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           alignment: Alignment.topLeft,
                           child: Material(
                             elevation: 4.0,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(14),
                             color: Colors.white,
                             child: Container(
-                              width:
-                                  MediaQuery.of(context).size.width -
-                                  48, // Match input width
-                              constraints: const BoxConstraints(maxHeight: 250),
+                              width: MediaQuery.of(context).size.width - 48,
+                              constraints: const BoxConstraints(maxHeight: 200),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: ListView.builder(
                                 padding: EdgeInsets.zero,
@@ -480,23 +484,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   return InkWell(
                                     onTap: () => onSelected(option),
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16.0,
-                                        vertical: 12.0,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16.0.w,
+                                        vertical: 10.0.h,
                                       ),
                                       child: Row(
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.restaurant_menu,
-                                            size: 18,
+                                            size: 16.sp,
                                             color: Colors.grey,
                                           ),
-                                          const SizedBox(width: 12),
+                                          SizedBox(width: 10.w),
                                           Expanded(
                                             child: Text(
                                               option,
-                                              style: const TextStyle(
-                                                fontSize: 15,
+                                              style: TextStyle(
+                                                fontSize: 14.sp,
                                                 color: AppColors.textDark,
                                               ),
                                             ),
@@ -523,23 +527,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           children: [
                             Icon(
                               Icons.kitchen_outlined,
-                              size: 80,
+                              size: 60.sp, // Reducido
                               color: Colors.grey[300],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16.h),
                             Text(
                               "Tu despensa está vacía",
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16.sp,
                                 color: Colors.grey[500],
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8.h),
                             Text(
                               "Agrega ingredientes para comenzar.",
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 14.sp,
                                 color: Colors.grey[400],
                               ),
                             ),
@@ -547,16 +551,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(
-                          24,
-                          10,
-                          24,
-                          100,
-                        ), // Padding bottom for button
+                        padding: EdgeInsets.fromLTRB(
+                          10.w, // Reducido
+                          10.h,
+                          10.w,
+                          10.h, // Reduced padding
+                        ),
                         itemCount: itemKeys.length,
                         separatorBuilder: (context, index) =>
-                            const SizedBox(height: 12),
+                            SizedBox(height: 8.h),
                         itemBuilder: (context, index) {
+                          // --- Normal Inventory Item ---
                           final itemKey = itemKeys[index];
                           final itemData = inventoryMap[itemKey];
                           final double quantity = (itemData?['quantity'] ?? 0)
@@ -566,19 +571,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           return Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(14.r),
+                              border: Border.all(
+                                color: Colors.grey.shade200,
+                                width: 1.0,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.03),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
+                                  color: Colors.black.withValues(
+                                    alpha: 0.08,
+                                  ), // Sombra más marcada
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(14.r),
                                 onTap: () {
                                   _showEditQuantityDialog(
                                     itemKey,
@@ -587,34 +598,34 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   );
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 14.w,
+                                    vertical: 6.h, // Padding reducido
                                   ),
                                   child: Row(
                                     children: [
-                                      // Icon Placeholder or specific icon logic
+                                      // Icon Placeholder
                                       Container(
-                                        padding: const EdgeInsets.all(10),
+                                        padding: EdgeInsets.all(8.w),
                                         decoration: BoxDecoration(
                                           color: AppColors.accentColor
-                                              .withValues(alpha: 0.15),
+                                              .withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(
-                                            12,
+                                            10.r,
                                           ),
                                         ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.check_circle_outline,
                                           color: AppColors.accentColor,
-                                          size: 20,
+                                          size: 18.sp,
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
+                                      SizedBox(width: 12.w),
                                       Expanded(
                                         child: Text(
                                           _capitalize(itemKey),
-                                          style: const TextStyle(
-                                            fontSize: 16,
+                                          style: TextStyle(
+                                            fontSize: 15.sp, // Tono abajo
                                             fontWeight: FontWeight.w600,
                                             color: AppColors.primaryText,
                                           ),
@@ -622,38 +633,38 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       ),
                                       // Quantity Badge
                                       Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w,
+                                          vertical: 5.h,
                                         ),
                                         decoration: BoxDecoration(
                                           color: AppColors.cardBackground,
                                           borderRadius: BorderRadius.circular(
-                                            20,
+                                            12.r,
                                           ),
                                         ),
                                         child: Text(
                                           "${quantity.truncateToDouble() == quantity ? quantity.toInt() : quantity} $unit",
-                                          style: const TextStyle(
-                                            fontSize: 13,
+                                          style: TextStyle(
+                                            fontSize: 12.sp,
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.textDark,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 4.w),
                                       // Delete Action
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.close_rounded,
-                                          size: 18,
-                                          color: Colors.grey,
+                                          size: 16.sp,
+                                          color: Colors.grey.shade400,
                                         ),
                                         onPressed: () =>
                                             _removeFoodItem(itemKey),
-                                        splashRadius: 20,
+                                        splashRadius: 18,
                                         constraints: const BoxConstraints(),
-                                        padding: const EdgeInsets.all(8),
+                                        padding: EdgeInsets.all(6.w),
                                       ),
                                     ],
                                   ),
@@ -664,55 +675,59 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         },
                       ),
               ),
-            ],
-          ),
-        ),
-        // --- Floating Action Button area for Generate ---
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: itemKeys.isNotEmpty
-            ? Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.buttonDark.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _handleGenerateMenu,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.buttonDark,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.auto_awesome, color: Colors.white),
-                        SizedBox(width: 10),
-                        Text(
-                          "Generemos nuestro menú",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+
+              // --- Fixed Generate Menu Button (Now at bottom of Column) ---
+              if (itemKeys.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 110.h),
+                  child: Container(
+                    width: double.infinity,
+                    height: 50.h,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.buttonDark.withValues(alpha: 0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
+                    child: ElevatedButton(
+                      onPressed: _handleGenerateMenu,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.buttonDark,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Colors.white,
+                            size: 20.sp,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            "Generar Menú",
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              )
-            : null,
+            ],
+          ),
+        ),
+        // --- Floating Action Button area REMOVED (integrated into list) ---
       ),
     );
   }

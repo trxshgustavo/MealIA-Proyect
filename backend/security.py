@@ -9,8 +9,8 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 # --- CORRECCIÓN DE IMPORTACIONES RELATIVAS ---
-from .database import get_db # CAMBIO 1: El punto indica que 'database' está en la carpeta actual
-from . import models, schemas  # CAMBIO 2: El punto indica que 'models' y 'schemas' están en la carpeta actual
+from database import get_db
+import models, schemas
 
 load_dotenv() # Carga las variables de .env
 SECRET_KEY = os.getenv("SECRET_KEY")

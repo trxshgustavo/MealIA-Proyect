@@ -8,6 +8,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../theme/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 // Export ScannedFood for use in InventoryScreen
 class ScannedFood {
@@ -312,8 +313,8 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
 
           // 3. Close Button (Glassmorphic)
           Positioned(
-            top: 50,
-            left: 20,
+            top: 50.h,
+            left: 20.w,
             child: _GlassIconButton(
               icon: Icons.close,
               onPressed: () => Navigator.pop(context),
@@ -324,7 +325,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
           if (_detectedItems.isEmpty && !_isAnalyzing) ...[
             // Shutter Button
             Positioned(
-              bottom: 40,
+              bottom: 40.h,
               left: 0,
               right: 0,
               child: Center(
@@ -335,17 +336,17 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
               ),
             ),
             Positioned(
-              bottom: 120,
+              bottom: 120.h,
               left: 0,
               right: 0,
-              child: const Text(
+              child: Text(
                 "Apunta a la comida",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,
-                  fontSize: 16,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w500,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black87)],
+                  shadows: [Shadow(blurRadius: 4.r, color: Colors.black87)],
                 ),
               ),
             ),
@@ -369,7 +370,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -381,12 +382,12 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
                         "Analizando alimentos...",
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
+                          fontSize: 18.sp,
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(
-                              blurRadius: 10,
-                              color: Colors.black.withOpacity(0.5),
+                              blurRadius: 10.r,
+                              color: Colors.black.withValues(alpha: 0.5),
                             ),
                           ],
                         ),
@@ -418,7 +419,7 @@ class _GlassIconButton extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          color: Colors.black.withOpacity(0.2),
+          color: Colors.black.withValues(alpha: 0.2),
           child: IconButton(
             icon: Icon(icon, color: Colors.white),
             onPressed: onPressed,
@@ -447,11 +448,11 @@ class _CornerPainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 3.w
       ..strokeCap = StrokeCap.round;
 
-    double cornerSize = 40;
-    double padding = 50;
+    double cornerSize = 40.w;
+    double padding = 50.w;
 
     // Top Left
     canvas.drawLine(
@@ -512,16 +513,16 @@ class _ShutterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 80,
-      height: 80,
+      width: 80.w,
+      height: 80.w,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 4),
+        border: Border.all(color: Colors.white, width: 4.w),
       ),
       child: Center(
         child: Container(
-          width: 64,
-          height: 64,
+          width: 64.w,
+          height: 64.w,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white,
@@ -552,15 +553,15 @@ class _ResultsSheet extends StatelessWidget {
     final hasSelection = detectedItems.any((i) => i.isSelected);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9FAFB), // Very light grey background
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      height: 0.75.sh,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
         boxShadow: [
           BoxShadow(
             color: Colors.black26,
-            blurRadius: 20,
-            offset: Offset(0, -5),
+            blurRadius: 20.r,
+            offset: Offset(0, -5.h),
           ),
         ],
       ),
@@ -569,12 +570,12 @@ class _ResultsSheet extends StatelessWidget {
           // Handle
           Center(
             child: Container(
-              margin: const EdgeInsets.only(top: 16, bottom: 8),
-              width: 50,
-              height: 5,
+              margin: EdgeInsets.only(top: 16.h, bottom: 8.h),
+              width: 50.w,
+              height: 5.h,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: BorderRadius.circular(5.r),
               ),
             ),
           ),
@@ -610,14 +611,14 @@ class _ResultsSheet extends StatelessWidget {
 
           // Bottom Actions
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20.w),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
+                  blurRadius: 10.r,
+                  offset: Offset(0, -5.h),
                 ),
               ],
             ),
@@ -625,7 +626,7 @@ class _ResultsSheet extends StatelessWidget {
               children: [
                 SizedBox(
                   width: double.infinity,
-                  height: 55,
+                  height: 55.h,
                   child: ElevatedButton(
                     onPressed: hasSelection ? onFinish : null,
                     style: ElevatedButton.styleFrom(
@@ -633,12 +634,12 @@ class _ResultsSheet extends StatelessWidget {
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(16.r),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       "Agregar al Inventario",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16.sp),
                     ),
                   ),
                 ),
@@ -697,23 +698,23 @@ class _FoodItemCardState extends State<_FoodItemCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: 16.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
+            blurRadius: 15.r,
+            offset: Offset(0, 4.h),
           ),
         ],
         border: widget.item.isSelected
-            ? Border.all(color: AppColors.accentColor, width: 2)
-            : Border.all(color: Colors.transparent, width: 2),
+            ? Border.all(color: AppColors.accentColor, width: 2.w)
+            : Border.all(color: Colors.transparent, width: 2.w),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18.r),
         child: InkWell(
           onTap: () {
             setState(() {
@@ -722,7 +723,7 @@ class _FoodItemCardState extends State<_FoodItemCard> {
             widget.onChanged();
           },
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -730,7 +731,7 @@ class _FoodItemCardState extends State<_FoodItemCard> {
                   children: [
                     // Checkbox
                     Padding(
-                      padding: const EdgeInsets.only(right: 12),
+                      padding: EdgeInsets.only(right: 12.w),
                       child: Icon(
                         widget.item.isSelected
                             ? Icons.check_circle
@@ -738,7 +739,7 @@ class _FoodItemCardState extends State<_FoodItemCard> {
                         color: widget.item.isSelected
                             ? AppColors.accentColor
                             : Colors.grey[300],
-                        size: 28,
+                        size: 28.sp,
                       ),
                     ),
                     Expanded(
@@ -747,17 +748,17 @@ class _FoodItemCardState extends State<_FoodItemCard> {
                         children: [
                           Text(
                             widget.item.name,
-                            style: const TextStyle(
-                              fontSize: 18,
+                            style: TextStyle(
+                              fontSize: 18.sp,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryText,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4.h),
                           Text(
                             "${widget.item.calories} kcal • ${widget.item.info}",
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 13.sp,
                               color: Colors.grey[500],
                             ),
                           ),
@@ -767,25 +768,27 @@ class _FoodItemCardState extends State<_FoodItemCard> {
                   ],
                 ),
                 if (widget.item.isSelected) ...[
-                  const Divider(height: 30),
+                  SizedBox(height: 15.h), // Divider improved
+                  const Divider(),
+                  SizedBox(height: 15.h),
                   Row(
                     children: [
                       // Quantity Stepper
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.r),
                         ),
                         child: Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.remove, size: 18),
+                              icon: Icon(Icons.remove, size: 18.sp),
                               onPressed: () =>
                                   _updateQuantity(widget.item.quantity - 1),
                               visualDensity: VisualDensity.compact,
                             ),
                             SizedBox(
-                              width: 50,
+                              width: 50.w,
                               child: TextField(
                                 controller: _qtyController,
                                 textAlign: TextAlign.center,

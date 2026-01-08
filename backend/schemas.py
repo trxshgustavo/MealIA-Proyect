@@ -39,6 +39,10 @@ class UserDataUpdate(BaseModel):
     weight: Optional[float] = None
     birthdate: Optional[datetime] = None
     goal: Optional[str] = None
+    photo_url: Optional[str] = None
+
+class UserPasswordUpdate(BaseModel):
+    password: str
 
 class User(UserBase):
     id: int
@@ -67,6 +71,16 @@ class MealDetail(BaseModel):
     ingredients: List[str]
     steps: List[str]
     calories: int
+    # Macros
+    carbs: int
+    protein: int
+    fat: int
+    # Micros
+    fiber: float
+    sugar: float
+    sodium: int
+    # Time
+    time: str
 
 class MenuGenerationResponse(BaseModel):
     breakfast: MealDetail

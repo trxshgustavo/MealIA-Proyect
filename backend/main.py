@@ -18,8 +18,8 @@ from openai import OpenAI
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
 # Imports locales
-from . import models, schemas, security, database 
-from .database import engine, get_db
+import models, schemas, security, database
+from database import engine, get_db
 
 # Configuración OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -28,6 +28,20 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 database.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Meal.IA Backend")
+print("--------------------------------------------------")
+print("MEAL.IA BACKEND STARTED - v3 (WITH ARGON2 & CORS)")
+print("--------------------------------------------------")
+
+# --- CORS CONFIGURATION (CRITICAL FOR MOBILE/FLUTTER) ---
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods
+    allow_headers=["*"], # Allows all headers
+)
 
 # Configuración de carpetas
 os.makedirs("uploads", exist_ok=True) 
@@ -95,9 +109,17 @@ def update_user_data(data: schemas.UserDataUpdate, db: Session = Depends(get_db)
     if data.weight: current_user.weight = data.weight
     if data.birthdate: current_user.birthdate = data.birthdate
     if data.goal: current_user.goal = data.goal
+    if data.photo_url: current_user.photo_url = data.photo_url
     db.commit()
     db.refresh(current_user)
     return current_user
+
+@app.put("/users/me/password")
+def update_password(data: schemas.UserPasswordUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
+    hashed_password = security.get_password_hash(data.password)
+    current_user.hashed_password = hashed_password
+    db.commit()
+    return {"detail": "Contraseña actualizada correctamente"}
 
 
 # --- 2. GESTIÓN DE FOTOS ---
@@ -128,7 +150,8 @@ async def delete_profile_photo(db: Session = Depends(get_db), current_user: mode
             filename = current_user.photo_url.split("/")[-1]
             path = f"uploads/{filename}"
             if os.path.exists(path): os.remove(path)
-        except: pass
+        except Exception as e:
+            print(f"Error deleting photo: {e}")
     current_user.photo_url = None
     db.commit()
     return current_user
@@ -266,6 +289,15 @@ def generate_menu_with_ia(db: Session = Depends(get_db), current_user: models.Us
     - Calorías totales: {target_calories} kcal (+/- 50).
     - Idioma: Español.
 
+    INSTRUCCIONES DE DATOS "REALES" (NO INVENTAR):
+    - Calcula los MACROS (Carbohidratos, Proteína, Grasa) aproximados reales de los ingredientes.
+    - Calcula los MICROS:
+       - Fiber (g): Fibra dietética.
+       - Sugar (g): Azúcares totales.
+       - Sodium (mg): Sodio estimado.
+    - Calcula el TIEMPO de preparación real total (prep + cocción). Ej: "25 min".
+    - Si no estás seguro de un micro, haz una estimación educada basada en ingredientes, NO pongas 0.
+
     INSTRUCCIONES TÉCNICAS JSON:
     - Devuelve SOLO JSON válido.
     - NO uses comas al final de las listas (trailing commas).
@@ -276,9 +308,45 @@ def generate_menu_with_ia(db: Session = Depends(get_db), current_user: models.Us
     
     FORMATO JSON OBLIGATORIO:
     {{
-      "breakfast": {{ "name": "TÍTULO MARKETING", "ingredients": ["cant+unidad ing", ...], "steps": ["Paso 1 (tiempo)...", "Paso 2...", "Emplatado..."], "calories": int }},
-      "lunch": {{ "name": "TÍTULO MARKETING", "ingredients": ["cant+unidad ing", ...], "steps": ["...", "Emplatado..."], "calories": int }},
-      "dinner": {{ "name": "TÍTULO MARKETING", "ingredients": ["cant+unidad ing", ...], "steps": ["...", "Emplatado..."], "calories": int }},
+      "breakfast": {{ 
+        "name": "TÍTULO MARKETING", 
+        "ingredients": ["cant+unidad ing", ...], 
+        "steps": ["Paso 1 (tiempo)...", "Paso 2...", "Emplatado..."], 
+        "calories": int,
+        "carbs": int,
+        "protein": int,
+        "fat": int,
+        "fiber": float,
+        "sugar": float,
+        "sodium": int,
+        "time": "XX min"
+      }},
+      "lunch": {{ 
+        "name": "TÍTULO MARKETING", 
+        "ingredients": ["cant+unidad ing", ...], 
+        "steps": ["...", "Emplatado..."], 
+        "calories": int,
+        "carbs": int,
+        "protein": int,
+        "fat": int,
+        "fiber": float,
+        "sugar": float,
+        "sodium": int,
+        "time": "XX min"
+      }},
+      "dinner": {{ 
+        "name": "TÍTULO MARKETING", 
+        "ingredients": ["cant+unidad ing", ...], 
+        "steps": ["...", "Emplatado..."], 
+        "calories": int,
+        "carbs": int,
+        "protein": int,
+        "fat": int,
+        "fiber": float,
+        "sugar": float,
+        "sodium": int,
+        "time": "XX min"
+      }},
       "note": "Nota del Chef motivadora para tus objetivos.",
       "total_calories": int
     }}
@@ -300,6 +368,29 @@ def generate_menu_with_ia(db: Session = Depends(get_db), current_user: models.Us
                  menu_data.get("lunch",{}).get("calories",0) + 
                  menu_data.get("dinner",{}).get("calories",0))
         menu_data["total_calories"] = total
+
+        # --- SANITIZACIÓN DE DATOS (NO DEVOLVER 0) ---
+        for meal_name in ["breakfast", "lunch", "dinner"]:
+            meal = menu_data.get(meal_name)
+            if not meal: continue
+            
+            cal = meal.get("calories", 500)
+            
+            # Fallback Macros (50% Carbs, 20% Protein, 30% Fat)
+            if meal.get("carbs", 0) == 0: meal["carbs"] = int((cal * 0.50) / 4)
+            if meal.get("protein", 0) == 0: meal["protein"] = int((cal * 0.20) / 4)
+            if meal.get("fat", 0) == 0: meal["fat"] = int((cal * 0.30) / 9)
+
+            # Fallback Micros
+            if meal.get("sodium", 0) == 0: meal["sodium"] = int(cal * 0.5) # Aprox
+            if meal.get("sugar", 0) == 0: meal["sugar"] = round(cal * 0.02, 1)
+            if meal.get("fiber", 0) == 0: meal["fiber"] = round(cal * 0.015, 1)
+
+            # Fallback Time
+            if not meal.get("time") or meal.get("time") == "0 min":
+                step_count = len(meal.get("steps", []))
+                meal["time"] = f"{15 + (step_count * 5)} min"
+        # ---------------------------------------------
         
         return menu_data
 

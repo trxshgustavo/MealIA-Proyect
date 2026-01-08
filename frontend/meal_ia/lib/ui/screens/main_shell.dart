@@ -29,11 +29,16 @@ class _MainShellState extends State<MainShell> {
   }
 
   @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // El IndexedStack mantiene el estado de las pantallas
-      // (así no pierdes lo que escribiste en InventoryScreen)
       backgroundColor: AppColors.cardBackground,
+      resizeToAvoidBottomInset: false,
+      extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: CustomAnimatedNavBar(
         selectedIndex: _currentIndex,
