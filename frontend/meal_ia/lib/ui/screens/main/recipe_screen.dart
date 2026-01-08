@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
+=======
+import 'package:provider/provider.dart';
+import '../../../core/providers/app_state.dart';
+import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart';
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
@@ -55,6 +62,10 @@ class _RecipeScreenState extends State<RecipeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+
     final Map<String, dynamic>? recipeData =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
@@ -160,6 +171,7 @@ class _RecipeScreenState extends State<RecipeScreen>
             height: 40.h, // Fixed height for the nav bar area
             child: Stack(
               children: [
+<<<<<<< HEAD
                 // Back Button - Aligned left
                 Align(
                   alignment: Alignment.centerLeft,
@@ -192,6 +204,17 @@ class _RecipeScreenState extends State<RecipeScreen>
             child: Row(
               children: [
                 Expanded(
+=======
+                // Zanahoria a color, visible
+                // Contenido de la cabecera
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    100,
+                    horizontalPadding,
+                    0,
+                  ),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -285,8 +308,167 @@ class _RecipeScreenState extends State<RecipeScreen>
               ],
             ),
           ),
+<<<<<<< HEAD
         ],
       ),
+=======
+
+          // 2. TARJETA FLOTANTE (Blanca)
+          Container(
+            margin: EdgeInsets.fromLTRB(
+              horizontalPadding * 0.67,
+              260,
+              horizontalPadding * 0.67,
+              0,
+            ),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // --- SECCIÓN INGREDIENTES ---
+                      const _SectionHeader(
+                        icon: Icons.shopping_basket_outlined,
+                        title: "Ingredientes",
+                      ),
+                      const SizedBox(height: 16),
+                      if (ingredients.isEmpty)
+                        const Text(
+                          "No hay ingredientes listados",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ...ingredients.map(
+                        (item) => _IngredientItem(text: item.toString()),
+                      ),
+
+                      const SizedBox(height: 32),
+                      const Divider(color: AppColors.inputFill),
+                      const SizedBox(height: 24),
+
+                      // --- SECCIÓN PASOS ---
+                      const _SectionHeader(
+                        icon: Icons.format_list_numbered_rounded,
+                        title: "Pasos de preparación",
+                      ),
+                      const SizedBox(height: 20),
+                      if (steps.isEmpty)
+                        const Text(
+                          "No hay pasos listados",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+
+                      ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: steps.length,
+                        itemBuilder: (context, index) {
+                          return _StepItem(
+                            index: index + 1,
+                            text: steps[index].toString(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+
+      // BOTONES FLOTANTES INFERIORES
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(horizontalPadding),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        // DIFFERENT BUTTONS IF PREVIEW OR VIEW MODE
+        child: isPreview
+            ? Row(
+                // PREVIEW MODE (Generate Flow)
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _handleRegenerate(mealType, recipeData!),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Regenerar"),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.buttonDark),
+                        foregroundColor: AppColors.buttonDark,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          _handleSave(context, mealType, recipeData!),
+                      icon: const Icon(Icons.check),
+                      label: const Text("Guardar"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.buttonDark,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                // VIEW MODE (Calendar View) - Maybe just "Back" or "Favorite"
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.buttonDark),
+                        foregroundColor: AppColors.buttonDark,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text("Volver"),
+                    ),
+                  ),
+                  // KEEP FAVORITE BUTTON IF NEEDED OR REMOVE
+                ],
+              ),
+      ),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
     );
   }
 

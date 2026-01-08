@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/data/food_database.dart';
 import '../theme/app_colors.dart';
+<<<<<<< HEAD
 // import '../../screens/main/food_scanner_screen.dart'; // No longer needed if we don't link it here directly? Wait, the modal uses it.
+=======
+import '../../../utils/screen_utils.dart';
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 import '../../screens/main/food_scanner_screen.dart';
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -326,6 +330,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final appState = Provider.of<AppState>(context);
     final inventoryMap = appState.inventoryMap;
     final itemKeys = inventoryMap.keys.toList();
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final titleFontSize = ScreenUtils.getTitleFontSize(
+      context,
+      defaultSize: 28.0,
+    );
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -339,14 +350,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
             children: [
               // --- Header ---
               Padding(
+<<<<<<< HEAD
                 padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 8.h), // Reducido
+=======
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  20,
+                  horizontalPadding,
+                  10,
+                ),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "Mi Despensa",
                       style: TextStyle(
+<<<<<<< HEAD
                         fontSize: 24.sp, // Reducido de 22
+=======
+                        fontSize: titleFontSize,
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryText,
                         letterSpacing: -0.5,
@@ -359,9 +383,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
               // --- Search / Add Bar ---
               Container(
                 margin: EdgeInsets.symmetric(
+<<<<<<< HEAD
                   horizontal: 10.w,
                   vertical: 8.h,
                 ), // Márgenes ajustados
+=======
+                  horizontal: horizontalPadding,
+                  vertical: 10,
+                ),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14.r), // Radio ajustado
@@ -467,8 +497,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             borderRadius: BorderRadius.circular(14),
                             color: Colors.white,
                             child: Container(
+<<<<<<< HEAD
                               width: MediaQuery.of(context).size.width - 48,
                               constraints: const BoxConstraints(maxHeight: 200),
+=======
+                              width:
+                                  ScreenUtils.getWidth(context) -
+                                  (horizontalPadding * 2), // Match input width
+                              constraints: const BoxConstraints(maxHeight: 250),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(14),
@@ -675,6 +712,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         },
                       ),
               ),
+<<<<<<< HEAD
 
               // --- Fixed Generate Menu Button (Now at bottom of Column) ---
               if (itemKeys.isNotEmpty)
@@ -690,6 +728,55 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           color: AppColors.buttonDark.withValues(alpha: 0.3),
                           blurRadius: 15,
                           offset: const Offset(0, 6),
+=======
+            ],
+          ),
+        ),
+        // --- Floating Action Button area for Generate ---
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: itemKeys.isNotEmpty
+            ? Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Container(
+                  width: double.infinity,
+                  height: ScreenUtils.isSmallScreen(context) ? 56 : 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.buttonDark.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _handleGenerateMenu,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.buttonDark,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.auto_awesome, color: Colors.white),
+                        SizedBox(
+                          width: ScreenUtils.getElementSpacing(
+                            context,
+                            defaultSpacing: 10.0,
+                          ),
+                        ),
+                        Text(
+                          "Generemos nuestro menú",
+                          style: TextStyle(
+                            fontSize: ScreenUtils.getButtonFontSize(context),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                         ),
                       ],
                     ),

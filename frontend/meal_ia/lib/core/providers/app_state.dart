@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
+<<<<<<< HEAD
 import 'dart:typed_data'; // Required for Uint8List
+=======
+import 'dart:async';
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart'; // NECESARIO PARA AUTH
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
@@ -16,9 +21,12 @@ class AppState extends ChangeNotifier {
   final String _baseUrl = ApiConfig.baseUrl;
 
   final _storage = const FlutterSecureStorage();
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  late final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
+    // Web requiere clientId explícito
+    clientId: kIsWeb ? dotenv.env['WEB_CLIENT_ID'] : null,
+    // serverClientId NO es soportado en Web; solo en mobile
+    serverClientId: kIsWeb ? null : dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
   );
 
   // Datos de Usuario
@@ -471,8 +479,11 @@ class AppState extends ChangeNotifier {
   // --- LOGIN CON AUTO-REPARACIÓN DE FIREBASE ---
   Future<String> login(String email, String password) async {
     final url = Uri.parse('$_baseUrl/token');
+    debugPrint("Intentando login en: $url");
+    
     try {
       // 1. Login en Backend (FastAPI)
+      debugPrint("Enviando petición POST a $_baseUrl/token");
       final response = await http
           .post(
             url,
@@ -480,6 +491,8 @@ class AppState extends ChangeNotifier {
             body: {'username': email, 'password': password},
           )
           .timeout(const Duration(seconds: 60));
+
+      debugPrint("Respuesta recibida: StatusCode ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -516,7 +529,16 @@ class AppState extends ChangeNotifier {
         // Carga de datos
         final success = await _loadUserData(token);
         return success ? "OK" : "Error al cargar tus datos";
+      } else if (response.statusCode == 401) {
+        // Credenciales incorrectas
+        try {
+          final data = jsonDecode(response.body);
+          return data['detail'] ?? 'Correo o contraseña incorrectos';
+        } catch (_) {
+          return 'Correo o contraseña incorrectos';
+        }
       } else {
+<<<<<<< HEAD
         try {
           final data = jsonDecode(response.body);
           return data['detail'] ?? 'Credenciales incorrectas';
@@ -528,6 +550,35 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint("Login Connection Error: $e");
       return 'Error de conexión con el servidor. Verifica tu internet y que el backend esté corriendo.';
+=======
+        // Otro error del servidor
+        try {
+          final data = jsonDecode(response.body);
+          return data['detail'] ?? 'Error del servidor (${response.statusCode})';
+        } catch (_) {
+          return 'Error del servidor (${response.statusCode})';
+        }
+      }
+    } on http.ClientException catch (e) {
+      debugPrint("❌ ClientException en login: $e");
+      debugPrint("📍 URL intentada: $_baseUrl/token");
+      return 'No se pudo conectar al servidor en $_baseUrl\nVerifica tu conexión a internet.';
+    } on SocketException catch (e) {
+      debugPrint("❌ SocketException en login: $e");
+      debugPrint("📍 URL intentada: $_baseUrl/token");
+      return 'Sin conexión a internet.\nAsegúrate de estar conectado a WiFi o datos móviles.';
+    } on TimeoutException catch (e) {
+      debugPrint("❌ TimeoutException en login: $e");
+      debugPrint("📍 URL intentada: $_baseUrl/token");
+      return 'La conexión tardó demasiado (>60s).\nEl servidor puede estar lento o inaccesible.';
+    } on FormatException catch (e) {
+      debugPrint("❌ FormatException en login: $e");
+      return 'Respuesta inválida del servidor. Contacta soporte.';
+    } catch (e, stackTrace) {
+      debugPrint("❌ Error inesperado en login: $e");
+      debugPrint("📍 StackTrace: $stackTrace");
+      return 'Error inesperado: ${e.toString()}\nURL: $_baseUrl';
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
     }
   }
 
@@ -565,12 +616,35 @@ class AppState extends ChangeNotifier {
 
         // 3. Iniciar sesión automáticamente
         return await login(email, password);
+      } else if (response.statusCode == 400) {
+        // Error de validación (email ya registrado, etc.)
+        try {
+          final data = jsonDecode(response.body);
+          return data['detail'] ?? 'El correo ya está registrado';
+        } catch (_) {
+          return 'El correo ya está registrado';
+        }
       } else {
-        final data = jsonDecode(response.body);
-        return data['detail'] ?? 'Error al registrar';
+        // Otro error del servidor
+        try {
+          final data = jsonDecode(response.body);
+          return data['detail'] ?? 'Error del servidor (${response.statusCode})';
+        } catch (_) {
+          return 'Error del servidor (${response.statusCode})';
+        }
       }
+    } on http.ClientException catch (e) {
+      debugPrint("Error de conexión en registro: $e");
+      return 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+    } on SocketException catch (e) {
+      debugPrint("Error de red en registro: $e");
+      return 'Sin conexión a internet. Verifica tu red.';
+    } on TimeoutException catch (e) {
+      debugPrint("Timeout en registro: $e");
+      return 'La conexión tardó demasiado. Intenta de nuevo.';
     } catch (e) {
-      return 'Error de red al registrar.';
+      debugPrint("Error inesperado en registro: $e");
+      return 'Error inesperado: ${e.toString()}';
     }
   }
 
@@ -640,12 +714,25 @@ class AppState extends ChangeNotifier {
         if (!success) return "Error al cargar datos";
         return isNewUser ? "OK_NEW" : "OK_EXISTING";
       } else {
-        final data = jsonDecode(response.body);
-        return data['detail'] ?? 'Error de servidor';
+        try {
+          final data = jsonDecode(response.body);
+          return data['detail'] ?? 'Error de servidor (${response.statusCode})';
+        } catch (_) {
+          return 'Error de servidor (${response.statusCode})';
+        }
       }
+    } on http.ClientException catch (e) {
+      debugPrint("Error de conexión en Google Sign-In: $e");
+      return 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+    } on SocketException catch (e) {
+      debugPrint("Error de red en Google Sign-In: $e");
+      return 'Sin conexión a internet. Verifica tu red.';
+    } on TimeoutException catch (e) {
+      debugPrint("Timeout en Google Sign-In: $e");
+      return 'La conexión tardó demasiado. Intenta de nuevo.';
     } catch (e) {
-      // print("Error signInWithGoogle: $e");
-      return "Error: $e";
+      debugPrint("Error inesperado en Google Sign-In: $e");
+      return 'Error inesperado: ${e.toString()}';
     }
   }
 
@@ -1598,7 +1685,8 @@ class AppState extends ChangeNotifier {
         // Maybe Unit is inside the name part or missing (Count)
         // E.g. "2 Huevos" -> Unit="u"
         ingredientName =
-            match.group(3) ?? "${match.group(2) ?? ''} ${match.group(3) ?? ''}";
+            match.group(3) ??
+            '${match.group(2) ?? ''} ${match.group(3) ?? ''}';
         ingredientName = ingredientName.trim();
       }
     }
@@ -1665,9 +1753,7 @@ class AppState extends ChangeNotifier {
             qtyToSend = resultBase.round(); // 'u' must be int.
             unitToSend =
                 currentData['unit']; // Keep original name if it was 'Huevos' etc, actually _getBase returns 'u' for unknown.
-            if (unitToSend == 'u') {
-              unitToSend = currentData['unit']; // if it was 'Unidades' keep it.
-            }
+            if (unitToSend == 'u') unitToSend = currentData['unit']; // if it was 'Unidades' keep it.
           } else {
             // For Mass/Vol, we use the base value (g or ml)
             qtyToSend = resultBase.round();

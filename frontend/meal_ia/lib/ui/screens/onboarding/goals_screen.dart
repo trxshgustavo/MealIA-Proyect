@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+<<<<<<< HEAD
+=======
+import '../../../utils/screen_utils.dart'; 
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -104,8 +108,14 @@ class GoalsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageSize = ScreenUtils.getResponsiveImageSize(context, baseSize: 280.0);
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(context);
+    final verticalSpacing = ScreenUtils.getVerticalSpacing(context, defaultSpacing: 20.0);
+    final formPadding = ScreenUtils.getFormPadding(context);
+
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
+<<<<<<< HEAD
       body: CustomScrollView(
         physics: const ClampingScrollPhysics(),
         slivers: [
@@ -124,6 +134,38 @@ class GoalsScreen extends StatelessWidget {
                       Icons.flag,
                       size: 100.sp,
                       color: AppColors.primaryText,
+=======
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ScreenUtils.getMaxContainerWidth(context),
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(horizontalPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Image.asset(
+                  'assets/carrot.png',
+                  height: imageSize,
+                  width: imageSize,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.flag, size: 100, color: AppColors.primaryText),
+                ),
+                SizedBox(height: verticalSpacing),
+                
+                Container(
+                  padding: formPadding, // Padding interno de la tarjeta
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      spreadRadius: 0,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                     ),
                   ),
                   SizedBox(height: 20.h),
@@ -214,6 +256,6 @@ class GoalsScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }

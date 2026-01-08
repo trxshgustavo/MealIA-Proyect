@@ -4,6 +4,7 @@ import '../../../core/providers/app_state.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_colors.dart';
 import 'recipe_screen.dart';
+import '../../../utils/screen_utils.dart';
 
 class RecipeCalendarScreen extends StatefulWidget {
   const RecipeCalendarScreen({super.key});
@@ -63,8 +64,14 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final titleFontSize = ScreenUtils.getTitleFontSize(
+      context,
+      defaultSize: 28.0,
+    );
 
-    // FIX: Get menu specifically for the selected date
     final dailyMenu = appState.getMenuForDate(_selectedDate);
     final isToday = _isSameDay(_selectedDate, DateTime.now());
 
@@ -77,18 +84,30 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             // Header Section
             Padding(
               padding: EdgeInsets.fromLTRB(
+<<<<<<< HEAD
                 20.w,
                 16.h,
                 20.w,
                 10.h,
               ), // Espaciado reducido
+=======
+                horizontalPadding,
+                20,
+                horizontalPadding,
+                20,
+              ),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     "Plan de Comidas",
                     style: TextStyle(
+<<<<<<< HEAD
                       fontSize: 24.sp, // Reducido de 20
+=======
+                      fontSize: titleFontSize,
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                       fontWeight: FontWeight.w800,
                       color: AppColors.textDark,
                       letterSpacing: -0.5,
@@ -108,6 +127,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             ),
 
             // Horizontal Calendar Strip
+<<<<<<< HEAD
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 15.w),
               child: SizedBox(
@@ -124,6 +144,20 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                     return _buildDateBubble(date, isSelected);
                   },
                 ),
+=======
+            SizedBox(
+              height: 90,
+              child: ListView.separated(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                scrollDirection: Axis.horizontal,
+                itemCount: _weekDays.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final date = _weekDays[index];
+                  final isSelected = _isSameDay(date, _selectedDate);
+                  return _buildDateBubble(date, isSelected);
+                },
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
               ),
             ),
 
@@ -144,8 +178,13 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                     ),
                   ],
                 ),
+<<<<<<< HEAD
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 100.h),
+=======
+                child: Padding(
+                  padding: EdgeInsets.all(horizontalPadding),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                   child: _buildMealList(context, dailyMenu, isToday),
                 ),
               ),

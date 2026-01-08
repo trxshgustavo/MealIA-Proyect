@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+<<<<<<< HEAD
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+=======
+import '../../../utils/screen_utils.dart';
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -259,10 +263,19 @@ class _MenuScreenState extends State<MenuScreen> {
                   Expanded(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
+<<<<<<< HEAD
                         horizontal: 20.0.w,
                         vertical: 10.0.h,
+=======
+                        horizontal: ScreenUtils.getResponsiveHorizontalPadding(context),
+                        vertical: ScreenUtils.getResponsiveVerticalPadding(context) * 0.5,
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                       ),
-                      child: Column(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: ScreenUtils.getMaxContainerWidth(context),
+                        ),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // HEADER "Total de Hoy" COMPACTO
@@ -377,6 +390,7 @@ class _MenuScreenState extends State<MenuScreen> {
                           // --- MOVED BUTTONS HERE ---
                           SizedBox(height: 20.h),
                         ],
+                        ),
                       ),
                     ),
                   ),
@@ -384,8 +398,18 @@ class _MenuScreenState extends State<MenuScreen> {
                   // 2. Botones de Acción (Compactos)
                   Container(
                     width: double.infinity,
+<<<<<<< HEAD
                     padding: EdgeInsets.fromLTRB(20.w, 10.h, 20.w, 20.h),
                     decoration: BoxDecoration(
+=======
+                    padding: EdgeInsets.fromLTRB(
+                      ScreenUtils.getResponsiveHorizontalPadding(context), 
+                      ScreenUtils.getResponsiveVerticalPadding(context) * 0.5, 
+                      ScreenUtils.getResponsiveHorizontalPadding(context), 
+                      ScreenUtils.getResponsiveVerticalPadding(context),
+                    ),
+                    decoration: const BoxDecoration(
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                       color: AppColors.cardBackground,
                       border: Border(
                         top: BorderSide(color: Colors.grey.shade100),

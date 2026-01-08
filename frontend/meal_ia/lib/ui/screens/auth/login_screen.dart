@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+<<<<<<< HEAD
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+=======
+import '../../../utils/screen_utils.dart';
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -109,11 +113,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. CORRECCIÓN: GestureDetector envuelve todo para cerrar teclado al tocar fuera
+    final titleFontSize = ScreenUtils.getTitleFontSize(
+      context,
+      defaultSize: 40.0,
+    );
+    final imageSize = ScreenUtils.getResponsiveImageSize(
+      context,
+      baseSize: 300.0,
+    );
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final verticalSpacing = ScreenUtils.getVerticalSpacing(
+      context,
+      defaultSpacing: 80.0,
+    );
+    final formPadding = ScreenUtils.getFormPadding(context);
+    final topSpacing = ScreenUtils.getHeight(context) * 0.05;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
+<<<<<<< HEAD
         body: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
@@ -306,6 +328,175 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           },
+=======
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          iconTheme: const IconThemeData(color: Colors.black54),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: ScreenUtils.getMaxContainerWidth(context),
+              ),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(height: topSpacing),
+
+                    Text(
+                      '¡Bienvenid@ a Meal.IA!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.primaryText,
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: verticalSpacing),
+
+                    Image.asset(
+                      'assets/carrot.png',
+                      height: imageSize,
+                      width: imageSize,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.error, color: AppColors.primaryText),
+                    ),
+                    SizedBox(height: verticalSpacing),
+
+                    Container(
+                      padding: formPadding,
+                      decoration: BoxDecoration(
+                        color: AppColors.formBackground,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.2),
+                            spreadRadius: 5,
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              'Bienvenido de vuelta',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.primaryText,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            ElevatedButton.icon(
+                              icon: Image.asset(
+                                'assets/google_logo.png',
+                                height: 22.0,
+                                width: 22.0,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.g_mobiledata,
+                                      color: Colors.black,
+                                    ),
+                              ),
+                              label: const Text('Ingresar con Google'),
+                              onPressed: _isLoading ? null : _submitGoogleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black87,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                side: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            const Text(
+                              'O ingresa con tu correo',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppColors.secondaryText),
+                            ),
+                            const SizedBox(height: 16),
+
+                            TextFormField(
+                              controller: _emailCtl,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: _inputDecoration(
+                                'Correo Electrónico',
+                              ),
+                              style: const TextStyle(
+                                color: AppColors.primaryText,
+                              ),
+                              validator: (v) => (v == null || !v.contains('@'))
+                                  ? 'Correo no válido'
+                                  : null,
+                            ),
+                            const SizedBox(height: 12),
+
+                            TextFormField(
+                              controller: _passwordCtl,
+                              obscureText: true,
+                              decoration: _inputDecoration('Contraseña'),
+                              style: const TextStyle(
+                                color: AppColors.primaryText,
+                              ),
+                              validator: (v) => (v == null || v.isEmpty)
+                                  ? 'Ingresa tu contraseña'
+                                  : null,
+                            ),
+                            const SizedBox(height: 24),
+
+                            _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : ElevatedButton(
+                                    onPressed: _submitLogin,
+                                    child: const Text(
+                                      'Ingresar',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pushNamed(context, '/register'),
+                              child: const Text(
+                                '¿No tienes cuenta? Regístrate aquí',
+                                style: TextStyle(
+                                  color: AppColors.secondaryText,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: AppColors.secondaryText,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: ScreenUtils.getElementSpacing(context)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
         ),
       ),
     );

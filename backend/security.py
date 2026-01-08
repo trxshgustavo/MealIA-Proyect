@@ -8,9 +8,16 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+<<<<<<< HEAD
 # --- CORRECCIÓN DE IMPORTACIONES RELATIVAS ---
 from database import get_db
 import models, schemas
+=======
+# --- CORRECCIÓN DE IMPORTACIONES ---
+from database import get_db
+import models
+import schemas
+>>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 load_dotenv() # Carga las variables de .env
 SECRET_KEY = os.getenv("SECRET_KEY")
