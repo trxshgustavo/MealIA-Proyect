@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
-<<<<<<< HEAD
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-=======
 import '../../../utils/screen_utils.dart';
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -151,15 +148,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-<<<<<<< HEAD
-        body: CustomScrollView(
-          physics: const ClampingScrollPhysics(),
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.0.w),
-=======
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -175,62 +163,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-<<<<<<< HEAD
-                    SizedBox(height: 40.h), // Top spacing
-=======
                     SizedBox(height: topSpacing),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
                     Text(
                       '¡Empecemos!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.primaryText,
-<<<<<<< HEAD
-                        fontSize: 32.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-
-                    // Flexible image or fixed relative height
-                    SizedBox(
-                      height: 0.2.sh, // 20% of screen height
-                      child: Center(
-                        child: Image.asset(
-                          'assets/carrot.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.error,
-                                color: AppColors.primaryText,
-                              ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-
-                    // Form Container
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20.w,
-                        vertical: 16.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.formBackground,
-                        borderRadius: BorderRadius.circular(20.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withValues(alpha: 0.2),
-                            spreadRadius: 5.r,
-                            blurRadius: 15.r,
-                            offset: Offset(0, 5.h),
-=======
                         fontSize: titleFontSize,
                         fontWeight: FontWeight.bold,
                       ),
@@ -257,7 +200,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             spreadRadius: 5,
                             blurRadius: 15,
                             offset: const Offset(0, 5),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                           ),
                         ],
                       ),
@@ -265,42 +207,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-<<<<<<< HEAD
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-=======
                           children: [
                             const Text(
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                               'Regístrate para comenzar',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: AppColors.primaryText,
-<<<<<<< HEAD
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: 12.h),
-=======
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 20),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
                             ElevatedButton.icon(
                               icon: Image.asset(
                                 'assets/google_logo.png',
-<<<<<<< HEAD
-                                height: 20.0.h,
-                                width: 20.0.w,
-=======
                                 height: 22.0,
                                 width: 22.0,
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                                 errorBuilder: (context, error, stackTrace) =>
                                     const Icon(
                                       Icons.g_mobiledata,
@@ -312,36 +235,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: Colors.black87,
-<<<<<<< HEAD
-                                padding: EdgeInsets.symmetric(vertical: 10.h),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-=======
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                                 ),
                                 side: BorderSide(color: Colors.grey[300]!),
                               ),
                             ),
-<<<<<<< HEAD
-                            SizedBox(height: 12.h),
-
-                            const Text(
-                              'O regístrate con tu correo',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: AppColors.secondaryText,
-                                fontSize: 12,
-                              ),
-                            ),
-                            SizedBox(height: 12.h),
-
-                            // Fields compacted
-=======
                             const SizedBox(height: 16),
                             const Text(
                               'O regístrate con tu correo',
@@ -351,34 +253,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 16),
 
                             // --- CAMPOS DE TEXTO ---
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                             TextFormField(
                               controller: _emailCtl,
                               keyboardType: TextInputType.emailAddress,
                               decoration: _inputDecoration(
-<<<<<<< HEAD
-                                'Correo',
-=======
                                 'Correo Electrónico',
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                                 Icons.email_outlined,
                               ),
                               style: const TextStyle(
                                 color: AppColors.primaryText,
-<<<<<<< HEAD
-                                fontSize: 14,
-=======
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                               ),
                               validator: (v) => (v == null || !v.contains('@'))
                                   ? 'Correo no válido'
                                   : null,
                             ),
-<<<<<<< HEAD
-                            SizedBox(height: 8.h),
-=======
                             const SizedBox(height: 12),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
                             TextFormField(
                               controller: _passwordCtl,
@@ -389,62 +278,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               style: const TextStyle(
                                 color: AppColors.primaryText,
-<<<<<<< HEAD
-                                fontSize: 14,
-=======
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                               ),
                               validator: (v) => (v == null || v.length < 6)
                                   ? 'Mínimo 6 caracteres'
                                   : null,
                             ),
-<<<<<<< HEAD
-                            SizedBox(height: 8.h),
-
-                            // Fila para Nombre y Apellido
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _firstNameCtl,
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                    decoration: _inputDecoration(
-                                      'Nombre',
-                                      Icons.person_outline,
-                                    ),
-                                    style: const TextStyle(
-                                      color: AppColors.primaryText,
-                                      fontSize: 14,
-                                    ),
-                                    validator: (v) => (v == null || v.isEmpty)
-                                        ? 'Requerido'
-                                        : null,
-                                  ),
-                                ),
-                                SizedBox(width: 10.w),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _lastNameCtl,
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                    decoration: _inputDecoration(
-                                      'Apellido',
-                                      Icons.person_outline,
-                                    ),
-                                    style: const TextStyle(
-                                      color: AppColors.primaryText,
-                                      fontSize: 14,
-                                    ),
-                                    validator: (v) => (v == null || v.isEmpty)
-                                        ? 'Requerido'
-                                        : null,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16.h),
-=======
                             const SizedBox(height: 12),
 
                             // Fila para Nombre y Apellido (Opcional: los dejé en columna para seguridad en pantallas chicas)
@@ -477,7 +315,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
 
                             const SizedBox(height: 20),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
                             _isLoading
                                 ? const Center(
@@ -485,51 +322,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   )
                                 : ElevatedButton(
                                     onPressed: _submitRegister,
-<<<<<<< HEAD
-                                    style: ElevatedButton.styleFrom(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 12.h,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Registrar y Continuar',
-                                      style: TextStyle(fontSize: 16.sp),
-=======
                                     child: const Text(
                                       'Registrar y Continuar',
                                       style: TextStyle(fontSize: 16),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                                     ),
                                   ),
 
                             TextButton(
-<<<<<<< HEAD
-                              onPressed: () async {
-                                FocusScope.of(context).unfocus();
-                                await SystemChannels.textInput.invokeMethod(
-                                  'TextInput.hide',
-                                );
-                                await Future.delayed(
-                                  const Duration(milliseconds: 200),
-                                );
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
-                              },
-=======
                               onPressed: () =>
                                   Navigator.pop(context), // Vuelve a Login
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                               child: const Text(
                                 '¿Ya tienes cuenta? Inicia sesión',
                                 style: TextStyle(
                                   color: AppColors.secondaryText,
                                   decoration: TextDecoration.underline,
                                   decorationColor: AppColors.secondaryText,
-<<<<<<< HEAD
-                                  fontSize: 12,
-=======
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                                 ),
                               ),
                             ),
@@ -537,16 +344,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                     ),
-<<<<<<< HEAD
-                    SizedBox(height: 20.h),
-=======
                     SizedBox(height: ScreenUtils.getElementSpacing(context)),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                   ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

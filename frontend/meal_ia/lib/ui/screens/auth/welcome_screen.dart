@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-<<<<<<< HEAD
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-=======
+
 import '../../../utils/screen_utils.dart';
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -56,7 +53,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     final buttonFontSize = ScreenUtils.getButtonFontSize(context);
     final imageHeight = ScreenUtils.getImageHeight(context);
     final verticalSpacing = ScreenUtils.getVerticalSpacing(context);
-    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(context);
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
     final verticalPadding = ScreenUtils.getResponsiveVerticalPadding(context);
     final isVerySmall = ScreenUtils.isVerySmallHeight(context);
     final isSmall = ScreenUtils.isSmallScreen(context);
@@ -64,99 +63,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-<<<<<<< HEAD
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 40.0.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Spacer(flex: 1),
-
-              // --- Título ---
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '¡Hola Bienvenid@\n a Meal.IA!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.primaryText,
-                      fontSize: 45.sp, // Reduced base size
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 50.h), // Adaptive space
-              // --- Subtítulo ---
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    "Soy 'Meal.IA' y te estaré ayudando a planificar\n tus menús para que cumplas tus objetivos",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.secondaryText,
-                      fontSize: 15.sp, // Reduced base size
-                      height: 1.6,
-                    ),
-                  ),
-                ),
-              ),
-
-              Spacer(flex: 2), // Flexible space instead of fixed height
-              // --- IMAGEN GIF ---
-              Expanded(
-                flex: 4,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Container(
-                      alignment: Alignment.center,
-                      child: Image.asset(
-                        'assets/saludo_carrot.png',
-                        fit: BoxFit.contain,
-                        gaplessPlayback: true,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Icon(Icons.image, size: 30, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              Spacer(flex: 2),
-
-              // --- Botón "Comencemos" ---
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/login');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.inputFill,
-                      foregroundColor: AppColors.primaryText,
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.r),
-                      ),
-                    ),
-                    child: Row(
-=======
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -164,21 +75,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       vertical: verticalPadding,
                     ),
                     child: Column(
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-<<<<<<< HEAD
-                        Text(
-                          'Comencemos',
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        const Icon(Icons.arrow_forward, size: 24),
-=======
                         if (!isVerySmall) const Spacer(flex: 1),
 
                         // --- Título ---
@@ -234,9 +133,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             ),
                           ),
                         ),
-                        
+
                         if (!isVerySmall) const Spacer(flex: 1),
-                        if (isVerySmall) SizedBox(height: verticalSpacing * 0.5),
+                        if (isVerySmall)
+                          SizedBox(height: verticalSpacing * 0.5),
 
                         // --- Botón "Comencemos" ---
                         FadeTransition(
@@ -273,20 +173,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           ),
                         ),
                         SizedBox(height: isVerySmall ? 20.0 : 40.0),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                       ],
                     ),
                   ),
                 ),
               ),
-<<<<<<< HEAD
-              SizedBox(height: 30.h),
-            ],
-          ),
-=======
             );
           },
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
         ),
       ),
     );

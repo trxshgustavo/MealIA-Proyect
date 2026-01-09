@@ -6,11 +6,8 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 import '../legal/legal_screen.dart';
-<<<<<<< HEAD
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-=======
 import '../../../utils/screen_utils.dart';
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -309,13 +306,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: SingleChildScrollView(
           child: Padding(
-<<<<<<< HEAD
-            padding: EdgeInsets.all(24.0.w),
-=======
             padding: EdgeInsets.all(
               ScreenUtils.getResponsiveHorizontalPadding(context),
             ),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -324,11 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   "Cambiar Contraseña",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-<<<<<<< HEAD
-                    fontSize: 20.sp,
-=======
                     fontSize: ScreenUtils.getSubtitleFontSize(context),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
                   ),
@@ -571,19 +560,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context,
     );
     final verticalPadding = ScreenUtils.getResponsiveVerticalPadding(context);
-    final isSmallScreen = ScreenUtils.isSmallScreen(context);
 
     return Container(
       width: double.infinity,
-<<<<<<< HEAD
-      padding: EdgeInsets.all(20.w), // Reducido de 24
-      margin: EdgeInsets.fromLTRB(
-        16.w,
-        16.h,
-        16.w,
-        16.h,
-      ), // Margen inferior reducido
-=======
       padding: EdgeInsets.all(horizontalPadding),
       margin: EdgeInsets.fromLTRB(
         horizontalPadding * 0.67,
@@ -591,7 +570,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         horizontalPadding * 0.67,
         verticalPadding * 0.67,
       ),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24.r), // Standardized radius
@@ -607,7 +585,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           GestureDetector(
             onTap: _uploadPhoto,
-<<<<<<< HEAD
             child: Stack(
               children: [
                 Container(
@@ -680,16 +657,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ],
-=======
-            child: CircleAvatar(
-              radius: isSmallScreen ? 50 : 70,
-              backgroundColor: AppColors.cardDark,
-              backgroundImage: _imageFile != null
-                  ? FileImage(_imageFile!) as ImageProvider
-                  : (appState.photoUrl != null && appState.photoUrl!.isNotEmpty)
-                  ? NetworkImage(appState.photoUrl!)
-                  : null,
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
             ),
           ),
           SizedBox(width: 20.w),
@@ -699,15 +666,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   "${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}",
-<<<<<<< HEAD
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 18.sp, // Reducido de 22
-=======
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 18 : 22,
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
@@ -715,15 +677,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SizedBox(height: 4.h),
                 Text(
                   appState.goal,
-<<<<<<< HEAD
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14.sp, // Reducido de 16
-=======
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16,
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                     color: AppColors.secondaryText,
                     height: 1.3,
                   ),
@@ -740,7 +697,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     BuildContext context, {
     required List<Widget> children,
   }) {
-<<<<<<< HEAD
     // Interleave dividers between children
     final List<Widget> separatedChildren = [];
     for (int i = 0; i < children.length; i++) {
@@ -752,12 +708,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
 
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: 16.w,
-        vertical: 8.h,
-      ), // Margen vertical reducido
-=======
     final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
       context,
     );
@@ -771,7 +721,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         horizontal: horizontalPadding * 0.67,
         vertical: verticalSpacing * 0.5,
       ),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r), // Reducido

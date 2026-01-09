@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
-<<<<<<< HEAD
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-=======
 import '../../../utils/screen_utils.dart';
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -263,133 +260,138 @@ class _MenuScreenState extends State<MenuScreen> {
                   Expanded(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-<<<<<<< HEAD
-                        horizontal: 20.0.w,
-                        vertical: 10.0.h,
-=======
-                        horizontal: ScreenUtils.getResponsiveHorizontalPadding(context),
-                        vertical: ScreenUtils.getResponsiveVerticalPadding(context) * 0.5,
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
+                        horizontal: ScreenUtils.getResponsiveHorizontalPadding(
+                          context,
+                        ),
+                        vertical:
+                            ScreenUtils.getResponsiveVerticalPadding(context) *
+                            0.5,
                       ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
                           maxWidth: ScreenUtils.getMaxContainerWidth(context),
                         ),
                         child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // HEADER "Total de Hoy" COMPACTO
-                          Center(
-                            child: Column(
-                              children: [
-                                Image.asset(
-                                  'assets/carrot.png',
-                                  height: 140.h, // Reducido de 140
-                                  width: 140.w,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(Icons.restaurant, size: 40.sp),
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // HEADER "Total de Hoy" COMPACTO
+                            Center(
+                              child: Column(
+                                children: [
+                                  Image.asset(
+                                    'assets/carrot.png',
+                                    height: 140.h, // Reducido de 140
+                                    width: 140.w,
+                                    fit: BoxFit.contain,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Icon(Icons.restaurant, size: 40.sp),
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Text(
+                                    'Total calorias de hoy',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.secondaryText,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    "${app.totalCalories} kcal",
+                                    style: TextStyle(
+                                      fontSize: 32.sp, // Reducido de 36
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.primaryText,
+                                      letterSpacing: -1.0,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 24.h), // Reducido de 30
+
+                            _buildMealCard(
+                              context,
+                              title: 'Desayuno',
+                              icon: Icons.wb_sunny_rounded,
+                              iconColor: Colors.orange,
+                              mealName:
+                                  menu['breakfast']?['name'] ?? 'Sugerencia',
+                              items:
+                                  menu['breakfast']?['ingredients'] as List? ??
+                                  [],
+                              calories: menu['breakfast']?['calories'] ?? 0,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/recipe',
+                                arguments: menu['breakfast'],
+                              ),
+                            ),
+
+                            _buildMealCard(
+                              context,
+                              title: 'Almuerzo',
+                              icon: Icons.restaurant,
+                              iconColor: Colors.redAccent,
+                              mealName: menu['lunch']?['name'] ?? 'Sugerencia',
+                              items:
+                                  menu['lunch']?['ingredients'] as List? ?? [],
+                              calories: menu['lunch']?['calories'] ?? 0,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/recipe',
+                                arguments: menu['lunch'],
+                              ),
+                            ),
+
+                            _buildMealCard(
+                              context,
+                              title: 'Cena',
+                              icon: Icons.nights_stay_rounded,
+                              iconColor: Colors.indigo,
+                              mealName: menu['dinner']?['name'] ?? 'Sugerencia',
+                              items:
+                                  menu['dinner']?['ingredients'] as List? ?? [],
+                              calories: menu['dinner']?['calories'] ?? 0,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/recipe',
+                                arguments: menu['dinner'],
+                              ),
+                            ),
+
+                            SizedBox(height: 16.h),
+
+                            if (menu['note'] != null)
+                              Container(
+                                padding: EdgeInsets.all(12.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueGrey.withValues(
+                                    alpha: 0.05,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.blueGrey.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                  ),
                                 ),
-                                SizedBox(height: 8.h),
-                                Text(
-                                  'Total calorias de hoy',
+                                child: Text(
+                                  menu['note'],
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: 13.sp,
+                                    fontStyle: FontStyle.italic,
                                     color: AppColors.secondaryText,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13.sp,
                                   ),
                                 ),
-                                Text(
-                                  "${app.totalCalories} kcal",
-                                  style: TextStyle(
-                                    fontSize: 32.sp, // Reducido de 36
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.primaryText,
-                                    letterSpacing: -1.0,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 24.h), // Reducido de 30
-
-                          _buildMealCard(
-                            context,
-                            title: 'Desayuno',
-                            icon: Icons.wb_sunny_rounded,
-                            iconColor: Colors.orange,
-                            mealName:
-                                menu['breakfast']?['name'] ?? 'Sugerencia',
-                            items:
-                                menu['breakfast']?['ingredients'] as List? ??
-                                [],
-                            calories: menu['breakfast']?['calories'] ?? 0,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              '/recipe',
-                              arguments: menu['breakfast'],
-                            ),
-                          ),
-
-                          _buildMealCard(
-                            context,
-                            title: 'Almuerzo',
-                            icon: Icons.restaurant,
-                            iconColor: Colors.redAccent,
-                            mealName: menu['lunch']?['name'] ?? 'Sugerencia',
-                            items: menu['lunch']?['ingredients'] as List? ?? [],
-                            calories: menu['lunch']?['calories'] ?? 0,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              '/recipe',
-                              arguments: menu['lunch'],
-                            ),
-                          ),
-
-                          _buildMealCard(
-                            context,
-                            title: 'Cena',
-                            icon: Icons.nights_stay_rounded,
-                            iconColor: Colors.indigo,
-                            mealName: menu['dinner']?['name'] ?? 'Sugerencia',
-                            items:
-                                menu['dinner']?['ingredients'] as List? ?? [],
-                            calories: menu['dinner']?['calories'] ?? 0,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              '/recipe',
-                              arguments: menu['dinner'],
-                            ),
-                          ),
-
-                          SizedBox(height: 16.h),
-
-                          if (menu['note'] != null)
-                            Container(
-                              padding: EdgeInsets.all(12.w),
-                              decoration: BoxDecoration(
-                                color: Colors.blueGrey.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.blueGrey.withValues(alpha: 0.1),
-                                ),
                               ),
-                              child: Text(
-                                menu['note'],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontStyle: FontStyle.italic,
-                                  color: AppColors.secondaryText,
-                                  fontSize: 13.sp,
-                                ),
-                              ),
-                            ),
-                          SizedBox(height: 16.h),
+                            SizedBox(height: 16.h),
 
-                          // --- MOVED BUTTONS HERE ---
-                          SizedBox(height: 20.h),
-                        ],
+                            // --- MOVED BUTTONS HERE ---
+                            SizedBox(height: 20.h),
+                          ],
                         ),
                       ),
                     ),
@@ -398,18 +400,13 @@ class _MenuScreenState extends State<MenuScreen> {
                   // 2. Botones de Acción (Compactos)
                   Container(
                     width: double.infinity,
-<<<<<<< HEAD
-                    padding: EdgeInsets.fromLTRB(20.w, 10.h, 20.w, 20.h),
-                    decoration: BoxDecoration(
-=======
                     padding: EdgeInsets.fromLTRB(
-                      ScreenUtils.getResponsiveHorizontalPadding(context), 
-                      ScreenUtils.getResponsiveVerticalPadding(context) * 0.5, 
-                      ScreenUtils.getResponsiveHorizontalPadding(context), 
+                      ScreenUtils.getResponsiveHorizontalPadding(context),
+                      ScreenUtils.getResponsiveVerticalPadding(context) * 0.5,
+                      ScreenUtils.getResponsiveHorizontalPadding(context),
                       ScreenUtils.getResponsiveVerticalPadding(context),
                     ),
-                    decoration: const BoxDecoration(
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
+                    decoration: BoxDecoration(
                       color: AppColors.cardBackground,
                       border: Border(
                         top: BorderSide(color: Colors.grey.shade100),

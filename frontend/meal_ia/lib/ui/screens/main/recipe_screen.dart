@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
-=======
-import 'package:provider/provider.dart';
-import '../../../core/providers/app_state.dart';
+
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
@@ -72,6 +68,10 @@ class _RecipeScreenState extends State<RecipeScreen>
     final String name = recipeData?['name'] ?? 'Receta';
     final int calories = recipeData?['calories'] ?? 0;
     final List<dynamic> steps = recipeData?['steps'] ?? [];
+    final List<dynamic> ingredients = recipeData?['ingredients'] ?? [];
+
+    final bool isPreview = recipeData?['isPreview'] ?? false;
+    final String mealType = recipeData?['mealType'] ?? 'breakfast';
 
     // STRICT DATA PARSING
     final int carbs = recipeData?['carbs'] ?? 0;
@@ -136,13 +136,105 @@ class _RecipeScreenState extends State<RecipeScreen>
                 duration: const Duration(milliseconds: 300),
                 child: _selectedTabIndex == 0
                     ? _buildNutritionTab(nutrientData)
-                    : _buildRecipeTab(name, steps),
+                    : _buildRecipeTab(name, ingredients, steps),
               ),
             ),
           ],
         ),
       ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(horizontalPadding),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        // DIFFERENT BUTTONS IF PREVIEW OR VIEW MODE
+        child: isPreview
+            ? Row(
+                // PREVIEW MODE (Generate Flow)
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _handleRegenerate(mealType, recipeData!),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Regenerar"),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.buttonDark),
+                        foregroundColor: AppColors.buttonDark,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          _handleSave(context, mealType, recipeData!),
+                      icon: const Icon(Icons.check),
+                      label: const Text("Guardar"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.buttonDark,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                // VIEW MODE (Calendar View) - Maybe just "Back" or "Favorite"
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.buttonDark),
+                        foregroundColor: AppColors.buttonDark,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text("Volver"),
+                    ),
+                  ),
+                  // KEEP FAVORITE BUTTON IF NEEDED OR REMOVE
+                ],
+              ),
+      ),
     );
+  }
+
+  void _handleRegenerate(String mealType, Map<String, dynamic> currentData) {
+    // TODO: Implement regenerate logic
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Regenerar no implementado aún")),
+    );
+  }
+
+  void _handleSave(
+    BuildContext context,
+    String mealType,
+    Map<String, dynamic> data,
+  ) async {
+    // TODO: Implement save logic properly
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Guardado simulado")));
+    Navigator.pop(context);
   }
 
   Widget _buildHeader(
@@ -171,7 +263,6 @@ class _RecipeScreenState extends State<RecipeScreen>
             height: 40.h, // Fixed height for the nav bar area
             child: Stack(
               children: [
-<<<<<<< HEAD
                 // Back Button - Aligned left
                 Align(
                   alignment: Alignment.centerLeft,
@@ -204,17 +295,6 @@ class _RecipeScreenState extends State<RecipeScreen>
             child: Row(
               children: [
                 Expanded(
-=======
-                // Zanahoria a color, visible
-                // Contenido de la cabecera
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    100,
-                    horizontalPadding,
-                    0,
-                  ),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -308,167 +388,8 @@ class _RecipeScreenState extends State<RecipeScreen>
               ],
             ),
           ),
-<<<<<<< HEAD
         ],
       ),
-=======
-
-          // 2. TARJETA FLOTANTE (Blanca)
-          Container(
-            margin: EdgeInsets.fromLTRB(
-              horizontalPadding * 0.67,
-              260,
-              horizontalPadding * 0.67,
-              0,
-            ),
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(horizontalPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // --- SECCIÓN INGREDIENTES ---
-                      const _SectionHeader(
-                        icon: Icons.shopping_basket_outlined,
-                        title: "Ingredientes",
-                      ),
-                      const SizedBox(height: 16),
-                      if (ingredients.isEmpty)
-                        const Text(
-                          "No hay ingredientes listados",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ...ingredients.map(
-                        (item) => _IngredientItem(text: item.toString()),
-                      ),
-
-                      const SizedBox(height: 32),
-                      const Divider(color: AppColors.inputFill),
-                      const SizedBox(height: 24),
-
-                      // --- SECCIÓN PASOS ---
-                      const _SectionHeader(
-                        icon: Icons.format_list_numbered_rounded,
-                        title: "Pasos de preparación",
-                      ),
-                      const SizedBox(height: 20),
-                      if (steps.isEmpty)
-                        const Text(
-                          "No hay pasos listados",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-
-                      ListView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: steps.length,
-                        itemBuilder: (context, index) {
-                          return _StepItem(
-                            index: index + 1,
-                            text: steps[index].toString(),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-
-      // BOTONES FLOTANTES INFERIORES
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.all(horizontalPadding),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        // DIFFERENT BUTTONS IF PREVIEW OR VIEW MODE
-        child: isPreview
-            ? Row(
-                // PREVIEW MODE (Generate Flow)
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _handleRegenerate(mealType, recipeData!),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text("Regenerar"),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.buttonDark),
-                        foregroundColor: AppColors.buttonDark,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () =>
-                          _handleSave(context, mealType, recipeData!),
-                      icon: const Icon(Icons.check),
-                      label: const Text("Guardar"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.buttonDark,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                // VIEW MODE (Calendar View) - Maybe just "Back" or "Favorite"
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.buttonDark),
-                        foregroundColor: AppColors.buttonDark,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const Text("Volver"),
-                    ),
-                  ),
-                  // KEEP FAVORITE BUTTON IF NEEDED OR REMOVE
-                ],
-              ),
-      ),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
     );
   }
 
@@ -875,12 +796,73 @@ class _RecipeScreenState extends State<RecipeScreen>
     );
   }
 
-  Widget _buildRecipeTab(String name, List<dynamic> steps) {
+  Widget _buildRecipeTab(
+    String name,
+    List<dynamic> ingredients,
+    List<dynamic> steps,
+  ) {
     return ListView(
       key: const ValueKey('recipe'),
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       children: [
+        // --- INGREDIENTS SECTION ---
+        Text(
+          "Ingredientes",
+          style: TextStyle(
+            fontSize: 15.sp,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1A1A1A),
+          ),
+        ),
+        SizedBox(height: 12.h),
+        if (ingredients.isEmpty)
+          Padding(
+            padding: EdgeInsets.only(bottom: 20.h),
+            child: Text(
+              "No hay ingredientes listados",
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 14.sp,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          )
+        else
+          ...ingredients.map((ing) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: EdgeInsets.only(top: 6.h),
+                    width: 6.w,
+                    height: 6.w,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9800),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Text(
+                      ing.toString(),
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey.shade800,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+        Divider(height: 40.h, color: Colors.grey.shade200),
+
+        // --- PREPARATION (STEPS) SECTION ---
         // Progress indicator
         Container(
           padding: EdgeInsets.all(16.w),

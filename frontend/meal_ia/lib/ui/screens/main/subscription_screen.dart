@@ -122,16 +122,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             // --- 2. SECCIÓN INFERIO LEX (PAGO) ---
             Container(
               width: double.infinity,
-<<<<<<< HEAD
-              padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 20.h),
-=======
               padding: EdgeInsets.fromLTRB(
                 horizontalPadding,
                 verticalPadding,
                 horizontalPadding,
                 verticalPadding,
               ),
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),

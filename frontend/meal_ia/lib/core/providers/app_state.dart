@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
-<<<<<<< HEAD
 import 'dart:typed_data'; // Required for Uint8List
-=======
 import 'dart:async';
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -480,7 +477,7 @@ class AppState extends ChangeNotifier {
   Future<String> login(String email, String password) async {
     final url = Uri.parse('$_baseUrl/token');
     debugPrint("Intentando login en: $url");
-    
+
     try {
       // 1. Login en Backend (FastAPI)
       debugPrint("Enviando petición POST a $_baseUrl/token");
@@ -538,23 +535,11 @@ class AppState extends ChangeNotifier {
           return 'Correo o contraseña incorrectos';
         }
       } else {
-<<<<<<< HEAD
-        try {
-          final data = jsonDecode(response.body);
-          return data['detail'] ?? 'Credenciales incorrectas';
-        } catch (_) {
-          debugPrint("Login 500/HTML Error: ${response.body}");
-          return 'Error en el servidor. Verifica que el backend esté corriendo.';
-        }
-      }
-    } catch (e) {
-      debugPrint("Login Connection Error: $e");
-      return 'Error de conexión con el servidor. Verifica tu internet y que el backend esté corriendo.';
-=======
         // Otro error del servidor
         try {
           final data = jsonDecode(response.body);
-          return data['detail'] ?? 'Error del servidor (${response.statusCode})';
+          return data['detail'] ??
+              'Error del servidor (${response.statusCode})';
         } catch (_) {
           return 'Error del servidor (${response.statusCode})';
         }
@@ -578,7 +563,6 @@ class AppState extends ChangeNotifier {
       debugPrint("❌ Error inesperado en login: $e");
       debugPrint("📍 StackTrace: $stackTrace");
       return 'Error inesperado: ${e.toString()}\nURL: $_baseUrl';
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
     }
   }
 
@@ -628,7 +612,8 @@ class AppState extends ChangeNotifier {
         // Otro error del servidor
         try {
           final data = jsonDecode(response.body);
-          return data['detail'] ?? 'Error del servidor (${response.statusCode})';
+          return data['detail'] ??
+              'Error del servidor (${response.statusCode})';
         } catch (_) {
           return 'Error del servidor (${response.statusCode})';
         }
@@ -1685,8 +1670,7 @@ class AppState extends ChangeNotifier {
         // Maybe Unit is inside the name part or missing (Count)
         // E.g. "2 Huevos" -> Unit="u"
         ingredientName =
-            match.group(3) ??
-            '${match.group(2) ?? ''} ${match.group(3) ?? ''}';
+            match.group(3) ?? '${match.group(2) ?? ''} ${match.group(3) ?? ''}';
         ingredientName = ingredientName.trim();
       }
     }
@@ -1753,7 +1737,9 @@ class AppState extends ChangeNotifier {
             qtyToSend = resultBase.round(); // 'u' must be int.
             unitToSend =
                 currentData['unit']; // Keep original name if it was 'Huevos' etc, actually _getBase returns 'u' for unknown.
-            if (unitToSend == 'u') unitToSend = currentData['unit']; // if it was 'Unidades' keep it.
+            if (unitToSend == 'u') {
+              unitToSend = currentData['unit'];
+            }
           } else {
             // For Mass/Vol, we use the base value (g or ml)
             qtyToSend = resultBase.round();

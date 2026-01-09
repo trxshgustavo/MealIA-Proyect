@@ -39,17 +39,17 @@ Future<void> main() async {
   // Force explicit token fetch and print
   try {
     final token = await FirebaseAppCheck.instance.getToken(true);
-    print('--------------------------------------------------');
-    print('FIREBASE APP CHECK TOKEN: ${token}');
-    print('--------------------------------------------------');
+    debugPrint('--------------------------------------------------');
+    debugPrint('FIREBASE APP CHECK TOKEN: $token');
+    debugPrint('--------------------------------------------------');
   } catch (e) {
-    print('--------------------------------------------------');
-    print('FIREBASE APP CHECK TOKEN ERROR: $e');
-    print('--------------------------------------------------');
+    debugPrint('--------------------------------------------------');
+    debugPrint('FIREBASE APP CHECK TOKEN ERROR: $e');
+    debugPrint('--------------------------------------------------');
   }
 
   FirebaseAppCheck.instance.onTokenChange.listen((token) {
-    print('FIREBASE APP CHECK TOKEN (STREAM): $token');
+    debugPrint('FIREBASE APP CHECK TOKEN (STREAM): $token');
   });
 
   // SystemChrome.setPreferredOrientations([
