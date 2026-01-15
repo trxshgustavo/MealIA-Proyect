@@ -18,16 +18,11 @@ from openai import OpenAI
 # Cargar variables de entorno
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
-<<<<<<< HEAD
 # Imports locales
-import models, schemas, security, database
-=======
-# Imports locales (sin imports relativos para uvicorn directo)
 import models
 import schemas
 import security
 import database
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 from database import engine, get_db
 
 # Configuración OpenAI
@@ -52,38 +47,7 @@ app.add_middleware(
     allow_headers=["*"], # Allows all headers
 )
 
-# --- CONFIGURACIÓN CORS ---
-# Función para validar orígenes dinámicos de localhost
-def cors_origin_validator(origin: str) -> bool:
-    """Permite localhost y 127.0.0.1 con cualquier puerto"""
-    if not origin:
-        return False
-    # Permitir cualquier puerto de localhost o 127.0.0.1
-    if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
-        return True
-    # Permitir emulador Android
-    if origin.startswith("http://10.0.2.2"):
-        return True
-    # Permitir producción
-    if origin == "https://mealia-proyect-1.onrender.com":
-        return True
-    # Permitir origen adicional desde .env
-    extra_origin = os.getenv("CORS_ORIGIN")
-    if extra_origin and origin == extra_origin:
-        return True
-    return False
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",  # Permite localhost/127.0.0.1 con cualquier puerto
-    allow_origins=[
-        "http://10.0.2.2:8000",  # Emulador Android
-        "https://mealia-proyect-1.onrender.com",  # Producción
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Configuración de carpetas
 os.makedirs("uploads", exist_ok=True) 
@@ -132,23 +96,67 @@ def calculate_target_calories(user: models.User) -> int:
 
 @app.post("/register", response_model=schemas.User)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = security.get_user(db, email=user.email)
-    if db_user: raise HTTPException(status_code=400, detail="Email ya registrado")
-    hashed_password = security.get_password_hash(user.password)
-    new_user = models.User(email=user.email, first_name=user.first_name, hashed_password=hashed_password)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+    try:
+        db_user = security.get_user(db, email=user.email)
+        if db_user:
+            raise HTTPException(status_code=400, detail="Email ya registrado")
+        
+        # Validar que el email no esté vacío
+        if not user.email or not user.email.strip():
+            raise HTTPException(status_code=400, detail="El email es requerido")
+        
+        # Validar que la contraseña tenga al menos 6 caracteres
+        if not user.password or len(user.password) < 6:
+            raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
+        
+        hashed_password = security.get_password_hash(user.password)
+        new_user = models.User(email=user.email, first_name=user.first_name, hashed_password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {str(e)}")
 
 @app.post("/token", response_model=schemas.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = security.get_user(db, email=form_data.username)
-    if not user or not security.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales incorrectas", headers={"WWW-Authenticate": "Bearer"})
-    access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = security.create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        # Validar que se proporcionen credenciales
+        if not form_data.username or not form_data.password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email y contraseña son requeridos",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        user = security.get_user(db, email=form_data.username)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciales incorrectas",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        if not security.verify_password(form_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciales incorrectas",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = security.create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al iniciar sesión: {str(e)}"
+        )
 
 @app.get("/users/me", response_model=schemas.User)
 def read_users_me(current_user: models.User = Depends(security.get_current_user)):

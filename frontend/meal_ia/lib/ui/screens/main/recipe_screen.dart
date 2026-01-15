@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
-
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
 
@@ -58,10 +57,6 @@ class _RecipeScreenState extends State<RecipeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
-      context,
-    );
-
     final Map<String, dynamic>? recipeData =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 

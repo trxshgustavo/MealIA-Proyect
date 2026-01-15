@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart';
 
 class DataScreen extends StatefulWidget {
   const DataScreen({super.key});
@@ -189,119 +190,177 @@ class _DataScreenState extends State<DataScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final imageSize = ScreenUtils.getResponsiveImageSize(
+      context,
+      baseSize: 280.0,
+    );
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final verticalSpacing = ScreenUtils.getVerticalSpacing(
+      context,
+      defaultSpacing: 20.0,
+    );
+    final formPadding = ScreenUtils.getFormPadding(context);
+
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
-      body: CustomScrollView(
-        physics: const ClampingScrollPhysics(),
-        slivers: [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Padding(
-              padding: EdgeInsets.all(24.0.w),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/carrot.png',
-                    height: 220.h,
-                    width: 220.w,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.analytics,
-                      size: 100.sp,
-                      color: AppColors.primaryText,
-                    ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ScreenUtils.getMaxContainerWidth(context),
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(horizontalPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/carrot.png',
+                  height: imageSize,
+                  width: imageSize,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.analytics,
+                    size: 100,
+                    color: AppColors.primaryText,
                   ),
-                  SizedBox(height: 20.h),
+                ),
+                SizedBox(height: verticalSpacing),
 
-                  Container(
-                    padding: EdgeInsets.all(24.0.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          spreadRadius: 0,
-                          blurRadius: 10.r,
-                          offset: Offset(0, 4.h),
+                Container(
+                  padding: formPadding,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        spreadRadius: 0,
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Cuéntanos sobre ti',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Cuéntanos sobre ti',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryText,
+                        const SizedBox(height: 20),
+
+                        TextFormField(
+                          controller: _dateCtl,
+                          readOnly: true,
+                          decoration: _inputDecoration(
+                            'Fecha de nacimiento (Opcional)',
+                            Icons.calendar_today,
+                          ),
+                          onTap: _pickDate,
+                        ),
+                        const SizedBox(height: 20),
+
+                        Text(
+                          'Altura',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: _pickHeight,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            decoration: BoxDecoration(
+                              color: AppColors.inputFill, // Fondo gris
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "$_currentHeight cm",
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryText,
+                                ),
+                              ),
                             ),
                           ),
-                          SizedBox(height: 20.h),
+                        ),
+                        const SizedBox(height: 20),
 
-                          TextFormField(
-                            controller: _dateCtl,
-                            readOnly: true,
-                            decoration: _inputDecoration(
-                              'Fecha de nacimiento (Opcional)',
-                              Icons.calendar_today,
+                        Text(
+                          'Peso',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: _pickWeight,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            decoration: BoxDecoration(
+                              color: AppColors.inputFill, // Fondo gris
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            onTap: _pickDate,
+                            child: Center(
+                              child: Text(
+                                "${_currentWeight.toStringAsFixed(1)} kg",
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryText,
+                                ),
+                              ),
+                            ),
                           ),
-                          SizedBox(height: 20.h),
+                        ),
+                        const SizedBox(height: 24),
 
-                          _buildSelectorField(
-                            label: 'Altura',
-                            value: "$_currentHeight cm",
-                            icon: Icons.height,
-                            onTap: _pickHeight,
-                          ),
-                          SizedBox(height: 16.h),
-
-                          _buildSelectorField(
-                            label: 'Peso',
-                            value: "${_currentWeight.toStringAsFixed(1)} kg",
-                            icon: Icons.monitor_weight_outlined,
-                            onTap: _pickWeight,
-                          ),
-                          SizedBox(height: 24.h),
-
-                          _isLoading
-                              ? const Center(child: CircularProgressIndicator())
-                              : ElevatedButton(
-                                  onPressed: _saveData,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.buttonDark,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 16.h,
-                                    ),
+                        _isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : ElevatedButton(
+                                onPressed: _saveData,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.buttonDark,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text(
-                                    'Continuar',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16.sp,
-                                    ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
                                   ),
                                 ),
-                        ],
-                      ),
+                                child: const Text(
+                                  'Continuar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

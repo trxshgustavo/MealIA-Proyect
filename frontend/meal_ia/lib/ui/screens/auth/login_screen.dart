@@ -112,18 +112,18 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final titleFontSize = ScreenUtils.getTitleFontSize(
       context,
-      defaultSize: 40.0,
+      defaultSize: 40,
     );
     final imageSize = ScreenUtils.getResponsiveImageSize(
       context,
-      baseSize: 300.0,
+      baseSize: 250.0,
     );
     final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
       context,
     );
     final verticalSpacing = ScreenUtils.getVerticalSpacing(
       context,
-      defaultSpacing: 80.0,
+      defaultSpacing: 0,
     );
     final formPadding = ScreenUtils.getFormPadding(context);
     final topSpacing = ScreenUtils.getHeight(context) * 0.05;
@@ -132,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
+<<<<<<< HEAD
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -139,6 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
           surfaceTintColor: Colors.transparent,
           iconTheme: const IconThemeData(color: Colors.black54),
         ),
+=======
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(

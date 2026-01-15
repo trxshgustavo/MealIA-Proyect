@@ -115,6 +115,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             ),
 
             // Horizontal Calendar Strip
+<<<<<<< HEAD
             SizedBox(
               height: 90,
               child: ListView.separated(
@@ -127,6 +128,24 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                   final isSelected = _isSameDay(date, _selectedDate);
                   return _buildDateBubble(date, isSelected);
                 },
+=======
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: SizedBox(
+                height: 90,
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _weekDays.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final date = _weekDays[index];
+                    final isSelected = _isSameDay(date, _selectedDate);
+                    return _buildDateBubble(date, isSelected);
+                  },
+                ),
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
               ),
             ),
 
@@ -147,8 +166,13 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                     ),
                   ],
                 ),
+<<<<<<< HEAD
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 100.h),
+=======
+                child: Padding(
+                  padding: EdgeInsets.all(horizontalPadding),
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
                   child: _buildMealList(context, dailyMenu, isToday),
                 ),
               ),
@@ -172,15 +196,6 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             color: isSelected ? Colors.transparent : Colors.grey.shade200,
             width: 1.5.w,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.buttonDark.withValues(alpha: 0.3),
-                    blurRadius: 6.r, // Sombra reducida
-                    offset: Offset(0, 3.h),
-                  ),
-                ]
-              : [],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import '../../../utils/screen_utils.dart';
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -104,115 +105,128 @@ class GoalsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageSize = ScreenUtils.getResponsiveImageSize(
+      context,
+      baseSize: 280.0,
+    );
+    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+    final verticalSpacing = ScreenUtils.getVerticalSpacing(
+      context,
+      defaultSpacing: 20.0,
+    );
+    // final formPadding = ScreenUtils.getFormPadding(context); // Unused currently, using specific padding in container
+
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
-      body: CustomScrollView(
-        physics: const ClampingScrollPhysics(),
-        slivers: [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Padding(
-              padding: EdgeInsets.all(24.0.w),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/carrot.png',
-                    height: 200.h,
-                    width: 200.w,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.flag,
-                      size: 100.sp,
-                      color: AppColors.primaryText,
-                    ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ScreenUtils.getMaxContainerWidth(context),
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(horizontalPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Image.asset(
+                  'assets/carrot.png',
+                  height: imageSize,
+                  width: imageSize,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.flag,
+                    size: 100,
+                    color: AppColors.primaryText,
                   ),
-                  SizedBox(height: 20.h),
+                ),
+                SizedBox(height: verticalSpacing),
 
-                  Container(
-                    padding: EdgeInsets.all(20.0.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          spreadRadius: 0,
-                          blurRadius: 10.r,
-                          offset: Offset(0, 4.h),
+                Container(
+                  padding: EdgeInsets.all(20.0.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        spreadRadius: 0,
+                        blurRadius: 10.r,
+                        offset: Offset(0, 4.h),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '¿Cuál es tu meta principal?',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          '¿Cuál es tu meta principal?',
-                          textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 24.h),
+
+                      _buildGoalCard(
+                        context,
+                        title: 'Déficit calórico',
+                        subtitle: 'Bajar de peso',
+                        icon: Icons.local_fire_department,
+                        value: 'Déficit Calórico',
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildGoalCard(
+                        context,
+                        title: 'Mantenimiento',
+                        subtitle: 'Conservar tu peso actual',
+                        icon: Icons.monitor_weight,
+                        value: 'Mantenimiento',
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildGoalCard(
+                        context,
+                        title: 'Aumentar masa muscular',
+                        subtitle: 'Ganar peso y músculo',
+                        icon: Icons.fitness_center,
+                        value: 'Aumentar masa muscular',
+                      ),
+                      SizedBox(height: 24.h),
+
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/main',
+                            (route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonDark,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                        ),
+                        child: Text(
+                          'Finalizar y continuar',
                           style: TextStyle(
-                            fontSize: 20.sp,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
+                            fontSize: 16.sp,
                           ),
                         ),
-                        SizedBox(height: 24.h),
-
-                        _buildGoalCard(
-                          context,
-                          title: 'Déficit calórico',
-                          subtitle: 'Bajar de peso',
-                          icon: Icons.local_fire_department,
-                          value: 'Déficit Calórico',
-                        ),
-                        SizedBox(height: 12.h),
-                        _buildGoalCard(
-                          context,
-                          title: 'Mantenimiento',
-                          subtitle: 'Conservar tu peso actual',
-                          icon: Icons.monitor_weight,
-                          value: 'Mantenimiento',
-                        ),
-                        SizedBox(height: 12.h),
-                        _buildGoalCard(
-                          context,
-                          title: 'Aumentar masa muscular',
-                          subtitle: 'Ganar peso y músculo',
-                          icon: Icons.fitness_center,
-                          value: 'Aumentar masa muscular',
-                        ),
-                        SizedBox(height: 24.h),
-
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/main',
-                              (route) => false,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.buttonDark,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            padding: EdgeInsets.symmetric(vertical: 16.h),
-                          ),
-                          child: Text(
-                            'Finalizar y continuar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16.sp,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

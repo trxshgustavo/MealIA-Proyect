@@ -48,15 +48,22 @@ class AppState extends ChangeNotifier {
 
   // --- VERIFICACIÓN DE SESIÓN ---
   Future<bool> checkLoginStatus() async {
-    await Future.delayed(const Duration(milliseconds: 1500));
-    final token = await _storage.read(key: 'auth_token');
+    try {
+      final token = await _storage.read(key: 'auth_token');
 
-    // Verificación Relajada: Si hay token (Backend), dejamos pasar.
-    // Si falta Firebase, intentaremos reconectar después.
-    if (token == null) {
+      if (token == null) {
+        return false;
+      }
+
+      // Attempt to load user data.
+      // If validation fails inside (e.g. 401), it will return false and clean up.
+      return await _loadUserData(token);
+    } catch (e) {
+      debugPrint("Error en checkLoginStatus: $e");
+      // Si hay un error, asumimos que no hay sesión válida
+      // Esto previene que la app se quede bloqueada
       return false;
     }
-    return await _loadUserData(token);
   }
 
   Future<void> logout() async {
@@ -445,11 +452,8 @@ class AppState extends ChangeNotifier {
       // STRICT CHECK: User MUST have a UID for us to trust the session
       if (user == null) {
         debugPrint("Critical: No Firebase User found. Failing Login.");
-        // BYPASS: Allow backend-only login for debugging
-        debugPrint(
-          "BYPASSING STRICT CHECK: Allowing login without Firebase for debugging.",
-        );
-        // return false;
+        // Strict Mode: Fail if Firebase is missing to avoid data inconsistency.
+        return false;
       }
 
       return true;
@@ -547,15 +551,20 @@ class AppState extends ChangeNotifier {
     } on http.ClientException catch (e) {
       debugPrint("❌ ClientException en login: $e");
       debugPrint("📍 URL intentada: $_baseUrl/token");
-      return 'No se pudo conectar al servidor en $_baseUrl\nVerifica tu conexión a internet.';
+      return 'No se pudo conectar al servidor.\n\nVerifica que:\n• El backend esté corriendo\n• La IP sea correcta: $_baseUrl\n• Tu dispositivo y PC estén en la misma red WiFi';
     } on SocketException catch (e) {
       debugPrint("❌ SocketException en login: $e");
       debugPrint("📍 URL intentada: $_baseUrl/token");
+      final errorMsg = e.message.toLowerCase();
+      if (errorMsg.contains('connection timed out') ||
+          errorMsg.contains('timeout')) {
+        return 'El servidor no responde.\n\nVerifica que:\n• El backend esté corriendo en $_baseUrl\n• El firewall permita conexiones en el puerto 8000\n• Tu dispositivo y PC estén en la misma red';
+      }
       return 'Sin conexión a internet.\nAsegúrate de estar conectado a WiFi o datos móviles.';
     } on TimeoutException catch (e) {
       debugPrint("❌ TimeoutException en login: $e");
       debugPrint("📍 URL intentada: $_baseUrl/token");
-      return 'La conexión tardó demasiado (>60s).\nEl servidor puede estar lento o inaccesible.';
+      return 'La conexión tardó demasiado.\n\nEl servidor en $_baseUrl no responde.\nVerifica que el backend esté corriendo.';
     } on FormatException catch (e) {
       debugPrint("❌ FormatException en login: $e");
       return 'Respuesta inválida del servidor. Contacta soporte.';
@@ -573,6 +582,18 @@ class AppState extends ChangeNotifier {
     required String firstName,
   }) async {
     final url = Uri.parse('$_baseUrl/register');
+
+    // Validaciones básicas antes de intentar conexión
+    if (email.isEmpty || !email.contains('@')) {
+      return 'Por favor ingresa un correo electrónico válido';
+    }
+    if (password.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres';
+    }
+    if (firstName.isEmpty) {
+      return 'Por favor ingresa tu nombre';
+    }
+
     try {
       // 1. Crear en Backend
       final response = await http
@@ -620,13 +641,18 @@ class AppState extends ChangeNotifier {
       }
     } on http.ClientException catch (e) {
       debugPrint("Error de conexión en registro: $e");
-      return 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+      return 'No se pudo conectar al servidor.\n\nVerifica que:\n• El backend esté corriendo\n• La IP sea correcta: $_baseUrl\n• Tu dispositivo y PC estén en la misma red WiFi';
     } on SocketException catch (e) {
       debugPrint("Error de red en registro: $e");
+      final errorMsg = e.message.toLowerCase();
+      if (errorMsg.contains('connection timed out') ||
+          errorMsg.contains('timeout')) {
+        return 'El servidor no responde.\n\nVerifica que:\n• El backend esté corriendo en $_baseUrl\n• El firewall permita conexiones en el puerto 8000\n• Tu dispositivo y PC estén en la misma red';
+      }
       return 'Sin conexión a internet. Verifica tu red.';
     } on TimeoutException catch (e) {
       debugPrint("Timeout en registro: $e");
-      return 'La conexión tardó demasiado. Intenta de nuevo.';
+      return 'La conexión tardó demasiado.\n\nEl servidor en $_baseUrl no responde.\nVerifica que el backend esté corriendo.';
     } catch (e) {
       debugPrint("Error inesperado en registro: $e");
       return 'Error inesperado: ${e.toString()}';
@@ -708,13 +734,18 @@ class AppState extends ChangeNotifier {
       }
     } on http.ClientException catch (e) {
       debugPrint("Error de conexión en Google Sign-In: $e");
-      return 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+      return 'No se pudo conectar al servidor.\n\nVerifica que:\n• El backend esté corriendo\n• La IP sea correcta: $_baseUrl\n• Tu dispositivo y PC estén en la misma red WiFi';
     } on SocketException catch (e) {
       debugPrint("Error de red en Google Sign-In: $e");
+      final errorMsg = e.message.toLowerCase();
+      if (errorMsg.contains('connection timed out') ||
+          errorMsg.contains('timeout')) {
+        return 'El servidor no responde.\n\nVerifica que:\n• El backend esté corriendo en $_baseUrl\n• El firewall permita conexiones en el puerto 8000\n• Tu dispositivo y PC estén en la misma red';
+      }
       return 'Sin conexión a internet. Verifica tu red.';
     } on TimeoutException catch (e) {
       debugPrint("Timeout en Google Sign-In: $e");
-      return 'La conexión tardó demasiado. Intenta de nuevo.';
+      return 'La conexión tardó demasiado.\n\nEl servidor en $_baseUrl no responde.\nVerifica que el backend esté corriendo.';
     } catch (e) {
       debugPrint("Error inesperado en Google Sign-In: $e");
       return 'Error inesperado: ${e.toString()}';
@@ -794,11 +825,13 @@ class AppState extends ChangeNotifier {
     // CACHE UPDATE
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // ignore: unawaited_futures
       _storage.write(
         key: 'inventory_cache_${user.uid}',
         value: jsonEncode(_inventory),
       );
       // FIRESTORE SYNC
+      // ignore: unawaited_futures
       _syncInventoryItemToFirestore(foodKey, quantity, unit);
     }
 
@@ -940,11 +973,13 @@ class AppState extends ChangeNotifier {
     // CACHE UPDATE
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // ignore: unawaited_futures
       _storage.write(
         key: 'inventory_cache_${user.uid}',
         value: jsonEncode(_inventory),
       );
       // FIRESTORE SYNC
+      // ignore: unawaited_futures
       _syncInventoryItemToFirestore(normalizedKey, quantity, unit);
     }
 
@@ -1029,11 +1064,13 @@ class AppState extends ChangeNotifier {
     if (user != null) {
       try {
         // Save new inventory state to local cache
+        // ignore: unawaited_futures
         _storage.write(
           key: 'inventory_cache_${user.uid}',
           value: jsonEncode(_inventory),
         );
         // Sync delete to Firestore
+        // ignore: unawaited_futures
         _deleteInventoryItemFromFirestore(foodKey);
       } catch (e) {
         debugPrint("Error syncing deletion to cache/firestore: $e");
@@ -1388,10 +1425,14 @@ class AppState extends ChangeNotifier {
       );
 
       // 3. Sync to Firestore (Robustness)
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'photo_url': photoUrl,
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'photo_url': photoUrl,
+          'updated_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint("Firestore Sync Warning (Non-fatal): $e");
+      }
 
       // 4. Sync to Backend (Best Effort)
       final token = await _storage.read(key: 'auth_token');
@@ -1482,6 +1523,7 @@ class AppState extends ChangeNotifier {
       if (token != null) {
         final url = Uri.parse('$_baseUrl/users/me/delete-photo');
         try {
+          // ignore: unawaited_futures
           http
               .delete(url, headers: {'Authorization': 'Bearer $token'})
               .timeout(const Duration(seconds: 5));
@@ -1602,6 +1644,7 @@ class AppState extends ChangeNotifier {
             menu,
             SetOptions(merge: true),
           ) // Guardamos el mapa directo como documento
+          // ignore: unawaited_futures
           .then(
             (_) => debugPrint(
               "Menú del día $dateKey guardado en Firestore EXITOSAMENTE",
@@ -1610,6 +1653,7 @@ class AppState extends ChangeNotifier {
           .catchError(
             (e) => debugPrint("Error guardando menú en Firestore: $e"),
           );
+      // Fire and forget - intencionalmente no esperado
     } else {
       debugPrint(
         "WARNING: No Firebase User found. Menu NOT saved to Firestore.",
@@ -1738,7 +1782,11 @@ class AppState extends ChangeNotifier {
             unitToSend =
                 currentData['unit']; // Keep original name if it was 'Huevos' etc, actually _getBase returns 'u' for unknown.
             if (unitToSend == 'u') {
+<<<<<<< HEAD
               unitToSend = currentData['unit'];
+=======
+              unitToSend = currentData['unit']; // if it was 'Unidades' keep it.
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
             }
           } else {
             // For Mass/Vol, we use the base value (g or ml)

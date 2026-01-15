@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/data/food_database.dart';
 import '../theme/app_colors.dart';
+<<<<<<< HEAD
 // import '../../screens/main/food_scanner_screen.dart'; // No longer needed if we don't link it here directly? Wait, the modal uses it.
+=======
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
 import '../../../utils/screen_utils.dart';
 import '../../screens/main/food_scanner_screen.dart';
 
@@ -690,6 +693,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         },
                       ),
               ),
+<<<<<<< HEAD
 
               // --- Fixed Generate Menu Button (Now at bottom of Column) ---
               if (itemKeys.isNotEmpty)
@@ -705,43 +709,68 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           color: AppColors.buttonDark.withValues(alpha: 0.3),
                           blurRadius: 15,
                           offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton(
-                      onPressed: _handleGenerateMenu,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.buttonDark,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            color: Colors.white,
-                            size: 20.sp,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            "Generar Menú",
-                            style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+=======
             ],
           ),
         ),
+        // --- Floating Action Button area for Generate ---
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: itemKeys.isNotEmpty
+            ? Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Container(
+                  width: double.infinity,
+                  height: ScreenUtils.isSmallScreen(context) ? 56 : 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.buttonDark.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _handleGenerateMenu,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.buttonDark,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.auto_awesome, color: Colors.white),
+                        SizedBox(
+                          width: ScreenUtils.getElementSpacing(
+                            context,
+                            defaultSpacing: 10.0,
+                          ),
+                        ),
+                        Text(
+                          "Generemos nuestro menú",
+                          style: TextStyle(
+                            fontSize: ScreenUtils.getButtonFontSize(context),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+<<<<<<< HEAD
+            ],
+          ),
+        ),
+=======
+              )
+            : null,
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
       ),
     );
   }

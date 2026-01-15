@@ -26,36 +26,69 @@ import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env"); // Load environment variables
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: kDebugMode
-        ? AndroidProvider.debug
-        : AndroidProvider.playIntegrity,
-    appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
-  );
 
-  // Force explicit token fetch and print
+  // Cargar variables de entorno (no crítico si falla)
   try {
-    final token = await FirebaseAppCheck.instance.getToken(true);
-    debugPrint('--------------------------------------------------');
-    debugPrint('FIREBASE APP CHECK TOKEN: $token');
-    debugPrint('--------------------------------------------------');
+    await dotenv.load(fileName: ".env");
+    debugPrint('✓ Variables de entorno cargadas');
   } catch (e) {
-    debugPrint('--------------------------------------------------');
-    debugPrint('FIREBASE APP CHECK TOKEN ERROR: $e');
-    debugPrint('--------------------------------------------------');
+    debugPrint('⚠️ No se pudo cargar .env (no crítico): $e');
+    debugPrint(
+      '💡 La app funcionará, pero algunas funciones pueden requerir configuración',
+    );
   }
 
-  FirebaseAppCheck.instance.onTokenChange.listen((token) {
-    debugPrint('FIREBASE APP CHECK TOKEN (STREAM): $token');
-  });
+  // ignore: unawaited_futures
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-  // SystemChrome.setPreferredOrientations([
-  //   DeviceOrientation.portraitUp,
-  //   DeviceOrientation.portraitDown,
-  // ]);
+  // Inicializar Firebase (crítico, pero manejamos errores)
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('✓ Firebase inicializado correctamente');
+  } catch (e) {
+    debugPrint('❌ ERROR CRÍTICO: No se pudo inicializar Firebase: $e');
+    debugPrint(
+      '💡 Verifica tu configuración de Firebase en firebase_options.dart',
+    );
+    // Continuamos de todas formas, pero algunas funciones no funcionarán
+  }
+  // Initialize App Check
+  // We use a "Debug" provider for non-PlayStore builds on Android to avoid 403 errors
+  // IMPORTANT: You must register the Debug Token printed in console in Firebase Console
+  try {
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: kDebugMode
+          ? AndroidProvider.debug
+          : AndroidProvider
+                .debug, // FORCE DEBUG FOR NOW (Physical Device Release)
+      appleProvider: kDebugMode
+          ? AppleProvider.debug
+          : AppleProvider.deviceCheck,
+    );
+
+    // DEBUG: Print Token for Registration
+    // Note: El token de debug se imprime automáticamente por Firebase en los logs de Android
+    // Busca en los logs: "Enter this debug secret into the allow list"
+    try {
+      // Intentamos obtener el token, pero no es crítico si falla
+      await Future.delayed(const Duration(seconds: 2));
+      debugPrint(
+        '💡 Si ves un token de debug en los logs de Android, regístralo en Firebase Console → App Check',
+      );
+    } catch (e) {
+      debugPrint('⚠️ APP CHECK TOKEN ERROR (no crítico): $e');
+      debugPrint(
+        '💡 La app funcionará, pero algunas funciones de Firebase pueden estar limitadas',
+      );
+    }
+  } catch (e) {
+    debugPrint('⚠️ APP CHECK ACTIVATION ERROR (no crítico): $e');
+    debugPrint(
+      '💡 La app funcionará normalmente, pero App Check no está activo',
+    );
+  }
   runApp(const MealIAApp());
 }
 

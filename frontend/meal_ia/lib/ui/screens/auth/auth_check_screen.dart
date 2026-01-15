@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -45,12 +46,28 @@ class _AuthCheckScreenState extends State<AuthCheckScreen>
   }
 
   Future<void> _checkAuthStatus() async {
-    final appState = Provider.of<AppState>(context, listen: false);
-    final isLoggedIn = await appState.checkLoginStatus();
-    if (!mounted) return;
-    if (isLoggedIn) {
-      Navigator.pushReplacementNamed(context, '/main');
-    } else {
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final isLoggedIn = await appState.checkLoginStatus().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint("Timeout verificando estado de autenticación");
+          return false;
+        },
+      );
+      if (!mounted) return;
+      if (isLoggedIn) {
+        // ignore: unawaited_futures
+        Navigator.pushReplacementNamed(context, '/main');
+      } else {
+        // ignore: unawaited_futures
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      debugPrint("Error verificando autenticación: $e");
+      if (!mounted) return;
+      // En caso de error, redirigir al login para que el usuario pueda intentar iniciar sesión
+      // ignore: unawaited_futures
       Navigator.pushReplacementNamed(context, '/login');
     }
   }

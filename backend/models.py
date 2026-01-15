@@ -1,10 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, JSON 
 from sqlalchemy.orm import relationship
-<<<<<<< HEAD
-from database import Base # Crearemos este archivo en el siguiente paso
-=======
 from database import Base
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 class User(Base):
     __tablename__ = "users"
@@ -13,8 +9,6 @@ class User(Base):
     last_name = Column(String, nullable=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    
-    inventory_items = relationship("InventoryItem", back_populates="owner")
     
     height = Column(Float, nullable=True) # metros
     weight = Column(Float, nullable=True) # kg

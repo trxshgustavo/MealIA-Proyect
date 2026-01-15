@@ -8,20 +8,15 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-<<<<<<< HEAD
-# --- CORRECCIÓN DE IMPORTACIONES RELATIVAS ---
-from database import get_db
-import models, schemas
-=======
 # --- CORRECCIÓN DE IMPORTACIONES ---
 from database import get_db
 import models
 import schemas
->>>>>>> f07a5d1764c53e5a13e8d8f232938d6fa0f8b50f
 
 load_dotenv() # Carga las variables de .env
 SECRET_KEY = os.getenv("SECRET_KEY")
-print(f"DEBUG: SECRET_KEY cargada es de tipo: {type(SECRET_KEY)}")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY no está configurada en las variables de entorno. Por favor, configura SECRET_KEY en tu archivo .env")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
@@ -38,6 +33,8 @@ def get_password_hash(password):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    if not SECRET_KEY:
+        raise ValueError("SECRET_KEY no está configurada")
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -59,6 +56,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         detail="No se pudieron validar las credenciales",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not SECRET_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error de configuración del servidor"
+        )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
@@ -67,6 +69,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         token_data = schemas.TokenData(email=email)
     except JWTError:
         raise credentials_exception
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Error al validar token: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
     user = get_user(db, email=token_data.email)
     if user is None:

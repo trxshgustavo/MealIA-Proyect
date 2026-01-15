@@ -463,20 +463,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
-
-              // 6. DANGER ZONE
-              _buildSettingsCard(
-                context,
-                children: [
-                  _buildSettingsItem(
-                    title: 'Eliminar Mi Cuenta',
-                    onTap: _confirmDeleteAccount,
-                    isDestructive: true,
-                    subtitle: "Esta acción es irreversible",
-                  ),
-                ],
-              ),
-              SizedBox(height: 90.h),
             ],
           ),
         ),
@@ -666,10 +652,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   "${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}",
+<<<<<<< HEAD
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 18.sp, // Reducido de 22
+=======
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 18 : 22,
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
@@ -677,10 +668,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SizedBox(height: 4.h),
                 Text(
                   appState.goal,
+<<<<<<< HEAD
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14.sp, // Reducido de 16
+=======
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+>>>>>>> 5e30402 (actualizacion 14-01-2026)
                     color: AppColors.secondaryText,
                     height: 1.3,
                   ),
