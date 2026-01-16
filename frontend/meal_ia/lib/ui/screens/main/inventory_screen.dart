@@ -3,10 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../../../core/data/food_database.dart';
 import '../theme/app_colors.dart';
-<<<<<<< HEAD
-// import '../../screens/main/food_scanner_screen.dart'; // No longer needed if we don't link it here directly? Wait, the modal uses it.
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
 import '../../../utils/screen_utils.dart';
 import '../../screens/main/food_scanner_screen.dart';
 
@@ -693,23 +689,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         },
                       ),
               ),
-<<<<<<< HEAD
-
-              // --- Fixed Generate Menu Button (Now at bottom of Column) ---
-              if (itemKeys.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 110.h),
-                  child: Container(
-                    width: double.infinity,
-                    height: 50.h,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.buttonDark.withValues(alpha: 0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 6),
-=======
             ],
           ),
         ),
@@ -757,20 +736,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
->>>>>>> 5e30402 (actualizacion 14-01-2026)
                         ),
                       ],
                     ),
                   ),
                 ),
-<<<<<<< HEAD
-            ],
-          ),
-        ),
-=======
               )
             : null,
->>>>>>> 5e30402 (actualizacion 14-01-2026)
       ),
     );
   }

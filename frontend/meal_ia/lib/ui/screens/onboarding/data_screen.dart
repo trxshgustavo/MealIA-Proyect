@@ -364,22 +364,4 @@ class _DataScreenState extends State<DataScreen> {
       ),
     );
   }
-
-  Widget _buildSelectorField({
-    required String label,
-    required String value,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: _inputDecoration(label, icon),
-        child: Text(
-          value,
-          style: TextStyle(fontSize: 16.sp, color: AppColors.primaryText),
-        ),
-      ),
-    );
-  }
 }

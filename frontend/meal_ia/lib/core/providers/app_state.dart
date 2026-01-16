@@ -1782,11 +1782,7 @@ class AppState extends ChangeNotifier {
             unitToSend =
                 currentData['unit']; // Keep original name if it was 'Huevos' etc, actually _getBase returns 'u' for unknown.
             if (unitToSend == 'u') {
-<<<<<<< HEAD
-              unitToSend = currentData['unit'];
-=======
               unitToSend = currentData['unit']; // if it was 'Unidades' keep it.
->>>>>>> 5e30402 (actualizacion 14-01-2026)
             }
           } else {
             // For Mass/Vol, we use the base value (g or ml)

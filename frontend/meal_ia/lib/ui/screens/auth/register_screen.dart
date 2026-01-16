@@ -148,16 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-<<<<<<< HEAD
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
-          iconTheme: const IconThemeData(color: Colors.black54),
-        ),
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
+
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -171,10 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(height: topSpacing),
-<<<<<<< HEAD
 
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
                     Text(
                       '¡Empecemos!',
                       textAlign: TextAlign.center,
@@ -222,10 +210,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                             const SizedBox(height: 20),
-<<<<<<< HEAD
 
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
                             ElevatedButton.icon(
                               icon: Image.asset(
                                 'assets/google_logo.png',
@@ -258,11 +243,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               style: TextStyle(color: AppColors.secondaryText),
                             ),
                             const SizedBox(height: 16),
-<<<<<<< HEAD
 
-                            // --- CAMPOS DE TEXTO ---
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
                             TextFormField(
                               controller: _emailCtl,
                               keyboardType: TextInputType.emailAddress,
@@ -278,10 +259,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   : null,
                             ),
                             const SizedBox(height: 12),
-<<<<<<< HEAD
 
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
                             TextFormField(
                               controller: _passwordCtl,
                               obscureText: true,
@@ -324,10 +302,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                             const SizedBox(height: 20),
-<<<<<<< HEAD
 
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
                             _isLoading
                                 ? const Center(
                                     child: CircularProgressIndicator(),
@@ -340,12 +315,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                   ),
                             TextButton(
-<<<<<<< HEAD
-                              onPressed: () =>
-                                  Navigator.pop(context), // Vuelve a Login
-=======
                               onPressed: () => Navigator.pop(context),
->>>>>>> 5e30402 (actualizacion 14-01-2026)
                               child: const Text(
                                 '¿Ya tienes cuenta? Inicia sesión',
                                 style: TextStyle(

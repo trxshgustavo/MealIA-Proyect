@@ -132,16 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-<<<<<<< HEAD
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
-          iconTheme: const IconThemeData(color: Colors.black54),
-        ),
-=======
->>>>>>> 5e30402 (actualizacion 14-01-2026)
+
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(

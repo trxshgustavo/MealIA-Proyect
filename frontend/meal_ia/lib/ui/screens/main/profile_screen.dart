@@ -461,6 +461,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: _logout,
                     isDestructive: true,
                   ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  _buildSettingsItem(
+                    title: 'Eliminar Cuenta',
+                    onTap: _confirmDeleteAccount,
+                    isDestructive: true,
+                  ),
                 ],
               ),
             ],
@@ -652,15 +658,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   "${appState.firstName ?? 'Usuario'} ${appState.lastName ?? ''}",
-<<<<<<< HEAD
+
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 18.sp, // Reducido de 22
-=======
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 18 : 22,
->>>>>>> 5e30402 (actualizacion 14-01-2026)
+                    fontSize: ScreenUtils.isSmallScreen(context)
+                        ? 18.sp
+                        : 22.sp,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryText,
                   ),
@@ -668,15 +672,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SizedBox(height: 4.h),
                 Text(
                   appState.goal,
-<<<<<<< HEAD
+
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 14.sp, // Reducido de 16
-=======
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16,
->>>>>>> 5e30402 (actualizacion 14-01-2026)
+                    fontSize: ScreenUtils.isSmallScreen(context)
+                        ? 14.sp
+                        : 16.sp,
                     color: AppColors.secondaryText,
                     height: 1.3,
                   ),

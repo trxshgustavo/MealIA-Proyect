@@ -60,6 +60,10 @@ class _RecipeScreenState extends State<RecipeScreen>
     final Map<String, dynamic>? recipeData =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
+    final double horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
+      context,
+    );
+
     final String name = recipeData?['name'] ?? 'Receta';
     final int calories = recipeData?['calories'] ?? 0;
     final List<dynamic> steps = recipeData?['steps'] ?? [];
