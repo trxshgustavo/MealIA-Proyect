@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class ApiConfig {
   // CONFIGURACIÓN DE ENTORNO
   // Cambia esta variable para alternar entre desarrollo y producción
-  static const bool isDevelopment = true; // true para desarrollo local
+  static const bool isDevelopment = false; // false para produccion (Render)
 
   // Set to true if testing on a physical Android device connected to local network
   static const bool usePhysicalDevice = true;

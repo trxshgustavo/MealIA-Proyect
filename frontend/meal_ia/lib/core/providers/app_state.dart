@@ -1431,7 +1431,8 @@ class AppState extends ChangeNotifier {
           'updated_at': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } catch (e) {
-        debugPrint("Firestore Sync Warning (Non-fatal): $e");
+        debugPrint("Firestore Sync Warning: $e");
+        return "Foto subida, pero hubo error guardando en base de datos (Firestore): $e";
       }
 
       // 4. Sync to Backend (Best Effort)

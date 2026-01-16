@@ -461,46 +461,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: _logout,
                     isDestructive: true,
                   ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  _buildSettingsItem(
-                    title: 'Eliminar Cuenta',
-                    onTap: _confirmDeleteAccount,
-                    isDestructive: true,
-                  ),
                 ],
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _confirmDeleteAccount() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("¿Eliminar Cuenta Permanetemente?"),
-        content: const Text(
-          "Estás a punto de borrar todos tus datos, incluyendo inventario, menús y perfil. \n\nEsta acción NO se puede deshacer.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar"),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () async {
-              Navigator.pop(context); // Cerrar diálogo
-              _executeAccountDeletion();
-            },
-            child: const Text(
-              "Eliminar Todo",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
     );
   }
