@@ -9,4 +9,4 @@ mealia.db
 
 # Archivos de caché de Python
 __pycache__/
-.pytest_cache/
+.pytest_cache/mealia.db
