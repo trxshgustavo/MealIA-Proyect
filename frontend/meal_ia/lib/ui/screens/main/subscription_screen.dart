@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
 
@@ -200,30 +204,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 50.h,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Procesando suscripción..."),
+                    child: Consumer<AppState>(
+                      builder: (context, appState, child) {
+                        return ElevatedButton(
+                          onPressed: () {
+                            _showPaymentBottomSheet(context, activeColor);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: activeColor,
+                            elevation: 8,
+                            shadowColor: activeColor.withValues(alpha: 0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                          ),
+                          child: Text(
+                            "Comenzar Ahora",
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: activeColor,
-                        elevation: 8,
-                        shadowColor: activeColor.withValues(alpha: 0.3),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
-                        ),
-                      ),
-                      child: Text(
-                        "Comenzar Ahora",
-                        style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
                     ),
                   ),
 
@@ -344,5 +348,200 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ],
       ),
     );
+  }
+
+  void _showPaymentBottomSheet(BuildContext context, Color activeColor) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
+        ),
+        child: _PaymentForm(activeColor: activeColor),
+      ),
+    );
+  }
+}
+
+class _PaymentForm extends StatefulWidget {
+  final Color activeColor;
+  const _PaymentForm({required this.activeColor});
+
+  @override
+  State<_PaymentForm> createState() => _PaymentFormState();
+}
+
+class _PaymentFormState extends State<_PaymentForm> {
+  CardFieldInputDetails? _cardDetails;
+  bool _isProcessing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24.w,
+        right: 24.w,
+        top: 24.h,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 50.w,
+              height: 5.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+          ),
+          SizedBox(height: 20.h),
+
+          Text(
+            "Pago Seguro con Stripe",
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w900,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            "Ingresa los detalles de tu tarjeta para suscribirte.",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+          ),
+          SizedBox(height: 30.h),
+
+          // --- STRIPE CARD FIELD ---
+          CardField(
+            onCardChanged: (details) {
+              setState(() {
+                _cardDetails = details;
+              });
+            },
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: widget.activeColor, width: 2),
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+            ),
+          ),
+
+          const Spacer(),
+
+          // BOTON PAGAR
+          SizedBox(
+            width: double.infinity,
+            height: 55.h,
+            child: ElevatedButton(
+              onPressed: (_cardDetails?.complete == true) && !_isProcessing
+                  ? _processPayment
+                  : null, // Disable if incomplete
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.activeColor,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                disabledBackgroundColor: Colors.grey[300],
+              ),
+              child: _isProcessing
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
+                      "Pagar y Suscribirse",
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processPayment() async {
+    setState(() => _isProcessing = true);
+
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+
+      // 1. Crear PaymentIntent en Backend
+      // 25000 CLP -> convertido a smallest currency unit (centavos/pesos)
+      // Stripe para CLP doesn't have decimals usually but let's assume 25000.
+      final paymentData = await appState.createPaymentIntent(25000, 'clp');
+
+      if (paymentData == null || paymentData['clientSecret'] == null) {
+        throw Exception("Error obteniendo secreto de pago");
+      }
+
+      final clientSecret = paymentData['clientSecret'];
+
+      // 2. Confirmar Pago con Stripe SDK
+      await Stripe.instance.confirmPayment(
+        paymentIntentClientSecret: clientSecret,
+        data: const PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(),
+        ),
+      );
+
+      // 3. Si no lanza excepción, fue exitoso. Actualizar Backend.
+      final success = await appState.upgradeSubscription();
+
+      if (mounted) {
+        if (success) {
+          Navigator.pop(context); // Close bottom sheet
+          Navigator.pop(context); // Close subscription screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("¡Suscripción Activada!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Pago ok, pero fallo upgrade en backend (Raro)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Pago procesado, pero error activando cuenta. Contacta soporte.",
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } on StripeException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error de Pago: ${e.error.localizedMessage}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 }

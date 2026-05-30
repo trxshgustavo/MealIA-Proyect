@@ -23,6 +23,7 @@ import 'ui/screens/main/subscription_screen.dart';
 import 'ui/screens/main_shell.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
+import 'package:flutter_stripe/flutter_stripe.dart'; // Import Stripe
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,11 +34,24 @@ Future<void> main() async {
     debugPrint('✓ Variables de entorno cargadas');
   } catch (e) {
     debugPrint('⚠️ No se pudo cargar .env (no crítico): $e');
-    debugPrint(
-      '💡 La app funcionará, pero algunas funciones pueden requerir configuración',
-    );
   }
 
+  // Inicializar Stripe (solo si la key está configurada)
+  try {
+    final stripeKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+    if (stripeKey.isEmpty || stripeKey.startsWith('pk_test_placeholder')) {
+      debugPrint('⚠️ STRIPE_PUBLISHABLE_KEY no configurado - pagos deshabilitados');
+    } else {
+      Stripe.publishableKey = stripeKey;
+      await Stripe.instance.applySettings();
+      debugPrint('✓ Stripe inicializado');
+    }
+  } catch (e) {
+    debugPrint('⚠️ Error inicializando Stripe (no crítico): $e');
+  }
+
+  // Pantalla completa: oculta barra de navegación y barra de estado
+  // immersiveSticky: las barras reaparecen brevemente al deslizar desde el borde
   // ignore: unawaited_futures
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
@@ -55,38 +69,22 @@ Future<void> main() async {
     // Continuamos de todas formas, pero algunas funciones no funcionarán
   }
   // Initialize App Check
-  // We use a "Debug" provider for non-PlayStore builds on Android to avoid 403 errors
-  // IMPORTANT: You must register the Debug Token printed in console in Firebase Console
-  try {
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: kDebugMode
-          ? AndroidProvider.debug
-          : AndroidProvider
-                .debug, // FORCE DEBUG FOR NOW (Physical Device Release)
-      appleProvider: kDebugMode
-          ? AppleProvider.debug
-          : AppleProvider.deviceCheck,
-    );
-
-    // DEBUG: Print Token for Registration
-    // Note: El token de debug se imprime automáticamente por Firebase en los logs de Android
-    // Busca en los logs: "Enter this debug secret into the allow list"
+  // SOLO en release: En debug, App Check genera errores 403 que bloquean Firebase Auth
+  // y causan que Google Sign-In se cuelgue con timeout.
+  if (!kDebugMode) {
     try {
-      // Intentamos obtener el token, pero no es crítico si falla
-      await Future.delayed(const Duration(seconds: 2));
-      debugPrint(
-        '💡 Si ves un token de debug en los logs de Android, regístralo en Firebase Console → App Check',
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: AndroidProvider.playIntegrity,
+        appleProvider: AppleProvider.deviceCheck,
       );
+      debugPrint('✓ App Check activado (release mode)');
     } catch (e) {
-      debugPrint('⚠️ APP CHECK TOKEN ERROR (no crítico): $e');
-      debugPrint(
-        '💡 La app funcionará, pero algunas funciones de Firebase pueden estar limitadas',
-      );
+      debugPrint('⚠️ APP CHECK ACTIVATION ERROR (no crítico): $e');
     }
-  } catch (e) {
-    debugPrint('⚠️ APP CHECK ACTIVATION ERROR (no crítico): $e');
+  } else {
+    debugPrint('⚠️ App Check desactivado en debug mode (evita errores 403)');
     debugPrint(
-      '💡 La app funcionará normalmente, pero App Check no está activo',
+      '💡 Para activar App Check en debug, registra tu debug token en Firebase Console → App Check',
     );
   }
   runApp(const MealIAApp());

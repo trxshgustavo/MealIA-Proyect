@@ -321,6 +321,157 @@ class _InventoryScreenState extends State<InventoryScreen> {
     Navigator.pushNamed(context, '/menu');
   }
 
+  Future<void> _handleShoppingSuggestions() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    if (!appState.isPremium) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Disponible solo para Premium"),
+          action: SnackBarAction(
+            label: "Ver Premium",
+            onPressed: () => Navigator.pushNamed(context, '/subscription'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (appState.inventoryMap.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Añade alimentos para recibir sugerencias."),
+        ),
+      );
+      return;
+    }
+
+    // Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final suggestions = await appState.getShoppingSuggestions();
+
+    if (!mounted) return;
+    Navigator.pop(context); // Close loading
+
+    if (suggestions == null || suggestions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No se encontraron sugerencias por ahora."),
+        ),
+      );
+      return;
+    }
+
+    // Show Results
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          return Padding(
+            padding: EdgeInsets.all(24.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Sugerencias de Compra",
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    itemCount: suggestions.length,
+                    separatorBuilder: (context, index) => Divider(height: 24.h),
+                    itemBuilder: (context, index) {
+                      final item = suggestions[index];
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10.w),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentColor.withValues(
+                                alpha: 0.1,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.lightbulb_outline,
+                              color: AppColors.accentColor,
+                              size: 20.sp,
+                            ),
+                          ),
+                          SizedBox(width: 16.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item['name'] ?? "Producto",
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  item['reason'] ?? "Sugerido por IA",
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    color: AppColors.textLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.add_circle_outline,
+                              color: AppColors.buttonDark,
+                            ),
+                            onPressed: () {
+                              // Quick add
+                              _newFoodItemController.text = item['name'];
+                              _addFoodItem();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Agregado: ${item['name']}"),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
@@ -355,14 +506,28 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Mi Despensa",
-                      style: TextStyle(
-                        fontSize: titleFontSize,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primaryText,
-                        letterSpacing: -0.5,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Mi Despensa",
+                          style: TextStyle(
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryText,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _handleShoppingSuggestions,
+                          icon: Icon(
+                            Icons.tips_and_updates_outlined,
+                            color: AppColors.accentColor,
+                            size: 28.sp,
+                          ),
+                          tooltip: "Sugerencias IA",
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -569,7 +734,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           10.w, // Reducido
                           10.h,
                           10.w,
-                          10.h, // Reduced padding
+                          100.h, // Increased padding for navbar
                         ),
                         itemCount: itemKeys.length,
                         separatorBuilder: (context, index) =>
@@ -696,7 +861,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: itemKeys.isNotEmpty
             ? Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                padding: EdgeInsets.only(
+                  left: horizontalPadding,
+                  right: horizontalPadding,
+                  bottom: 90.h, // Lift above custom navbar
+                ),
                 child: Container(
                   width: double.infinity,
                   height: ScreenUtils.isSmallScreen(context) ? 56 : 60,

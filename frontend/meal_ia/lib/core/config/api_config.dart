@@ -1,22 +1,16 @@
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConfig {
   // CONFIGURACIÓN DE ENTORNO
   // Cambia esta variable para alternar entre desarrollo y producción
-  static const bool isDevelopment = false; // false para produccion (Render)
+  static const bool isDevelopment = false;
 
-  // Set to true if testing on a physical Android device connected to local network
-  static const bool usePhysicalDevice = true;
-
-  // IPs de Desarrollo
-  static const String localIP =
-      "http://127.0.0.1:8000"; // Preferible para Chrome en el mismo PC
-  static const String androidEmulatorIP =
-      "http://10.0.2.2:8000"; // Para emulador Android
-  // Si usas dispositivo físico, cambia esta IP a la de tu PC (ej: 192.168.1.x)
-  static const String physicalDeviceIP = "http://192.168.1.68:8000";
+  // IPs de Desarrollo por defecto
+  static const String androidEmulatorIP = 'http://10.0.2.2:8000';
+  static const String localIP = 'http://127.0.0.1:8000'; 
 
   // URL de Producción
   static const String productionURL = "https://mealia-proyect-1.onrender.com";
@@ -25,6 +19,12 @@ class ApiConfig {
   static String get baseUrl {
     if (!isDevelopment) return productionURL;
 
+    // Si el usuario configuró una IP en el .env, usarla primero
+    final envUrl = dotenv.env['BACKEND_URL'];
+    if (envUrl != null && envUrl.isNotEmpty) {
+      return envUrl;
+    }
+
     // Selección automática por plataforma en desarrollo
     if (kIsWeb) {
       return localIP;
@@ -32,9 +32,7 @@ class ApiConfig {
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        if (usePhysicalDevice) {
-          return physicalDeviceIP;
-        }
+        // En Android, asume emulador a menos que BACKEND_URL este en el .env
         return androidEmulatorIP;
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:

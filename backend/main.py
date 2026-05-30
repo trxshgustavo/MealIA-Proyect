@@ -1,19 +1,8 @@
 import os
-import json 
-import shutil 
-import uuid 
-import random 
 from dotenv import load_dotenv
-from datetime import date, timedelta 
-from google.oauth2 import id_token
-from google.auth.transport import requests
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles 
-from sqlalchemy.orm import Session
-from pydantic import BaseModel 
-from openai import OpenAI 
+from fastapi.middleware.cors import CORSMiddleware
 
 # Cargar variables de entorno
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
@@ -23,14 +12,10 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Imports locales
-import models
-import schemas
-import security
 import database
-from database import engine, get_db
-
-# Configuración OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+import payments
+from routers import auth, users, inventory, menu
+from database import engine
 
 # Crear tablas (Si cambiaste modelos, recuerda borrar mealia.db para regenerar)
 database.Base.metadata.create_all(bind=engine)
@@ -41,8 +26,6 @@ print("MEAL.IA BACKEND STARTED - v3 (WITH ARGON2 & CORS)")
 print("--------------------------------------------------")
 
 # --- CORS CONFIGURATION (CRITICAL FOR MOBILE/FLUTTER) ---
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], # Allows all origins
@@ -51,23 +34,19 @@ app.add_middleware(
     allow_headers=["*"], # Allows all headers
 )
 
-
+# Include Routers
+app.include_router(auth.router, tags=["Authentication"])
+app.include_router(users.router, tags=["Users"])
+app.include_router(inventory.router, tags=["Inventory"])
+app.include_router(menu.router, tags=["Menu & Recipes"])
+app.include_router(payments.router, tags=["Payments"])
 
 # Configuración de carpetas
 os.makedirs("uploads", exist_ok=True) 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-
-# --- CLASES AUXILIARES ---
-class GoogleLoginResponse(schemas.Token):
-    is_new_user: bool
-
-class PhotoResponse(BaseModel):
-    photo_url: str
-
-
 # --- ENDPOINT DE SALUD PARA DIAGNÓSTICO ---
-@app.get("/health")
+@app.get("/health", tags=["Health"])
 def health_check():
     """Endpoint simple para verificar que el servidor está corriendo"""
     return {
@@ -76,434 +55,6 @@ def health_check():
         "version": "1.0.0"
     }
 
-# --- CÁLCULO DE CALORÍAS ---
-def calculate_target_calories(user: models.User) -> int:
-    weight = user.weight or 70
-    height_cm = (user.height * 100) if user.height else 170
-    age = 25
-    if user.birthdate:
-        today = date.today()
-        age = today.year - user.birthdate.year - ((today.month, today.day) < (user.birthdate.month, user.birthdate.day))
-    
-    # Mifflin-St Jeor
-    bmr = (10 * weight) + (6.25 * height_cm) - (5 * age) + 5 
-    tdee = bmr * 1.3 
-    target = int(tdee)
-    
-    if user.goal == "Déficit": target -= 400 
-    elif user.goal == "Aumentar masa": target += 400 
-    
-    return max(1200, min(target, 4000))
-
-
-# --- 1. ENDPOINTS DE AUTENTICACIÓN ---
-
-@app.post("/register", response_model=schemas.User)
-def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    try:
-        db_user = security.get_user(db, email=user.email)
-        if db_user:
-            raise HTTPException(status_code=400, detail="Email ya registrado")
-        
-        # Validar que el email no esté vacío
-        if not user.email or not user.email.strip():
-            raise HTTPException(status_code=400, detail="El email es requerido")
-        
-        # Validar que la contraseña tenga al menos 6 caracteres
-        if not user.password or len(user.password) < 6:
-            raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
-        
-        hashed_password = security.get_password_hash(user.password)
-        new_user = models.User(email=user.email, first_name=user.first_name, hashed_password=hashed_password)
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return new_user
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {str(e)}")
-
-@app.post("/token", response_model=schemas.Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    try:
-        # Validar que se proporcionen credenciales
-        if not form_data.username or not form_data.password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email y contraseña son requeridos",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
-        
-        user = security.get_user(db, email=form_data.username)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales incorrectas",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
-        
-        if not security.verify_password(form_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales incorrectas",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
-        
-        access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = security.create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
-        return {"access_token": access_token, "token_type": "bearer"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al iniciar sesión: {str(e)}"
-        )
-
-@app.get("/users/me", response_model=schemas.User)
-def read_users_me(current_user: models.User = Depends(security.get_current_user)):
-    return current_user
-
-@app.put("/users/me/data", response_model=schemas.User)
-def update_user_data(data: schemas.UserDataUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    if data.first_name: current_user.first_name = data.first_name
-    if data.last_name: current_user.last_name = data.last_name
-    if data.height: current_user.height = data.height
-    if data.weight: current_user.weight = data.weight
-    if data.birthdate: current_user.birthdate = data.birthdate
-    if data.goal: current_user.goal = data.goal
-    if data.photo_url: current_user.photo_url = data.photo_url
-    db.commit()
-    db.refresh(current_user)
-    return current_user
-
-@app.put("/users/me/password")
-def update_password(data: schemas.UserPasswordUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    hashed_password = security.get_password_hash(data.password)
-    current_user.hashed_password = hashed_password
-    db.commit()
-    return {"detail": "Contraseña actualizada correctamente"}
-
-
-# --- 2. GESTIÓN DE FOTOS ---
-
-@app.post("/users/me/upload-photo", response_model=PhotoResponse)
-async def upload_profile_photo(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    allowed_types = ["image/jpeg", "image/png", "image/heic", "image/webp", "application/octet-stream"]
-    if file.content_type not in allowed_types: raise HTTPException(status_code=400, detail="Archivo no válido")
-    
-    file_extension = file.filename.split(".")[-1]
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = f"uploads/{unique_filename}"
-    
-    try:
-        with open(file_path, "wb") as buffer: shutil.copyfileobj(file.file, buffer)
-    except: raise HTTPException(status_code=500, detail="Error al guardar")
-    finally: file.file.close()
-    
-    full_photo_url = f"{str(request.base_url)}{file_path}"
-    current_user.photo_url = full_photo_url
-    db.commit()
-    return {"photo_url": full_photo_url}
-
-@app.delete("/users/me/delete-photo", response_model=schemas.User)
-async def delete_profile_photo(db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    if current_user.photo_url:
-        try:
-            filename = current_user.photo_url.split("/")[-1]
-            path = f"uploads/{filename}"
-            if os.path.exists(path): os.remove(path)
-        except Exception as e:
-            print(f"Error deleting photo: {e}")
-    current_user.photo_url = None
-    db.commit()
-    return current_user
-
-
-# --- 3. ENDPOINTS DE INVENTARIO ---
-
-@app.post("/inventory", response_model=schemas.InventoryItem)
-def add_inventory_item(item: schemas.InventoryItemCreate, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    normalized_name = item.name.strip().lower()
-    if not normalized_name: raise HTTPException(status_code=400, detail="Nombre vacío")
-    
-    db_item = db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id, models.InventoryItem.name == normalized_name).first()
-    
-    if db_item:
-        db_item.quantity += item.quantity # Suma si existe
-    else:
-        # Crea nuevo con unidad
-        db_item = models.InventoryItem(name=normalized_name, owner_id=current_user.id, quantity=item.quantity, unit=item.unit)
-        db.add(db_item)
-    
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
-@app.put("/inventory/{item_name}", response_model=schemas.InventoryItem)
-def update_inventory_item(item_name: str, item_update: schemas.InventoryItemUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    normalized_name = item_name.strip().lower()
-    db_item = db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id, models.InventoryItem.name == normalized_name).first()
-    
-    if not db_item: raise HTTPException(status_code=404, detail="Ítem no encontrado")
-    
-    # Actualiza valores
-    db_item.quantity = item_update.quantity
-    db_item.unit = item_update.unit
-    
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
-@app.post("/inventory/decrement/{item_name}", response_model=schemas.InventoryItem)
-def decrement_inventory_item(item_name: str, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    db_item = db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id, models.InventoryItem.name == item_name).first()
-    if not db_item: raise HTTPException(status_code=404, detail="No encontrado")
-    
-    if db_item.quantity > 1:
-        db_item.quantity -= 1
-        db.commit()
-        db.refresh(db_item)
-        return db_item
-    else:
-        db.delete(db_item)
-        db.commit()
-        raise HTTPException(status_code=200, detail="Eliminado")
-
-@app.delete("/inventory/remove/{item_name}")
-def remove_inventory_item(item_name: str, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    db_item = db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id, models.InventoryItem.name == item_name).first()
-    if not db_item: raise HTTPException(status_code=404, detail="No encontrado")
-    
-    db.delete(db_item)
-    db.commit()
-    return {"detail": "Eliminado"}
-
-@app.get("/inventory", response_model=list[schemas.InventoryItem])
-def get_inventory(db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    return db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id).all()
-
-
-# --- 4. ENDPOINT RECETAS ---
-
-@app.post("/save-recipe", response_model=schemas.SavedRecipe)
-def save_recipe(recipe: schemas.SavedRecipeCreate, db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    existing = db.query(models.SavedRecipe).filter(models.SavedRecipe.owner_id == current_user.id, models.SavedRecipe.name == recipe.name).first()
-    if existing: raise HTTPException(status_code=400, detail="Ya existe")
-    
-    new_recipe = models.SavedRecipe(name=recipe.name, ingredients=recipe.ingredients, steps=recipe.steps, calories=recipe.calories, owner_id=current_user.id)
-    db.add(new_recipe)
-    db.commit()
-    db.refresh(new_recipe)
-    return new_recipe
-
-
-# --- 5. GENERACIÓN DE MENÚ (IA SUPREMA: LOGICA DE PORCIONES + MARKETING) ---
-
-@app.post("/generate-menu", response_model=schemas.MenuGenerationResponse)
-def generate_menu_with_ia(db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
-    # 1. Obtener inventario
-    inventory_items = db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id).all()
-    if not inventory_items: raise HTTPException(status_code=400, detail="Inventario vacío")
-    
-    # Formateamos lista legible: "2.5 Kg de Harina"
-    inventory_list_str = ", ".join([f"{item.quantity} {item.unit} de {item.name}" for item in inventory_items])
-    target_calories = calculate_target_calories(current_user)
-    
-    # 2. Gustos previos
-    saved = db.query(models.SavedRecipe).filter(models.SavedRecipe.owner_id == current_user.id).limit(10).all()
-    fav_txt = ""
-    if saved:
-        names = [r.name for r in saved]
-        fav_txt = f"GUSTOS PREVIOS: {', '.join(random.sample(names, min(len(names), 3)))}."
-
-    vibes = ["fresco y ligero", "reconfortante", "sabores intensos", "estilo mediterráneo", "energético"]
-    daily_vibe = random.choice(vibes)
-
-    # --- PROMPT DEFINITIVO ---
-    prompt_del_sistema = f"""
-    Eres "Meal.IA", un Nutricionista experto y Chef Ejecutivo de alta cocina.
-    
-    === CONTEXTO DEL INVENTARIO (CRÍTICO) ===
-    Estás viendo la DESPENSA COMPLETA de la casa (STOCK TOTAL).
-    Lista: [{inventory_list_str}]
-    
-    REGLA DE LÓGICA DE PORCIONES (NO COMER 1 KG):
-    1. Si la lista dice "1 Kg de Avena", significa que hay una BOLSA guardada. NO mandes al usuario a comer 1 Kg.
-       -> Usa una porción lógica para 1 persona (Ej: 40g - 60g).
-    2. Si dice "2 Kg de Arroz", usa solo 80g-100g.
-    3. Si dice "5 Unidades de Tomate", usa 1 o 2.
-    
-    REGLAS DE ORDEN DE COMIDAS:
-    1. EL ALMUERZO ES LA COMIDA PRINCIPAL (MÁS CALORIAS).
-    
-    REGLAS DE DISPONIBILIDAD:
-    1. USA SOLO LO QUE HAY EN LA LISTA NO USES COSAS QUE NO ESTAN EN EL INVENTARIO. (Permitidos extras básicos: Sal, Pimienta, Aceite, Agua).
-    2. Si falta algo esencial para un plato, NO lo inventes. Cambia de receta.
-
-    REGLAS DE ESTILO (NO SEAS FLOJO):
-    1. **TÍTULOS:** Crea nombres de restaurante (Marketing). Ej: "Risotto Cremoso de..." en lugar de "Arroz con...".
-    2. **PASOS DETALLADOS:** - Prohibido decir "cocina hasta que esté listo". 
-       - DI: "Cocina por 5 minutos hasta dorar".
-       - DI: "Cuando huelas a nuez tostada, apaga el fuego".
-    3. **EMPLATADO:** El último paso siempre es cómo servirlo para que se vea bello.
-
-    OBJETIVO:
-    - Calorías totales: {target_calories} kcal (+/- 50).
-    - Idioma: Español.
-
-    INSTRUCCIONES DE DATOS "REALES" (NO INVENTAR):
-    - Calcula los MACROS (Carbohidratos, Proteína, Grasa) aproximados reales de los ingredientes.
-    - Calcula los MICROS:
-       - Fiber (g): Fibra dietética.
-       - Sugar (g): Azúcares totales.
-       - Sodium (mg): Sodio estimado.
-    - Calcula el TIEMPO de preparación real total (prep + cocción). Ej: "25 min".
-    - Si no estás seguro de un micro, haz una estimación educada basada en ingredientes, NO pongas 0.
-
-    INSTRUCCIONES TÉCNICAS JSON:
-    - Devuelve SOLO JSON válido.
-    - NO uses comas al final de las listas (trailing commas).
-    """
-    
-    prompt_del_usuario = f"""
-    Crea el plan para {current_user.first_name}. Vibe de hoy: {daily_vibe}. {fav_txt}
-    
-    FORMATO JSON OBLIGATORIO:
-    {{
-      "breakfast": {{ 
-        "name": "TÍTULO MARKETING", 
-        "ingredients": ["cant+unidad ing", ...], 
-        "steps": ["Paso 1 (tiempo)...", "Paso 2...", "Emplatado..."], 
-        "calories": int,
-        "carbs": int,
-        "protein": int,
-        "fat": int,
-        "fiber": float,
-        "sugar": float,
-        "sodium": int,
-        "time": "XX min"
-      }},
-      "lunch": {{ 
-        "name": "TÍTULO MARKETING", 
-        "ingredients": ["cant+unidad ing", ...], 
-        "steps": ["...", "Emplatado..."], 
-        "calories": int,
-        "carbs": int,
-        "protein": int,
-        "fat": int,
-        "fiber": float,
-        "sugar": float,
-        "sodium": int,
-        "time": "XX min"
-      }},
-      "dinner": {{ 
-        "name": "TÍTULO MARKETING", 
-        "ingredients": ["cant+unidad ing", ...], 
-        "steps": ["...", "Emplatado..."], 
-        "calories": int,
-        "carbs": int,
-        "protein": int,
-        "fat": int,
-        "fiber": float,
-        "sugar": float,
-        "sodium": int,
-        "time": "XX min"
-      }},
-      "note": "Nota del Chef motivadora para tus objetivos.",
-      "total_calories": int
-    }}
-    """
-
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-3.5-turbo", 
-            messages=[{"role": "system", "content": prompt_del_sistema}, {"role": "user", "content": prompt_del_usuario}],
-            temperature=0.7, 
-        )
-        
-        # Limpieza y parseo
-        content = completion.choices[0].message.content
-        menu_data = json.loads(content)
-        
-        # Recalcular total por seguridad
-        total = (menu_data.get("breakfast",{}).get("calories",0) + 
-                 menu_data.get("lunch",{}).get("calories",0) + 
-                 menu_data.get("dinner",{}).get("calories",0))
-        menu_data["total_calories"] = total
-
-        # --- SANITIZACIÓN DE DATOS (NO DEVOLVER 0) ---
-        for meal_name in ["breakfast", "lunch", "dinner"]:
-            meal = menu_data.get(meal_name)
-            if not meal: continue
-            
-            cal = meal.get("calories", 500)
-            
-            # Fallback Macros (50% Carbs, 20% Protein, 30% Fat)
-            if meal.get("carbs", 0) == 0: meal["carbs"] = int((cal * 0.50) / 4)
-            if meal.get("protein", 0) == 0: meal["protein"] = int((cal * 0.20) / 4)
-            if meal.get("fat", 0) == 0: meal["fat"] = int((cal * 0.30) / 9)
-
-            # Fallback Micros
-            if meal.get("sodium", 0) == 0: meal["sodium"] = int(cal * 0.5) # Aprox
-            if meal.get("sugar", 0) == 0: meal["sugar"] = round(cal * 0.02, 1)
-            if meal.get("fiber", 0) == 0: meal["fiber"] = round(cal * 0.015, 1)
-
-            # Fallback Time
-            if not meal.get("time") or meal.get("time") == "0 min":
-                step_count = len(meal.get("steps", []))
-                meal["time"] = f"{15 + (step_count * 5)} min"
-        # ---------------------------------------------
-        
-        return menu_data
-
-    except json.JSONDecodeError:
-        print("Error: La IA generó un JSON inválido.")
-        raise HTTPException(status_code=500, detail="Error de formato en respuesta IA. Intenta de nuevo.")
-    except Exception as e:
-        print(f"Error IA: {e}")
-        raise HTTPException(status_code=500, detail=f"Error interno IA: {e}")
-
-
-# --- 6. ENDPOINT GOOGLE ---
-
-@app.post("/auth/google", response_model=GoogleLoginResponse) 
-def auth_google(google_token: schemas.GoogleToken, db: Session = Depends(get_db)):
-    WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID")
-    ANDROID_CLIENT_ID = os.getenv("GOOGLE_ANDROID_CLIENT_ID")
-    if not WEB_CLIENT_ID or not ANDROID_CLIENT_ID: raise HTTPException(status_code=500, detail="IDs de Google no configurados")
-    
-    CLIENT_IDS = [WEB_CLIENT_ID, ANDROID_CLIENT_ID]
-    
-    try:
-        id_info = id_token.verify_oauth2_token(google_token.token, requests.Request())
-        if id_info['aud'] not in CLIENT_IDS: raise ValueError(f"Audiencia inválida: {id_info['aud']}")
-        
-        email = id_info['email']
-        first_name = id_info.get('given_name', 'Usuario')
-        last_name = id_info.get('family_name') 
-        
-        user = security.get_user(db, email=email)
-        is_new_user = False 
-        
-        if not user:
-            is_new_user = True 
-            fake_password = security.get_password_hash(os.urandom(16).hex()) 
-            user = models.User(email=email, first_name=first_name, last_name=last_name, hashed_password=fake_password)
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        
-        access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
-        app_token = security.create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
-        
-        return {"access_token": app_token, "token_type": "bearer", "is_new_user": is_new_user}
-        
-    except ValueError as e:
-        print(f"Error token Google: {e}")
-        raise HTTPException(status_code=401, detail=f"Token inválido: {e}")
-    except Exception as e:
-        print(f"Error auth/google: {e}")
-        raise HTTPException(status_code=500, detail="Error interno servidor")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

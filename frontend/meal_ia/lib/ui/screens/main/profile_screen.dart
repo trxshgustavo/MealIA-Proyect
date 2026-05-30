@@ -459,6 +459,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSettingsItem(
                     title: 'Cerrar Sesión',
                     onTap: _logout,
+                    isDestructive: false,
+                  ),
+                  _buildSettingsItem(
+                    title: 'Eliminar Cuenta',
+                    onTap: _executeAccountDeletion,
                     isDestructive: true,
                   ),
                 ],
@@ -568,7 +573,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             width: 100.r,
                             height: 100.r,
                             errorBuilder: (context, error, stackTrace) {
-                              debugPrint("Error loading profile image: $error");
                               return Container(
                                 color: AppColors.cardDark,
                                 child: Icon(

@@ -34,6 +34,14 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
       14, // Show 2 weeks total (3 past + 11 future)
       (index) => startDate.add(Duration(days: index)),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final appState = Provider.of<AppState>(context, listen: false);
+        // Fetch plans for the range (3 days ago to +11 days)
+        appState.fetchMealPlans(_weekDays.first, _weekDays.last);
+      }
+    });
   }
 
   void _onDateSelected(DateTime date) {
@@ -118,7 +126,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: SizedBox(
-                height: 90,
+                height: 95.h,
                 child: ListView.separated(
                   padding: EdgeInsets.zero,
                   scrollDirection: Axis.horizontal,
@@ -152,8 +160,13 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                   ],
                 ),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.all(horizontalPadding),
-                  child: _buildMealList(context, dailyMenu, isToday),
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    horizontalPadding,
+                    horizontalPadding,
+                    100.h, // Added extra padding for navbar
+                  ),
+                  child: _buildMealList(context, dailyMenu, isToday, appState),
                 ),
               ),
             ),
@@ -207,6 +220,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     BuildContext context,
     Map<String, dynamic>? menu,
     bool isToday,
+    AppState appState,
   ) {
     // 1. Data Exists -> Show Menu (Always, for any date)
     if (menu != null && menu.isNotEmpty) {
@@ -250,38 +264,121 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Future Date -> Locked
+    // Future Date
     if (_selectedDate.isAfter(today)) {
+      // 2a. No Premium -> Locked
+      if (!appState.isPremium) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock_clock_outlined,
+                  size: 32.sp,
+                  color: Colors.grey,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              Text(
+                "Plan Futuro",
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              const Text(
+                "Suscríbete a Premium para\nplanificar tus comidas futuras.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textLight),
+              ),
+              SizedBox(height: 12.h),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/subscription');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.buttonDark,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "Ser Premium",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // 2b. Premium -> Generate Button (Actionable Empty State)
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(16.w), // Reducido
+              padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: AppColors.accentColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.lock_clock_outlined,
-                size: 32.sp, // Reducido de 40
-                color: Colors.grey,
+                Icons.calendar_month_outlined,
+                size: 40.sp,
+                color: AppColors.accentColor,
               ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 20.h),
             Text(
-              "Plan Futuro",
+              "Sin plan para este día",
               style: TextStyle(
-                fontSize: 16.sp, // Reducido de 18
+                fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textDark,
               ),
             ),
-            SizedBox(height: 6.h),
-            const Text(
-              "Los menús futuros se generarán\nautomáticamente o son Premium.",
+            SizedBox(height: 8.h),
+            Text(
+              "Genera un menú personalizado\npara ${_getDayShortName(_selectedDate.weekday)} ${_selectedDate.day}.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textLight),
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: AppColors.textLight,
+                height: 1.5,
+              ),
+            ),
+            SizedBox(height: 24.h),
+            ElevatedButton.icon(
+              onPressed: () =>
+                  _handleGenerateMenuForDate(context, _selectedDate),
+              icon: const Icon(
+                Icons.auto_awesome,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: const Text(
+                "Generar Menú",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.buttonDark,
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+              ),
             ),
           ],
         ),
@@ -567,7 +664,9 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     if (mealData is Map) {
       // 1. Check for explicit time
       if (mealData['time'] != null) {
-        return "${mealData['time']} min";
+        final time = mealData['time'].toString();
+        // Evitar doble sufijo "min min"
+        return time.contains('min') ? time : "$time min";
       }
       // 2. Heuristic: Base 10m + 5m per step
       final steps = mealData['steps'];
@@ -627,5 +726,60 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
       'Diciembre',
     ];
     return months[month - 1];
+  }
+
+  Future<void> _handleGenerateMenuForDate(
+    BuildContext context,
+    DateTime date,
+  ) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    // Check inventory first
+    if (appState.inventoryMap.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Añade alimentos antes de generar un menú!'),
+        ),
+      );
+      return;
+    }
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+            insetPadding: EdgeInsets.zero,
+            child: Container(
+              color: Colors.white,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Reuse animation logic or simple indicator
+                  CircularProgressIndicator(color: AppColors.buttonDark),
+                  SizedBox(height: 20),
+                  Text(
+                    "Planificando el futuro...",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    await appState.generateMenuConIA(date: date);
+
+    if (context.mounted) {
+      Navigator.pop(context); // Close loading
+      // Stay on page, UI will update via Provider
+    }
   }
 }

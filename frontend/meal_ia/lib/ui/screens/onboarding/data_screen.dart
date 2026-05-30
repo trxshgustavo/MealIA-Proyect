@@ -205,6 +205,21 @@ class _DataScreenState extends State<DataScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
+      // Add AppBar to allow easy back navigation if pushed from Profile
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.primaryText,
+                ),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+      ),
+      extendBodyBehindAppBar: true,
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -215,6 +230,7 @@ class _DataScreenState extends State<DataScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Only show image if enough space or in onboarding (optional tweak, leaving standard)
                 Image.asset(
                   'assets/carrot.png',
                   height: imageSize,
@@ -234,7 +250,7 @@ class _DataScreenState extends State<DataScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: Colors.white.withValues(alpha: 0.2),
                         spreadRadius: 0,
                         blurRadius: 10,
                         offset: const Offset(0, 4),

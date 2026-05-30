@@ -1,7 +1,7 @@
 fastapi
-uvicorn
-sqlalchemy
-pydantic
+uvicorn[standard]
+sqlalchemy>=2.0
+pydantic[email]
 python-dotenv
 openai
 google-auth
@@ -10,4 +10,7 @@ google-auth-httplib2
 requests
 python-multipart
 passlib[bcrypt]
+argon2-cffi
 python-jose[cryptography]
+stripe
+psycopg2-binary

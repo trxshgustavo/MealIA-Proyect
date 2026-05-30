@@ -116,10 +116,60 @@ class GoalsScreen extends StatelessWidget {
       context,
       defaultSpacing: 20.0,
     );
-    // final formPadding = ScreenUtils.getFormPadding(context); // Unused currently, using specific padding in container
+
+    // If we can pop, it means we came from Profile/Data screen (Edit Mode)
+    // If not, we are likely in Onboarding (Main is root of onboarding flow actually... wait)
+    // Actually, in onboarding, the stack is / -> /welcome -> /register -> /data -> /goals
+    // So canPop is TRUE in onboarding too.
+    // We need a better heuristic.
+    // Usually Onboarding finishes with pushNamedAndRemoveUntil to /main.
+    // Setting/Edit mode should just pop or popUntil.
+    // However, if we are editing, we are already logged in and MainShell is in the stack bottom or close to it.
+
+    // Simple heuristic: If we are calling from Profile -> Data -> Goal, we want 'Guardar' behavior (which just pops back to data or profile).
+    // BUT DataScreen also pushes /goals.
+
+    // Let's rely on the user intention.
+    // If I change the button to "Finalizar" it implies end of flow.
+    // If I change it to "Guardar" it implies sub-screen.
+
+    // I will use a simple check: is the user already fully authenticated and configured?
+    // Hard to check in widget build synchronously without provider check.
+
+    // Let's just assume if the user is here, they selected a goal.
+    // Iwill change the button to pop to /main (refreshing it) OR simply pop if we want to go back.
+    // The safest "Edit" behavior is pop. The safest "Onboarding" is pushNamedAndRemoveUntil.
+
+    // I will add an optional argument to the route, but that requires changing routing.
+    // Instead, I'll check if the route settings arguments contains "edit".
+
+    // For now, I will change it to:
+    // If we are deeper in the stack (more than just onboarding steps), maybe we can just pop to /main?
+    // Actually, simply using pushNamedAndRemoveUntil is FINE for onboarding.
+    // For editing, it's annoying because it resets the app state/tab.
+
+    // I will enable the "Back" button in AppBar so users can just go back if they changed their mind,
+    // and the "Finalizar" button will strictly go to Main.
+    // This is consistent with "I am done editing everything".
+
+    // Add AppBar to allow backing out.
 
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.primaryText,
+                ),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+      ),
+      extendBodyBehindAppBar: true,
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -173,7 +223,7 @@ class GoalsScreen extends StatelessWidget {
 
                       _buildGoalCard(
                         context,
-                        title: 'Déficit calórico',
+                        title: 'Déficit Calórico',
                         subtitle: 'Bajar de peso',
                         icon: Icons.local_fire_department,
                         value: 'Déficit Calórico',
@@ -198,6 +248,10 @@ class GoalsScreen extends StatelessWidget {
 
                       ElevatedButton(
                         onPressed: () {
+                          // If valid change, we just navigate.
+                          // The change is saved INSTANTLY on tap of the card (see _buildGoalCard).
+                          // So this button is just "Exit".
+
                           Navigator.pushNamedAndRemoveUntil(
                             context,
                             '/main',

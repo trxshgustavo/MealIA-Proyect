@@ -8,10 +8,10 @@ echo.
 echo [1/3] Activando entorno virtual...
 if exist "venv\Scripts\activate.bat" (
     call venv\Scripts\activate.bat
-    echo ✓ Entorno virtual activado (venv)
+    echo ✓ Entorno virtual activado [venv]
 ) else if exist ".venv\Scripts\activate.bat" (
     call .venv\Scripts\activate.bat
-    echo ✓ Entorno virtual activado (.venv)
+    echo ✓ Entorno virtual activado [.venv]
 ) else (
     echo ✗ ERROR: No se encontró el entorno virtual!
     echo.

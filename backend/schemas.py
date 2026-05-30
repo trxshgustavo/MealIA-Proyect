@@ -18,7 +18,7 @@ class InventoryItemUpdate(BaseModel): # <--- NUEVO ESQUEMA PARA EL PUT
 class InventoryItem(InventoryItemBase):
     id: int
     owner_id: int
-    quantity: int # ¡Debe devolver la cantidad!
+    quantity: float # Debe coincidir con el modelo SQLAlchemy (Float)
 
     class Config:
         from_attributes = True # Permite a Pydantic leer modelos de SQLAlchemy
@@ -40,6 +40,7 @@ class UserDataUpdate(BaseModel):
     birthdate: Optional[datetime] = None
     goal: Optional[str] = None
     photo_url: Optional[str] = None
+    is_premium: Optional[bool] = None
 
 class UserPasswordUpdate(BaseModel):
     password: str
@@ -52,6 +53,7 @@ class User(UserBase):
     goal: Optional[str] = None
     inventory_items: List[InventoryItem] = []
     photo_url: str | None = None
+    is_premium: bool = False
 
     class Config:
         from_attributes = True
@@ -104,3 +106,31 @@ class SavedRecipe(SavedRecipeCreate):
 
     class Config:
         from_attributes = True
+
+# --- Meal Plan ---
+class MealPlanCreate(BaseModel):
+    date: str # YYYY-MM-DD
+    breakfast: MealDetail
+    lunch: MealDetail
+    dinner: MealDetail
+    total_calories: int
+
+class MealPlan(BaseModel):
+    id: int
+    date: datetime  # Override: DB stores as DateTime, not str
+    breakfast: MealDetail
+    lunch: MealDetail
+    dinner: MealDetail
+    total_calories: int
+    owner_id: int
+
+    class Config:
+        from_attributes = True
+
+# --- Shopping Suggestion ---
+class ShoppingSuggestionItem(BaseModel):
+    name: str
+    reason: str # Por qué se sugiere (ej: "Para hacer Lasagna")
+
+class ShoppingSuggestionResponse(BaseModel):
+    suggestions: List[ShoppingSuggestionItem]

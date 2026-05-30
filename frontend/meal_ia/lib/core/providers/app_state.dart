@@ -35,6 +35,7 @@ class AppState extends ChangeNotifier {
   double? weight;
   String goal = 'Mantenimiento';
   String? photoUrl;
+  bool isPremium = false; // Premium Status
 
   // Inventario y Menú
   final Map<String, Map<String, dynamic>> _inventory = {};
@@ -42,6 +43,10 @@ class AppState extends ChangeNotifier {
 
   Map<String, dynamic>? generatedMenu;
   int totalCalories = 0;
+
+  // Recetas Guardadas (Favoritos)
+  List<Map<String, dynamic>> _savedRecipes = [];
+  List<Map<String, dynamic>> get savedRecipes => _savedRecipes;
 
   // --- HELPERS ---
   String? get currentUserId => FirebaseAuth.instance.currentUser?.uid;
@@ -86,6 +91,7 @@ class AppState extends ChangeNotifier {
     _inventory.clear();
     _mealCalendar.clear();
     generatedMenu = null;
+    _savedRecipes.clear();
 
     notifyListeners();
   }
@@ -122,166 +128,121 @@ class AppState extends ChangeNotifier {
         }
       }
 
-      // 1. Cargar Perfil desde Backend
-      String? backendGoal;
-
-      try {
-        final userResponse = await http
-            .get(
-              Uri.parse('$_baseUrl/users/me'),
-              headers: {'Authorization': 'Bearer $token'},
-            )
-            .timeout(const Duration(seconds: 20));
-
-        if (userResponse.statusCode == 200) {
-          final userData = jsonDecode(utf8.decode(userResponse.bodyBytes));
-
-          // UPDATE MEMORY
-          email = userData['email'];
-          firstName = userData['first_name'];
-          lastName = userData['last_name'];
-          height = (userData['height'] as num?)?.toDouble();
-          weight = (userData['weight'] as num?)?.toDouble();
-
-          birthdate = userData['birthdate'] != null
-              ? DateTime.tryParse(userData['birthdate'])
-              : null;
-
-          backendGoal = userData['goal'];
-          // Only set photoUrl if backend returns a non-empty string
-          final backendPhotoUrl = userData['photo_url'] as String?;
-          if (backendPhotoUrl != null && backendPhotoUrl.isNotEmpty) {
-            photoUrl = backendPhotoUrl;
-          }
-
-          // UPDATE CACHE
-          if (user != null) {
-            final cacheData = {
-              'email': email,
-              'first_name': firstName,
-              'last_name': lastName,
-              'height': height,
-              'weight': weight,
-              'birthdate': birthdate?.toIso8601String(),
-              'photo_url': photoUrl,
-              'goal': backendGoal,
-            };
-            await _storage.write(
-              key: 'user_profile_cache_${user.uid}',
-              value: jsonEncode(cacheData),
-            );
-          }
-        } else {
-          debugPrint("Backend /users/me returned ${userResponse.statusCode}");
-          if (userResponse.statusCode == 401) {
-            await logout();
-            return false;
-          }
-        }
-      } catch (e) {
-        debugPrint("Error loading basic profile from backend: $e");
-      }
-
-      // ... Firestore Fallback follows ...
-
-      // --- FIRESTORE BACKUP READ (ALWAYS RUNS TO FILL GAPS) ---
-      // Runs if backend failed OR if backend data was incomplete.
-      // Already defiend user above.
-      if (user != null) {
+      Future<void> loadProfile() async {
+        String? backendGoal;
         try {
-          final doc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
+          final userResponse = await http
+              .get(
+                Uri.parse('$_baseUrl/users/me'),
+                headers: {'Authorization': 'Bearer $token'},
+              )
+              .timeout(const Duration(seconds: 20));
 
-          if (doc.exists) {
-            final data = doc.data()!;
+          if (userResponse.statusCode == 200) {
+            final userData = jsonDecode(utf8.decode(userResponse.bodyBytes));
+            email = userData['email'];
+            firstName = userData['first_name'];
+            lastName = userData['last_name'];
+            height = (userData['height'] as num?)?.toDouble();
+            weight = (userData['weight'] as num?)?.toDouble();
+            birthdate = userData['birthdate'] != null
+                ? DateTime.tryParse(userData['birthdate'])
+                : null;
+            backendGoal = userData['goal'];
+            final backendPhotoUrl = userData['photo_url'] as String?;
+            if (backendPhotoUrl != null && backendPhotoUrl.isNotEmpty) {
+              photoUrl = backendPhotoUrl;
+            }
+            isPremium = userData['is_premium'] ?? false;
 
-            // Sync Email/Name if missing (e.g. backend down)
-            if (email == null && user.email != null) email = user.email;
-            if (firstName == null && data.containsKey('first_name')) {
-              firstName = data['first_name'];
+            if (user != null) {
+              final cacheData = {
+                'email': email,
+                'first_name': firstName,
+                'last_name': lastName,
+                'height': height,
+                'weight': weight,
+                'birthdate': birthdate?.toIso8601String(),
+                'photo_url': photoUrl,
+                'goal': backendGoal,
+                'is_premium': isPremium,
+              };
+              await _storage.write(
+                key: 'user_profile_cache_${user.uid}',
+                value: jsonEncode(cacheData),
+              );
             }
-            if (lastName == null && data.containsKey('last_name')) {
-              lastName = data['last_name'];
-            }
-
-            // Recuperar Meta
-            if (backendGoal == null || backendGoal == 'Mantenimiento') {
-              if (data.containsKey('goal')) {
-                backendGoal = data['goal'];
-                // We do NOT write to storage here yet, we wait for final reconciliation
-              }
-            }
-
-            // Recuperar Foto (check for null OR empty string from backend)
-            if (photoUrl == null || photoUrl!.isEmpty) {
-              if (data.containsKey('photo_url') && data['photo_url'] != null) {
-                final firestorePhoto = data['photo_url'] as String?;
-                if (firestorePhoto != null && firestorePhoto.isNotEmpty) {
-                  photoUrl = firestorePhoto;
-                  debugPrint("Loaded photoUrl from Firestore: $photoUrl");
-                }
-              }
-            }
-
-            // Recuperar Datos Físicos
-            if (height == null && data.containsKey('height')) {
-              height = (data['height'] as num?)?.toDouble();
-            }
-            if (weight == null && data.containsKey('weight')) {
-              weight = (data['weight'] as num?)?.toDouble();
-            }
-            if (birthdate == null && data.containsKey('birthdate')) {
-              birthdate = DateTime.tryParse(data['birthdate']);
+          } else {
+            debugPrint("Backend /users/me returned ${userResponse.statusCode}");
+            if (userResponse.statusCode == 401) {
+              await logout();
+              return;
             }
           }
         } catch (e) {
-          debugPrint("Error leyendo backup de Firestore: $e");
+          debugPrint("Error loading basic profile from backend: $e");
         }
-      }
-      // -----------------------------
 
-      // FINAL GOAL LOGIC (Backend vs Cache vs Default)
-      // STRICT: Only load from UID-scoped key.
-      if (user != null) {
-        String goalKey = 'user_goal_${user.uid}';
-        if (backendGoal == null || backendGoal == 'Mantenimiento') {
-          String? cachedGoal = await _storage.read(key: goalKey);
-          goal = cachedGoal ?? 'Mantenimiento';
-        } else {
-          goal = backendGoal; // Lint fix: Removed !
-          await _storage.write(key: goalKey, value: goal);
-        }
-      } else {
-        // Should not happen if we enforce login, but fail safe
-        goal = 'Mantenimiento';
-      }
-
-      // FINAL PHOTO LOGIC
-      if (user != null) {
-        String photoKey = 'profile_photo_url_${user.uid}';
-
-        // Load from local cache if photo is still missing
-        if (photoUrl == null || photoUrl!.isEmpty) {
-          String? cachedPhoto = await _storage.read(key: photoKey);
-          if (cachedPhoto != null && cachedPhoto.isNotEmpty) {
-            photoUrl = cachedPhoto;
-            debugPrint("Loaded photoUrl from Local Storage: $photoUrl");
+        if (user != null) {
+          try {
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+            if (doc.exists) {
+              final data = doc.data()!;
+              if (email == null && user.email != null) email = user.email;
+              if (firstName == null && data.containsKey('first_name')) firstName = data['first_name'];
+              if (lastName == null && data.containsKey('last_name')) lastName = data['last_name'];
+              if (backendGoal == null || backendGoal == 'Mantenimiento') {
+                if (data.containsKey('goal')) backendGoal = data['goal'];
+              }
+              if (photoUrl == null || photoUrl!.isEmpty) {
+                if (data.containsKey('photo_url') && data['photo_url'] != null) {
+                  final firestorePhoto = data['photo_url'] as String?;
+                  if (firestorePhoto != null && firestorePhoto.isNotEmpty) {
+                    photoUrl = firestorePhoto;
+                    debugPrint("Loaded photoUrl from Firestore: $photoUrl");
+                  }
+                }
+              }
+              if (height == null && data.containsKey('height')) height = (data['height'] as num?)?.toDouble();
+              if (weight == null && data.containsKey('weight')) weight = (data['weight'] as num?)?.toDouble();
+              if (birthdate == null && data.containsKey('birthdate')) birthdate = DateTime.tryParse(data['birthdate']);
+            }
+          } catch (e) {
+            debugPrint("Error leyendo backup de Firestore: $e");
           }
         }
 
-        // Persist to local cache if we have a valid URL
-        if (photoUrl != null && photoUrl!.isNotEmpty) {
-          await _storage.write(key: photoKey, value: photoUrl);
+        if (user != null) {
+          String goalKey = 'user_goal_${user.uid}';
+          if (backendGoal == null || backendGoal == 'Mantenimiento') {
+            String? cachedGoal = await _storage.read(key: goalKey);
+            goal = cachedGoal ?? 'Mantenimiento';
+          } else {
+            goal = backendGoal;
+            await _storage.write(key: goalKey, value: goal);
+          }
+          
+          String photoKey = 'profile_photo_url_${user.uid}';
+          if (photoUrl == null || photoUrl!.isEmpty) {
+            String? cachedPhoto = await _storage.read(key: photoKey);
+            if (cachedPhoto != null && cachedPhoto.isNotEmpty) {
+              photoUrl = cachedPhoto;
+            }
+          }
+          if (photoUrl != null && photoUrl!.isNotEmpty) {
+            await _storage.write(key: photoKey, value: photoUrl);
+          }
+        } else {
+          goal = 'Mantenimiento';
         }
       }
 
-      // 2. Cargar Inventario (Cache + Network)
-      if (user != null) {
+      Future<void> loadInventory() async {
+        if (user == null) return;
         String inventoryKey = 'inventory_cache_${user.uid}';
-
-        // A. Load from Cache first
         try {
           String? cachedInv = await _storage.read(key: inventoryKey);
           if (cachedInv != null) {
@@ -290,17 +251,12 @@ class AppState extends ChangeNotifier {
             decoded.forEach((key, value) {
               _inventory[key] = Map<String, dynamic>.from(value);
             });
-            debugPrint(
-              "Loaded Inventory from Cache: ${_inventory.length} items.",
-            );
           }
         } catch (e) {
           debugPrint("Error loading inventory cache: $e");
         }
 
-        // B. Fetch from Network
         try {
-          debugPrint("_loadUserData: Fetching Inventory...");
           final invResponse = await http
               .get(
                 Uri.parse('$_baseUrl/inventory'),
@@ -310,8 +266,6 @@ class AppState extends ChangeNotifier {
 
           if (invResponse.statusCode == 200) {
             final List<dynamic> data = jsonDecode(invResponse.body);
-            // Verify if server indicates "empty" or just we have data.
-            // Usually we SHOULD trust server.
             _inventory.clear();
             for (var item in data) {
               _inventory[item['name']] = {
@@ -319,44 +273,31 @@ class AppState extends ChangeNotifier {
                 'unit': item['unit'] ?? 'Unidades',
               };
             }
-            debugPrint(
-              "_loadUserData: Inventory Fetched. Count: ${_inventory.length}",
-            );
-
-            // Update Cache
             await _storage.write(
               key: inventoryKey,
               value: jsonEncode(_inventory),
             );
           } else if (invResponse.statusCode == 401) {
-            debugPrint("Inventory 401 Unauthorized. Auto-logout.");
             await logout();
-            return false;
+            return;
           } else if (invResponse.statusCode == 500) {
-            debugPrint(
-              "_loadUserData: Inventory Failed: ${invResponse.statusCode}",
-            );
             await _blindRepairCriticalItems(token);
           }
         } catch (e) {
-          debugPrint("Error saving goal: $e");
+          debugPrint("Error loading inventory from network: $e");
         }
 
-        // C. Fetch from Firestore (Sync/Backup)
         try {
-          debugPrint("Fetching Inventory from Firestore...");
           final invSnap = await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .collection('inventory')
               .get();
-
           if (invSnap.docs.isNotEmpty) {
             bool cacheUpdateNeeded = false;
             for (var doc in invSnap.docs) {
               final data = doc.data();
               final name = doc.id;
-              // Add if not present (Merge strategy)
               if (!_inventory.containsKey(name)) {
                 _inventory[name] = {
                   'quantity': (data['quantity'] as num?)?.toDouble() ?? 0.0,
@@ -366,9 +307,6 @@ class AppState extends ChangeNotifier {
               }
             }
             if (cacheUpdateNeeded) {
-              debugPrint(
-                "Inventory merged with Firestore. Total: ${_inventory.length}",
-              );
               await _storage.write(
                 key: inventoryKey,
                 value: jsonEncode(_inventory),
@@ -380,68 +318,82 @@ class AppState extends ChangeNotifier {
         }
       }
 
-      // 3. Cargar HISTORIAL de Menús (Local + Firestore) (Non-critical)
-      try {
-        // --- LOCAL SCOPED ---
-        String calendarKey = 'meal_calendar_local';
-        if (user != null) calendarKey = 'meal_calendar_local_${user.uid}';
+      Future<void> loadHistory() async {
+        try {
+          String calendarKey = 'meal_calendar_local';
+          if (user != null) calendarKey = 'meal_calendar_local_${user.uid}';
 
-        final localCalendarJson = await _storage.read(key: calendarKey);
-        if (localCalendarJson != null) {
-          final Map<String, dynamic> decoded = jsonDecode(localCalendarJson);
-          _mealCalendar.clear();
-          decoded.forEach((key, value) {
-            _mealCalendar[key] = Map<String, dynamic>.from(value);
-          });
-          debugPrint(
-            "Loaded Local Calendar with ${_mealCalendar.length} entries.",
-          );
-        }
-
-        // --- FIRESTORE ---
-        if (user != null) {
-          // Obtener colección 'daily_menus'
-          final now = DateTime.now();
-          final startDate = now.subtract(const Duration(days: 30));
-
-          debugPrint(
-            "Fetching Firestore menus since ${_formatDate(startDate)} for user ${user.uid}",
-          );
-
-          final querySnapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('daily_menus')
-              .where(
-                FieldPath.documentId,
-                isGreaterThanOrEqualTo: _formatDate(startDate),
-              )
-              .get();
-
-          debugPrint("Firestore returned ${querySnapshot.docs.length} menus.");
-
-          for (var doc in querySnapshot.docs) {
-            final dateKey = doc.id; // YYYY-MM-DD
-            final data = doc.data();
-            _mealCalendar[dateKey] = data; // Guardamos en memoria
+          final localCalendarJson = await _storage.read(key: calendarKey);
+          if (localCalendarJson != null) {
+            final Map<String, dynamic> decoded = jsonDecode(localCalendarJson);
+            _mealCalendar.clear();
+            decoded.forEach((key, value) {
+              _mealCalendar[key] = Map<String, dynamic>.from(value);
+            });
           }
 
-          // Actualizar cache local
-          await _storage.write(
-            key: calendarKey,
-            value: jsonEncode(_mealCalendar),
-          );
+          if (user != null) {
+            final now = DateTime.now();
+            final startDate = now.subtract(const Duration(days: 30));
+            final querySnapshot = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('daily_menus')
+                .where(
+                  FieldPath.documentId,
+                  isGreaterThanOrEqualTo: _formatDate(startDate),
+                )
+                .get();
+
+            for (var doc in querySnapshot.docs) {
+              final dateKey = doc.id;
+              final data = doc.data();
+              _mealCalendar[dateKey] = data;
+            }
+            await _storage.write(
+              key: calendarKey,
+              value: jsonEncode(_mealCalendar),
+            );
+          }
+          
+          // FIX: Recuperar el menú de hoy si existe en el historial
+          final todayKey = _formatDate(DateTime.now());
+          if (_mealCalendar.containsKey(todayKey)) {
+             generatedMenu = _mealCalendar[todayKey];
+             totalCalories = generatedMenu?['total_calories'] ?? 0;
+          } else {
+             generatedMenu = null;
+             totalCalories = 0;
+          }
+        } catch (e) {
+          debugPrint("Error cargando historial de menús: $e");
         }
-      } catch (e) {
-        debugPrint("Error cargando historial de menús: $e");
       }
+
+      Future<void> loadSavedRecipes() async {
+        if (user == null) return;
+        try {
+          final snapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('saved_recipes')
+              .get();
+          _savedRecipes = snapshot.docs.map((doc) => doc.data()).toList();
+        } catch (e) {
+          debugPrint("Error loading saved recipes from Firestore: $e");
+        }
+      }
+
+      await Future.wait([
+        loadProfile(),
+        loadInventory(),
+        loadHistory(),
+        loadSavedRecipes(),
+      ]);
 
       notifyListeners();
 
       // STRICT VALIDATION:
-      // User requested "Don't let me in if errors".
-      // If we failed to load critical data (Email/Name) from both Backend and Firestore,
-      // we must return FALSE to show the error screen.
       if (email == null || firstName == null) {
         debugPrint(
           "Critical Data Missing: Email or Name is null. Failing Login.",
@@ -449,11 +401,9 @@ class AppState extends ChangeNotifier {
         return false;
       }
 
-      // STRICT CHECK: User MUST have a UID for us to trust the session
+      // NO STRICT CHECK FOR FIREBASE USER. We trust the backend.
       if (user == null) {
-        debugPrint("Critical: No Firebase User found. Failing Login.");
-        // Strict Mode: Fail if Firebase is missing to avoid data inconsistency.
-        return false;
+        debugPrint("Warning: No Firebase User found. Offline features or sync might be degraded, but login proceeds.");
       }
 
       return true;
@@ -506,22 +456,20 @@ class AppState extends ChangeNotifier {
             password: password,
           );
         } on FirebaseAuthException catch (e) {
-          // AUTO-REPAIR: Si no existe en Firebase pero sí en Backend, lo creamos.
-          if (e.code == 'user-not-found') {
+          // AUTO-REPAIR: Si no existe en Firebase pero sí en Backend, o la contraseña difiere.
+          if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'wrong-password') {
             try {
+              // Intento drástico de sincronizar: crear si no existe
               await FirebaseAuth.instance.createUserWithEmailAndPassword(
                 email: email,
                 password: password,
               );
-              // print("Usuario recreado en Firebase para sincronización.");
             } catch (createError) {
-              // print("Error recreando usuario en Firebase: $createError");
+              debugPrint("Error auto-repair Firebase: $createError");
             }
-          } else {
-            // print("Firebase Login Falló (ignorando): ${e.code} - ${e.message}");
           }
         } catch (e) {
-          // print("Error genérico Firebase Login: $e");
+          debugPrint("Error genérico Firebase Login: $e");
         }
 
         // 3. LOGRADO: Guardamos token y cargamos user
@@ -662,27 +610,66 @@ class AppState extends ChangeNotifier {
   // --- GOOGLE LOGIN ---
   Future<String> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return "Inicio de sesión cancelado";
+      // PASO 0: Limpiar sesión anterior de Google para evitar que signIn() se cuelgue
+      // Esto resuelve el bug donde una sesión stale bloquea el flujo OAuth
+      try {
+        await _googleSignIn.signOut();
+        debugPrint('✓ Sesión anterior de Google limpiada');
+      } catch (e) {
+        debugPrint('⚠️ Error limpiando sesión Google (no crítico): $e');
+      }
 
+      // PASO 1: Iniciar flujo de Google Sign-In con timeout explícito
+      debugPrint('🔄 Iniciando Google Sign-In...');
+      final GoogleSignInAccount? googleUser = await _googleSignIn
+          .signIn()
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              debugPrint('❌ Google Sign-In tardó más de 30s - cancelando');
+              return null;
+            },
+          );
+
+      if (googleUser == null) {
+        debugPrint('ℹ️ Google Sign-In: usuario canceló o timeout');
+        return "Inicio de sesión cancelado";
+      }
+      debugPrint('✓ Google Sign-In exitoso: ${googleUser.email}');
+
+      // PASO 2: Obtener tokens de autenticación
       final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+          await googleUser.authentication.timeout(
+        const Duration(seconds: 15),
+      );
       final String? googleToken = googleAuth.idToken;
 
-      if (googleToken == null) return "Error al obtener token de Google";
+      if (googleToken == null) {
+        debugPrint('❌ No se obtuvo idToken de Google');
+        return "Error al obtener token de Google";
+      }
+      debugPrint('✓ Token de Google obtenido');
 
-      // Sincronizar Firebase con Google Credential
+      // PASO 3: Sincronizar Firebase con Google Credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
       try {
-        await FirebaseAuth.instance.signInWithCredential(credential);
+        await FirebaseAuth.instance
+            .signInWithCredential(credential)
+            .timeout(const Duration(seconds: 15));
+        debugPrint('✓ Firebase Auth sincronizado con Google');
       } on FirebaseAuthException catch (e) {
+        debugPrint('❌ Firebase Auth error: ${e.code}');
         return _handleFirebaseError(e);
+      } on TimeoutException {
+        debugPrint('⚠️ Firebase Auth timeout (continuando con backend...)');
       }
 
+      // PASO 4: Enviar token al backend
+      debugPrint('🔄 Enviando token al backend...');
       final url = Uri.parse('$_baseUrl/auth/google');
       final response = await http
           .post(
@@ -713,9 +700,6 @@ class AppState extends ChangeNotifier {
             }
           }
 
-          // Retry strict check Logic locally? Or just assume OK if we have data now?
-          // Strict check in _loadUserData returns false.
-          // If we manually filled them, we are good.
           if (email != null && firstName != null) {
             success = true;
             notifyListeners();
@@ -723,6 +707,7 @@ class AppState extends ChangeNotifier {
         }
 
         if (!success) return "Error al cargar datos";
+        debugPrint('✓ Login con Google completado (${isNewUser ? "nuevo" : "existente"})');
         return isNewUser ? "OK_NEW" : "OK_EXISTING";
       } else {
         try {
@@ -810,6 +795,221 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint("Error deleting item '$name' from Firestore: $e");
     }
+  }
+
+  // --- PREMIUM FEATURES ---
+
+  Future<bool> upgradeSubscription() async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/subscription/upgrade'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        isPremium = true;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error upgrading subscription: $e");
+    }
+    return false;
+  }
+
+  Future<Map<String, dynamic>?> createPaymentIntent(
+    int amount,
+    String currency,
+  ) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/payments/create-payment-intent'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'amount': amount, 'currency': currency}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        debugPrint("Error creating payment intent: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("Error calling create-payment-intent: $e");
+    }
+    return null;
+  }
+
+  Future<List<dynamic>> fetchMealPlans(DateTime start, DateTime end) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return [];
+
+    try {
+      final startStr = _formatDate(start);
+      final endStr = _formatDate(end);
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/meal-plans?start_date=$startStr&end_date=$endStr'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> plans = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // Update local cache/calendar map
+        for (var plan in plans) {
+          final dateObj = DateTime.parse(plan['date']);
+          final dateKey = _formatDate(dateObj);
+
+          final menuData = {
+            'breakfast': plan['breakfast'],
+            'lunch': plan['lunch'],
+            'dinner': plan['dinner'],
+            'total_calories': plan['total_calories'],
+          };
+          _mealCalendar[dateKey] = menuData;
+        }
+        notifyListeners();
+        return plans;
+      }
+    } catch (e) {
+      debugPrint("Error fetching meal plans: $e");
+    }
+    return [];
+  }
+
+  Future<bool> saveMealPlan(
+    DateTime date,
+    Map<String, dynamic> menuData,
+  ) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return false;
+
+    final dateKey = _formatDate(date);
+    _mealCalendar[dateKey] = menuData;
+    notifyListeners();
+
+    try {
+      final body = {
+        'date': dateKey,
+        'breakfast': menuData['breakfast'],
+        'lunch': menuData['lunch'],
+        'dinner': menuData['dinner'],
+        'total_calories': menuData['total_calories'] ?? 2000,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/meal-plans'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        // Guardar también en Firestore como backup para sincronización
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          try {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('daily_menus')
+                .doc(dateKey)
+                .set(menuData, SetOptions(merge: true));
+          } catch (e) {
+            debugPrint("Error saving meal plan to Firestore: $e");
+          }
+        }
+        return true;
+      } else {
+        debugPrint("Error conserving meal plan: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("Error saving meal plan: $e");
+    }
+    return false;
+  }
+
+  Future<Map<String, dynamic>?> generateMenuConIA({DateTime? date}) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/generate-menu'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+
+        final menuData = {
+          'breakfast': data['breakfast'],
+          'lunch': data['lunch'],
+          'dinner': data['dinner'],
+          'total_calories': data['total_calories'],
+          'note': data['note'],
+        };
+
+        final targetDate = date ?? DateTime.now();
+
+        if (_isSameDay(targetDate, DateTime.now())) {
+          generatedMenu = menuData;
+          // FIX: Actualizar totalCalories desde la respuesta de la IA
+          totalCalories = data['total_calories'] ??
+              ((data['breakfast']?['calories'] ?? 0) as int) +
+              ((data['lunch']?['calories'] ?? 0) as int) +
+              ((data['dinner']?['calories'] ?? 0) as int);
+        }
+
+        await saveMealPlan(targetDate, menuData);
+
+        notifyListeners();
+        return menuData;
+      } else {
+        debugPrint("Error generating menu: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("Error calling generate-menu: $e");
+    }
+    return null;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<List<dynamic>?> getShoppingSuggestions() async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/inventory/suggest'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data['suggestions'];
+      } else if (response.statusCode == 403) {
+        // Not Premium
+        return []; // Handle externally or throw
+      }
+    } catch (e) {
+      debugPrint("Error fetching suggestions: $e");
+    }
+    return null;
   }
 
   void setPersonalData({String? firstName, String? lastName}) {
@@ -1106,92 +1306,13 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<bool> generateMenuConIA() async {
-    final token = await _storage.read(key: 'auth_token');
-    if (token == null) return false;
-    final url = Uri.parse('$_baseUrl/generate-menu');
-    try {
-      final response = await http
-          .post(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-          )
-          .timeout(const Duration(seconds: 60));
-      if (response.statusCode == 200) {
-        String rawBody = utf8.decode(response.bodyBytes);
-        String cleanBody = _cleanJsonString(rawBody);
-
-        try {
-          final data = jsonDecode(cleanBody);
-          generatedMenu = {
-            'breakfast': data['breakfast'],
-            'lunch': data['lunch'],
-            'dinner': data['dinner'],
-            'note': data['note'] ?? 'Menú generado por IA.',
-          };
-          // Safe cast for total_calories
-          totalCalories = (data['total_calories'] as num?)?.toInt() ?? 0;
-
-          notifyListeners();
-          return true;
-        } catch (e) {
-          debugPrint("Error parseando JSON de IA: $e");
-          debugPrint("Raw Body: $rawBody");
-          return false;
-        }
-      } else if (response.statusCode == 401) {
-        await logout();
-        return false;
-      } else {
-        generatedMenu = null;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      generatedMenu = null;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Helper para limpiar respuestas de IA que a veces incluyen markdown o texto extra
-  String _cleanJsonString(String raw) {
-    String cleaned = raw.trim();
-
-    // 1. Eliminar bloques de código markdown ```json ... ```
-    if (cleaned.startsWith('```')) {
-      // Remover primera línea (```json)
-      final firstNewLine = cleaned.indexOf('\n');
-      if (firstNewLine != -1) {
-        cleaned = cleaned.substring(firstNewLine + 1);
-      }
-      // Remover última línea (```)
-      final lastBackticks = cleaned.lastIndexOf('```');
-      if (lastBackticks != -1) {
-        cleaned = cleaned.substring(0, lastBackticks);
-      }
-    }
-
-    // 2. Encontrar el primer '{' y el último '}' por si hay texto alrededor
-    final firstBrace = cleaned.indexOf('{');
-    final lastBrace = cleaned.lastIndexOf('}');
-
-    if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
-      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
-    }
-
-    return cleaned.trim();
-  }
-
   Future<bool> saveUserPhysicalData({
     String? firstName,
     String? lastName,
     DateTime? birthdate,
     double? height,
     double? weight,
+    String? goal,
   }) async {
     final token = await _storage.read(key: 'auth_token');
 
@@ -1203,8 +1324,11 @@ class AppState extends ChangeNotifier {
     if (birthdate != null) this.birthdate = birthdate;
     if (height != null) this.height = height;
     if (weight != null) this.weight = weight;
+    if (goal != null) this.goal = goal;
 
     notifyListeners(); // Immediate UI feedback
+
+    bool backendSuccess = false; // Default to false, strict check
 
     // 2. BACKEND SYNC (Best Effort)
     if (token != null) {
@@ -1215,6 +1339,7 @@ class AppState extends ChangeNotifier {
       if (birthdate != null) body['birthdate'] = birthdate.toIso8601String();
       if (height != null) body['height'] = height;
       if (weight != null) body['weight'] = weight;
+      if (goal != null) body['goal'] = goal;
 
       try {
         final response = await http
@@ -1226,22 +1351,27 @@ class AppState extends ChangeNotifier {
               },
               body: jsonEncode(body),
             )
-            .timeout(const Duration(seconds: 10));
+            .timeout(
+              const Duration(seconds: 15),
+            ); // Increased timeout for reliability
 
         if (response.statusCode == 200) {
           // Optionally parse response to confirm
           final data = jsonDecode(response.body);
           // Update goal if returned by backend as a side effect (rare)
-          if (data['goal'] != null) goal = data['goal'];
+          if (data['goal'] != null) this.goal = data['goal'];
+
+          backendSuccess = true; // Mark as successful
         } else if (response.statusCode == 401) {
-          debugPrint("Backend 401: Token expired, but saving locally.");
+          debugPrint("Backend 401: Token expired. Sync failed.");
+          // We could logout here, but let's just return false
         } else {
           debugPrint(
             "Backend Warning (${response.statusCode}): ${response.body}",
           );
         }
       } catch (e) {
-        debugPrint("Backend Exception (ignored for persistence): $e");
+        debugPrint("Backend Exception (sync failed): $e");
       }
     }
 
@@ -1259,8 +1389,7 @@ class AppState extends ChangeNotifier {
           firestoreData['first_name'] = this.firstName;
         }
         if (this.lastName != null) firestoreData['last_name'] = this.lastName;
-
-        firestoreData['goal'] = goal;
+        if (this.goal.isNotEmpty) firestoreData['goal'] = this.goal;
 
         if (firestoreData.isNotEmpty) {
           await FirebaseFirestore.instance
@@ -1272,6 +1401,11 @@ class AppState extends ChangeNotifier {
         }
       } catch (fsError) {
         debugPrint("Error syncing physical data to Firestore: $fsError");
+      }
+
+      // Also sync to specific goal doc/key if we changed it
+      if (goal != null) {
+        await _storage.write(key: 'user_goal_${user.uid}', value: goal);
       }
     }
 
@@ -1294,7 +1428,7 @@ class AppState extends ChangeNotifier {
         if (this.birthdate != null) {
           cacheData['birthdate'] = this.birthdate?.toIso8601String();
         }
-        cacheData['goal'] = goal;
+        cacheData['goal'] = this.goal; // Always sync current goal
         if (photoUrl != null) cacheData['photo_url'] = photoUrl;
         if (email != null) cacheData['email'] = email;
 
@@ -1308,7 +1442,7 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    return true;
+    return backendSuccess;
   }
 
   Future<bool> saveUserGoal(String goal) async {
@@ -1547,7 +1681,6 @@ class AppState extends ChangeNotifier {
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return "No hay token de sesión";
 
-    // 1. Intentamos Endpoint Específico (PUT)
     try {
       final response = await http.put(
         Uri.parse('$_baseUrl/users/me/password'),
@@ -1556,40 +1689,9 @@ class AppState extends ChangeNotifier {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({'password': newPassword}),
-      );
-      if (response.statusCode == 200) return "OK";
-    } catch (e) {
-      // Continue
-    }
+      ).timeout(const Duration(seconds: 10));
 
-    // 2. Intentamos Endpoint Genérico (PUT /users/me)
-    try {
-      final response = await http.put(
-        Uri.parse('$_baseUrl/users/me'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'password': newPassword}),
-      );
       if (response.statusCode == 200) return "OK";
-    } catch (e) {
-      // Continue
-    }
-
-    // 3. Intentamos Endpoint PATCH (PATCH /users/me)
-    try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/users/me'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'password': newPassword}),
-      );
-      if (response.statusCode == 200) return "OK";
-
-      // Si llegamos hasta aquí, devolvemos el error del último intento para debug
       return "Fallo Server (${response.statusCode}): ${response.body}";
     } catch (e) {
       return "Error de conexión: $e";
@@ -1863,25 +1965,32 @@ class AppState extends ChangeNotifier {
     String type,
     Map<String, dynamic> currentRecipe,
   ) async {
-    // Mock implementation - simulates regeneration
-    await Future.delayed(const Duration(seconds: 2));
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
 
-    return {
-      'name': 'Nueva Receta de ${_capitalize(type)} Sorpresa',
-      'calories': (currentRecipe['calories'] ?? 500) + 50,
-      'ingredients': [
-        'Ingrediente Nuevo 1',
-        'Ingrediente Nuevo 2',
-        'Toque Secreto',
-      ],
-      'steps': ['Paso 1: Improvisar.', 'Paso 2: Disfrutar.'],
-    };
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/generate-menu'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        // Extract only the requested meal type from the full menu
+        final mealData = data[type];
+        if (mealData != null) {
+          return Map<String, dynamic>.from(mealData);
+        }
+      } else {
+        debugPrint("Error regenerating meal: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Error calling regenerate meal: $e");
+    }
+    return null;
   }
 
-  String _capitalize(String s) {
-    if (s.isEmpty) return "";
-    return s[0].toUpperCase() + s.substring(1);
-  }
+
 
   // --- DELETE ACCOUNT ---
   Future<bool> deleteAccount() async {

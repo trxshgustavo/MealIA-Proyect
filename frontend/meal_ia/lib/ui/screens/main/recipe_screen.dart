@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
+import '../../../core/providers/app_state.dart';
 
 class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
@@ -18,6 +20,8 @@ class _RecipeScreenState extends State<RecipeScreen>
   Animation<double>? _animation;
   final Set<int> _completedSteps = {};
   int _selectedTabIndex = 0;
+  bool _isRegenerating = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -112,17 +116,6 @@ class _RecipeScreenState extends State<RecipeScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // DEBUG OVERLAY
-            Container(
-              color: Colors.redAccent,
-              padding: const EdgeInsets.all(8),
-              width: double.infinity,
-              child: Text(
-                "DEBUG DATA: ${recipeData.toString()}",
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-              ),
-            ),
-
             // HEADER
             _buildHeader(context, name, calories, time),
 
@@ -160,9 +153,20 @@ class _RecipeScreenState extends State<RecipeScreen>
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _handleRegenerate(mealType, recipeData!),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text("Regenerar"),
+                      onPressed: _isRegenerating
+                          ? null
+                          : () => _handleRegenerate(mealType, recipeData!),
+                      icon: _isRegenerating
+                          ? SizedBox(
+                              width: 18.w,
+                              height: 18.h,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.buttonDark,
+                              ),
+                            )
+                          : const Icon(Icons.refresh),
+                      label: Text(_isRegenerating ? "Regenerando..." : "Regenerar"),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.buttonDark),
                         foregroundColor: AppColors.buttonDark,
@@ -176,10 +180,20 @@ class _RecipeScreenState extends State<RecipeScreen>
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () =>
-                          _handleSave(context, mealType, recipeData!),
-                      icon: const Icon(Icons.check),
-                      label: const Text("Guardar"),
+                      onPressed: _isSaving
+                          ? null
+                          : () => _handleSave(context, mealType, recipeData!),
+                      icon: _isSaving
+                          ? SizedBox(
+                              width: 18.w,
+                              height: 18.h,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check),
+                      label: Text(_isSaving ? "Guardando..." : "Guardar"),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.buttonDark,
                         foregroundColor: Colors.white,
@@ -217,11 +231,54 @@ class _RecipeScreenState extends State<RecipeScreen>
     );
   }
 
-  void _handleRegenerate(String mealType, Map<String, dynamic> currentData) {
-    // TODO: Implement regenerate logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Regenerar no implementado aún")),
-    );
+  void _handleRegenerate(String mealType, Map<String, dynamic> currentData) async {
+    if (_isRegenerating) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() => _isRegenerating = true);
+
+    final appState = Provider.of<AppState>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    try {
+      // Regenerate the entire menu (the API generates all 3 meals at once)
+      final newMenu = await appState.generateMenuConIA();
+
+      if (!mounted) return;
+
+      if (newMenu != null && newMenu[mealType] != null) {
+        // Navigate to the new recipe for this meal type, replacing current route
+        final newMealData = Map<String, dynamic>.from(newMenu[mealType] as Map);
+        newMealData['isPreview'] = true;
+        newMealData['mealType'] = mealType;
+
+        navigator.pushReplacementNamed(
+          '/recipe',
+          arguments: newMealData,
+        );
+      } else {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text("Error al regenerar. Intenta de nuevo."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRegenerating = false);
+      }
+    }
   }
 
   void _handleSave(
@@ -229,12 +286,65 @@ class _RecipeScreenState extends State<RecipeScreen>
     String mealType,
     Map<String, dynamic> data,
   ) async {
-    // TODO: Implement save logic properly
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Guardado simulado")));
-    Navigator.pop(context);
+    if (_isSaving) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() => _isSaving = true);
+
+    final appState = Provider.of<AppState>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    try {
+      // Save recipe to favorites via the backend API
+      final success = await appState.saveRecipeToFavorites(data);
+
+      if (!mounted) return;
+
+      if (success) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text("\"${data['name']}\" guardada en favoritos"),
+              ],
+            ),
+            backgroundColor: const Color(0xFF4CAF50),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text("La receta ya existe en favoritos o hubo un error"),
+            backgroundColor: Colors.orangeAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      navigator.pop();
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text("Error al guardar: $e"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
+
 
   Widget _buildHeader(
     BuildContext context,
@@ -459,6 +569,13 @@ class _RecipeScreenState extends State<RecipeScreen>
     );
   }
 
+  /// Guard against division by zero when all macros are 0
+  double _safePct(double pct, _NutrientData data) {
+    final total = data.carbsPct + data.proteinPct + data.fatPct;
+    if (total <= 0) return 0.33; // Equal distribution fallback
+    return pct / total;
+  }
+
   Widget _buildNutritionTab(_NutrientData nutrients) {
     return SingleChildScrollView(
       key: const ValueKey('nutrition'),
@@ -515,15 +632,9 @@ class _RecipeScreenState extends State<RecipeScreen>
                       size: Size(120.w, 120.w),
                       painter: _CleanDonutPainter(
                         progress: safeAnimation.value,
-                        carbsPct:
-                            data.carbsPct /
-                            (data.carbsPct + data.proteinPct + data.fatPct),
-                        proteinPct:
-                            data.proteinPct /
-                            (data.carbsPct + data.proteinPct + data.fatPct),
-                        fatPct:
-                            data.fatPct /
-                            (data.carbsPct + data.proteinPct + data.fatPct),
+                        carbsPct: _safePct(data.carbsPct, data),
+                        proteinPct: _safePct(data.proteinPct, data),
+                        fatPct: _safePct(data.fatPct, data),
                       ),
                     ),
                     Column(
@@ -562,21 +673,21 @@ class _RecipeScreenState extends State<RecipeScreen>
                       "${data.carbs}g",
                       const Color(0xFF4CAF50),
                       (data.carbs * 4) /
-                          data.calories, // Approximate progress for visual
+                          (data.calories > 0 ? data.calories : 1),
                     ),
                     SizedBox(height: 14.h),
                     _buildMacroLegendItem(
                       "Proteínas",
                       "${data.protein}g",
                       const Color(0xFFFF9800),
-                      (data.protein * 4) / data.calories,
+                      (data.protein * 4) / (data.calories > 0 ? data.calories : 1),
                     ),
                     SizedBox(height: 14.h),
                     _buildMacroLegendItem(
                       "Grasas",
                       "${data.fat}g",
                       const Color(0xFF2196F3),
-                      (data.fat * 9) / data.calories,
+                      (data.fat * 9) / (data.calories > 0 ? data.calories : 1),
                     ),
                   ],
                 ),
@@ -733,7 +844,7 @@ class _RecipeScreenState extends State<RecipeScreen>
 
           _buildNutrientRow(
             "Colesterol",
-            "${data.sodium}",
+            "${data.cholesterol}",
             "mg",
             const Color(0xFFEF5350),
           ),

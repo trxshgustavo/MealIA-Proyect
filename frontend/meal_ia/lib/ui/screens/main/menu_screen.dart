@@ -454,7 +454,7 @@ class _MenuScreenState extends State<MenuScreen> {
                                 : () async {
                                     setState(() => _isSaving = true);
                                     try {
-                                      await app.saveMenuForDate(
+                                      await app.saveMealPlan(
                                         DateTime.now(),
                                         menu,
                                       );

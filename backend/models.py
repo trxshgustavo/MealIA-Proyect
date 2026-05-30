@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, JSON 
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from database import Base
 
 class User(Base):
@@ -15,8 +16,10 @@ class User(Base):
     birthdate = Column(DateTime, nullable=True)
     goal = Column(String, default="Mantenimiento") 
     photo_url = Column(String, nullable=True)
+    is_premium = Column(Integer, default=0) # 0: Free, 1: Premium
     inventory_items = relationship("InventoryItem", back_populates="owner")
     saved_recipes = relationship("SavedRecipe", back_populates="owner")
+    meal_plans = relationship("MealPlan", back_populates="owner")
 
 
 class InventoryItem(Base):
@@ -40,3 +43,16 @@ class SavedRecipe(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="saved_recipes")
+
+class MealPlan(Base):
+    __tablename__ = "meal_plans"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(DateTime, nullable=False) # Fecha del plan
+    breakfast = Column(JSON)
+    lunch = Column(JSON)
+    dinner = Column(JSON)
+    total_calories = Column(Integer)
+    
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="meal_plans")
