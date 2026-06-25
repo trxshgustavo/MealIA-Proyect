@@ -54,3 +54,4 @@ typing_extensions==4.15.0
 urllib3==2.6.2
 uvicorn==0.41.0
 websockets==16.0
+slowapi
