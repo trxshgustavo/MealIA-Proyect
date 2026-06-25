@@ -1,8 +1,6 @@
 [tool.pyrefly]
 python_version = "3.13"
 search_path = [
-  ".",
   "backend",
-  ".venv/Lib/site-packages",
   "backend/.venv/Lib/site-packages",
 ]

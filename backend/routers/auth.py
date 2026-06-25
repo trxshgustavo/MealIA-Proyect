@@ -3,7 +3,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from google.oauth2 import id_token
@@ -12,6 +12,8 @@ import models
 import schemas
 import security
 from database import get_db
+from limiter import limiter
+import re
 
 router = APIRouter()
 
@@ -20,7 +22,8 @@ class GoogleLoginResponse(schemas.Token):
     is_new_user: bool
 
 @router.post("/register", response_model=schemas.User)
-def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register_user(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     try:
         db_user = security.get_user(db, email=user.email)
         if db_user:
@@ -30,12 +33,25 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         if not user.email or not user.email.strip():
             raise HTTPException(status_code=400, detail="El email es requerido")
         
-        # Validar que la contraseña tenga al menos 6 caracteres
-        if not user.password or len(user.password) < 6:
-            raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
+        # Validación Fuerte de Contraseña
+        if not user.password or len(user.password) < 8:
+            raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres")
+        if not re.search(r"\d", user.password):
+            raise HTTPException(status_code=400, detail="La contraseña debe contener al menos un número")
+        if not re.search(r"[A-Z]", user.password):
+            raise HTTPException(status_code=400, detail="La contraseña debe contener al menos una letra mayúscula")
+            
+        # Determinar si es administrador basado en el .env
+        admin_email = os.getenv("ADMIN_EMAIL", "").strip()
+        is_admin = 1 if (admin_email and user.email.lower() == admin_email.lower()) else 0
         
         hashed_password = security.get_password_hash(user.password)
-        new_user = models.User(email=user.email, first_name=user.first_name, hashed_password=hashed_password)
+        new_user = models.User(
+            email=user.email, 
+            first_name=user.first_name, 
+            hashed_password=hashed_password,
+            is_admin=is_admin
+        )
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
@@ -47,7 +63,8 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {str(e)}")
 
 @router.post("/token", response_model=schemas.Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     try:
         # Validar que se proporcionen credenciales
         if not form_data.username or not form_data.password:
@@ -71,6 +88,12 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
                 detail="Credenciales incorrectas",
                 headers={"WWW-Authenticate": "Bearer"}
             )
+            
+        # Determinar si es administrador basado en el .env (por si cambió después del registro)
+        admin_email = os.getenv("ADMIN_EMAIL", "").strip()
+        if admin_email and user.email.lower() == admin_email.lower() and not user.is_admin:
+            user.is_admin = 1
+            db.commit()
         
         access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = security.create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
@@ -84,7 +107,8 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         )
 
 @router.post("/auth/google", response_model=GoogleLoginResponse) 
-def auth_google(google_token: schemas.GoogleToken, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def auth_google(request: Request, google_token: schemas.GoogleToken, db: Session = Depends(get_db)):
     WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID")
     ANDROID_CLIENT_ID = os.getenv("GOOGLE_ANDROID_CLIENT_ID")
     
@@ -113,7 +137,9 @@ def auth_google(google_token: schemas.GoogleToken, db: Session = Depends(get_db)
         if not user:
             is_new_user = True 
             fake_password = security.get_password_hash(os.urandom(16).hex()) 
-            user = models.User(email=email, first_name=first_name, last_name=last_name, hashed_password=fake_password)
+            admin_email = os.getenv("ADMIN_EMAIL", "").strip()
+            is_admin = 1 if (admin_email and email.lower() == admin_email.lower()) else 0
+            user = models.User(email=email, first_name=first_name, last_name=last_name, hashed_password=fake_password, is_admin=is_admin)
             db.add(user)
             db.commit()
             db.refresh(user)

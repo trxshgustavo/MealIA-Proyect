@@ -4,6 +4,8 @@ import '../../../core/providers/app_state.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_colors.dart';
 import 'recipe_screen.dart';
+import 'add_extra_meal_bottomsheet.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 import '../../../utils/screen_utils.dart';
 
 class RecipeCalendarScreen extends StatefulWidget {
@@ -226,6 +228,8 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     if (menu != null && menu.isNotEmpty) {
       return Column(
         children: [
+          _buildMacroTracker(menu),
+          SizedBox(height: 16.h),
           _buildSectionHeader(
             isToday
                 ? "Tu Menú de Hoy"
@@ -236,26 +240,60 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
             _buildMealCard(
               context,
               "Desayuno",
+              "breakfast",
               Icons.wb_sunny_outlined,
               menu['breakfast'],
               Colors.orangeAccent,
+              menu['breakfast_eaten'] ?? false,
+              appState,
             ),
           if (menu['lunch'] != null)
             _buildMealCard(
               context,
               "Almuerzo",
+              "lunch",
               Icons.restaurant_outlined,
               menu['lunch'],
               Colors.redAccent,
+              menu['lunch_eaten'] ?? false,
+              appState,
             ),
           if (menu['dinner'] != null)
             _buildMealCard(
               context,
               "Cena",
+              "dinner",
               Icons.nightlight_round_outlined,
               menu['dinner'],
               Colors.indigoAccent,
+              menu['dinner_eaten'] ?? false,
+              appState,
             ),
+          SizedBox(height: 16.h),
+          _buildSectionHeader("Comidas Extras"),
+          SizedBox(height: 8.h),
+          if (menu['extra_meals'] != null && (menu['extra_meals'] as List).isNotEmpty)
+            ...((menu['extra_meals'] as List).map((extra) => _buildMealCard(
+              context,
+              "Extra",
+              "extra",
+              Icons.fastfood_outlined,
+              extra,
+              Colors.green,
+              true,
+              appState,
+            )).toList()),
+          SizedBox(height: 12.h),
+          ElevatedButton.icon(
+            onPressed: () => showAddExtraMealSheet(context, appState, _selectedDate),
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text("Añadir Comida Extra", style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.buttonDark,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            ),
+          ),
         ],
       );
     }
@@ -483,9 +521,12 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
   Widget _buildMealCard(
     BuildContext context,
     String timeLabel,
+    String mealTypeKey,
     IconData icon,
     dynamic mealData,
     Color accentColor,
+    bool isEaten,
+    AppState appState,
   ) {
     String title = "Plato desconocido";
     String description = "Toca para ver la receta completa";
@@ -578,6 +619,28 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    // Checkbox for eaten
+                    GestureDetector(
+                      onTap: () {
+                        appState.markMealEaten(_selectedDate, mealTypeKey, !isEaten);
+                      },
+                      child: Container(
+                        width: 24.w,
+                        height: 24.w,
+                        decoration: BoxDecoration(
+                          color: isEaten ? accentColor : Colors.white,
+                          border: Border.all(
+                            color: isEaten ? accentColor : Colors.grey,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: isEaten 
+                            ? Icon(Icons.check, color: Colors.white, size: 16.sp)
+                            : null,
                       ),
                     ),
                   ],
@@ -677,6 +740,150 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     }
     // Default fallback
     return "20 min";
+  }
+
+  Widget _buildMacroTracker(Map<String, dynamic> menu) {
+    // Collect daily goals (simplified logic: target total is stored, macros are roughly calculated)
+    int targetCalories = menu['total_calories'] ?? 2000;
+    int targetCarbs = (targetCalories * 0.50 / 4).round();
+    int targetProtein = (targetCalories * 0.25 / 4).round();
+    int targetFat = (targetCalories * 0.25 / 9).round();
+
+    int consumedCalories = 0;
+    int consumedCarbs = 0;
+    int consumedProtein = 0;
+    int consumedFat = 0;
+
+    void addMacros(dynamic meal) {
+      if (meal == null) return;
+      consumedCalories += (meal['calories'] ?? 0) as int;
+      consumedCarbs += (meal['carbs'] ?? 0) as int;
+      consumedProtein += (meal['protein'] ?? 0) as int;
+      consumedFat += (meal['fat'] ?? 0) as int;
+    }
+
+    if (menu['breakfast_eaten'] == true) addMacros(menu['breakfast']);
+    if (menu['lunch_eaten'] == true) addMacros(menu['lunch']);
+    if (menu['dinner_eaten'] == true) addMacros(menu['dinner']);
+    
+    if (menu['extra_meals'] != null) {
+      for (var extra in menu['extra_meals']) {
+        addMacros(extra);
+      }
+    }
+
+    double proteinPercent = (consumedProtein / targetProtein).clamp(0.0, 1.0);
+    double carbsPercent = (consumedCarbs / targetCarbs).clamp(0.0, 1.0);
+    double fatPercent = (consumedFat / targetFat).clamp(0.0, 1.0);
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 15.r,
+            offset: Offset(0, 5.h),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Resumen Diario",
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              Text(
+                "$consumedCalories / $targetCalories kcal",
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildCircularMacro(
+                title: "Carbos",
+                amount: consumedCarbs,
+                target: targetCarbs,
+                percent: carbsPercent,
+                color: Colors.orange,
+              ),
+              _buildCircularMacro(
+                title: "Proteína",
+                amount: consumedProtein,
+                target: targetProtein,
+                percent: proteinPercent,
+                color: Colors.redAccent,
+              ),
+              _buildCircularMacro(
+                title: "Grasas",
+                amount: consumedFat,
+                target: targetFat,
+                percent: fatPercent,
+                color: Colors.green,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircularMacro({
+    required String title,
+    required int amount,
+    required int target,
+    required double percent,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        CircularPercentIndicator(
+          radius: 30.r,
+          lineWidth: 6.w,
+          animation: true,
+          percent: percent,
+          center: Text(
+            "${(percent * 100).toInt()}%",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.sp),
+          ),
+          circularStrokeCap: CircularStrokeCap.round,
+          progressColor: color,
+          backgroundColor: Colors.grey.shade200,
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
+        ),
+        Text(
+          "${amount}g / ${target}g",
+          style: TextStyle(
+            fontSize: 10.sp,
+            color: AppColors.textLight,
+          ),
+        ),
+      ],
+    );
   }
 
   // --- Helpers ---

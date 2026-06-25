@@ -1,8 +1,11 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles 
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from limiter import limiter
 
 # Cargar variables de entorno
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
@@ -25,7 +28,6 @@ print("--------------------------------------------------")
 print("MEAL.IA BACKEND STARTED - v3 (WITH ARGON2 & CORS)")
 print("--------------------------------------------------")
 
-# --- CORS CONFIGURATION (CRITICAL FOR MOBILE/FLUTTER) ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], # Allows all origins
@@ -33,6 +35,20 @@ app.add_middleware(
     allow_methods=["*"], # Allows all methods
     allow_headers=["*"], # Allows all headers
 )
+
+# --- SECURE HEADERS MIDDLEWARE ---
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
+# --- RATE LIMITER CONFIG ---
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Include Routers
 app.include_router(auth.router, tags=["Authentication"])

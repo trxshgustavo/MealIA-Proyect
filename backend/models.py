@@ -17,6 +17,7 @@ class User(Base):
     goal = Column(String, default="Mantenimiento") 
     photo_url = Column(String, nullable=True)
     is_premium = Column(Integer, default=0) # 0: Free, 1: Premium
+    is_admin = Column(Integer, default=0) # 0: User, 1: Admin
     inventory_items = relationship("InventoryItem", back_populates="owner")
     saved_recipes = relationship("SavedRecipe", back_populates="owner")
     meal_plans = relationship("MealPlan", back_populates="owner")
@@ -53,6 +54,12 @@ class MealPlan(Base):
     lunch = Column(JSON)
     dinner = Column(JSON)
     total_calories = Column(Integer)
+    
+    # Nuevas columnas de tracking
+    breakfast_eaten = Column(Integer, default=0) # 0: False, 1: True (usamos Integer por compatibilidad con SQLite booleans si es necesario, pero SQLAlchemy soporta Boolean)
+    lunch_eaten = Column(Integer, default=0)
+    dinner_eaten = Column(Integer, default=0)
+    extra_meals = Column(JSON, default=list) # Lista de comidas extra
     
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="meal_plans")

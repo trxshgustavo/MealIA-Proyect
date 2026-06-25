@@ -1,6 +1,6 @@
 # Política de Privacidad
 
-**Última actualización: 13 de Diciembre de 2025**
+**Última actualización: 02 de Junio de 2026**
 
 En **MealIA**, su privacidad es una prioridad. Esta Política de Privacidad describe cómo recopilamos, usamos y protegemos su información personal cuando utiliza nuestra aplicación móvil y servicios relacionados.
 
@@ -50,4 +50,4 @@ Podemos actualizar esta política ocasionalmente. Le notificaremos cualquier cam
 
 ## 8. Contacto
 
-Si tiene preguntas sobre esta política, contáctenos en: soporte@mealia.app (o el correo de contacto correspondiente).
+Si tiene preguntas sobre esta política, contáctenos en: contactomealia@gmail.com (o el correo de contacto correspondiente).

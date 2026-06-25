@@ -69,13 +69,24 @@ class _MenuScreenState extends State<MenuScreen> {
     );
 
     // Ejecutar la generación (Esto actualiza el estado en AppState)
-    await appState.generateMenuConIA();
-
-    if (!mounted) return;
-
-    // Cerrar el diálogo
-    Navigator.of(context).pop();
-
+    try {
+      await appState.generateMenuConIA();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        // Cerrar el diálogo
+        Navigator.of(context).pop();
+      }
+    }
     // Al cerrar el diálogo, el Provider notificará y la pantalla se redibujará con el nuevo menú
   }
 

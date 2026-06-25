@@ -23,7 +23,6 @@ import 'ui/screens/main/subscription_screen.dart';
 import 'ui/screens/main_shell.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
-import 'package:flutter_stripe/flutter_stripe.dart'; // Import Stripe
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,20 +33,6 @@ Future<void> main() async {
     debugPrint('✓ Variables de entorno cargadas');
   } catch (e) {
     debugPrint('⚠️ No se pudo cargar .env (no crítico): $e');
-  }
-
-  // Inicializar Stripe (solo si la key está configurada)
-  try {
-    final stripeKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
-    if (stripeKey.isEmpty || stripeKey.startsWith('pk_test_placeholder')) {
-      debugPrint('⚠️ STRIPE_PUBLISHABLE_KEY no configurado - pagos deshabilitados');
-    } else {
-      Stripe.publishableKey = stripeKey;
-      await Stripe.instance.applySettings();
-      debugPrint('✓ Stripe inicializado');
-    }
-  } catch (e) {
-    debugPrint('⚠️ Error inicializando Stripe (no crítico): $e');
   }
 
   // Pantalla completa: oculta barra de navegación y barra de estado

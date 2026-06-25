@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:markdown/markdown.dart' as md;
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import '../theme/app_colors.dart';
 
 class LegalScreen extends StatelessWidget {
@@ -37,45 +38,59 @@ class LegalScreen extends StatelessWidget {
           }
 
           if (snapshot.hasData) {
-            return Markdown(
-              data: snapshot.data!,
+            final htmlData = md.markdownToHtml(snapshot.data!);
+            return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              styleSheet: MarkdownStyleSheet(
-                h1: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primaryText,
-                  height: 1.5,
-                  letterSpacing: -0.5,
-                ),
-                h2: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
-                  height: 1.5,
-                ),
-                h3: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
-                  height: 1.4,
-                ),
-                h2Padding: const EdgeInsets.only(top: 24, bottom: 8),
-                h3Padding: const EdgeInsets.only(top: 16, bottom: 8),
-                p: const TextStyle(
+              child: HtmlWidget(
+                '<div style="text-align: justify;">$htmlData</div>',
+                textStyle: const TextStyle(
                   fontSize: 16,
                   height: 1.6,
                   color: AppColors.secondaryText,
                 ),
-                listBullet: const TextStyle(
-                  fontSize: 16,
-                  color: AppColors.secondaryText,
-                ),
-                strong: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
-                ),
-                blockSpacing: 16,
+                customStylesBuilder: (element) {
+                  if (element.localName == 'h1') {
+                    return {
+                      'font-size': '26px',
+                      'font-weight': '800',
+                      'color': '#000000', // Assuming primary text is near black
+                      'line-height': '1.5',
+                      'letter-spacing': '-0.5px',
+                    };
+                  }
+                  if (element.localName == 'h2') {
+                    return {
+                      'font-size': '20px',
+                      'font-weight': 'bold',
+                      'color': '#000000',
+                      'line-height': '1.5',
+                      'margin-top': '24px',
+                      'margin-bottom': '8px',
+                    };
+                  }
+                  if (element.localName == 'h3') {
+                    return {
+                      'font-size': '18px',
+                      'font-weight': '600',
+                      'color': '#000000',
+                      'line-height': '1.4',
+                      'margin-top': '16px',
+                      'margin-bottom': '8px',
+                    };
+                  }
+                  if (element.localName == 'strong' || element.localName == 'b') {
+                    return {
+                      'font-weight': 'bold',
+                      'color': '#000000',
+                    };
+                  }
+                  if (element.localName == 'p' || element.localName == 'li') {
+                    return {
+                      'margin-bottom': '16px',
+                    };
+                  }
+                  return null;
+                },
               ),
             );
           }

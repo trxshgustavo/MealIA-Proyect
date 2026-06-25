@@ -36,6 +36,7 @@ class AppState extends ChangeNotifier {
   String goal = 'Mantenimiento';
   String? photoUrl;
   bool isPremium = false; // Premium Status
+  bool isAdmin = false; // Admin Status
 
   // Inventario y Menú
   final Map<String, Map<String, dynamic>> _inventory = {};
@@ -154,6 +155,7 @@ class AppState extends ChangeNotifier {
               photoUrl = backendPhotoUrl;
             }
             isPremium = userData['is_premium'] ?? false;
+            isAdmin = userData['is_admin'] ?? false;
 
             if (user != null) {
               final cacheData = {
@@ -166,6 +168,7 @@ class AppState extends ChangeNotifier {
                 'photo_url': photoUrl,
                 'goal': backendGoal,
                 'is_premium': isPremium,
+                'is_admin': isAdmin,
               };
               await _storage.write(
                 key: 'user_profile_cache_${user.uid}',
@@ -401,6 +404,9 @@ class AppState extends ChangeNotifier {
         return false;
       }
 
+      // Sincronizar inventario local hacia el backend (Para mitigar reinicios de DB en Render)
+      _syncInventoryToBackend(token);
+
       // NO STRICT CHECK FOR FIREBASE USER. We trust the backend.
       if (user == null) {
         debugPrint("Warning: No Firebase User found. Offline features or sync might be degraded, but login proceeds.");
@@ -413,6 +419,31 @@ class AppState extends ChangeNotifier {
       if (email != null && firstName != null) return true;
       return false;
     }
+  }
+
+  // Helper para restaurar el inventario del backend desde el caché local/Firestore
+  Future<void> _syncInventoryToBackend(String token) async {
+    if (_inventory.isEmpty) return;
+    debugPrint("🔄 Sincronizando ${_inventory.length} items al backend...");
+    for (var entry in _inventory.entries) {
+      try {
+        await http.post(
+          Uri.parse('$_baseUrl/inventory'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'name': entry.key,
+            'quantity': entry.value['quantity'],
+            'unit': entry.value['unit'],
+          }),
+        ).timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint("Error sincronizando ${entry.key}: $e");
+      }
+    }
+    debugPrint("✅ Sincronización de inventario completada.");
   }
 
   Future<void> refreshAppData() async {
@@ -820,34 +851,6 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
-  Future<Map<String, dynamic>?> createPaymentIntent(
-    int amount,
-    String currency,
-  ) async {
-    final token = await _storage.read(key: 'auth_token');
-    if (token == null) return null;
-
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/payments/create-payment-intent'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'amount': amount, 'currency': currency}),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        debugPrint("Error creating payment intent: ${response.body}");
-      }
-    } catch (e) {
-      debugPrint("Error calling create-payment-intent: $e");
-    }
-    return null;
-  }
-
   Future<List<dynamic>> fetchMealPlans(DateTime start, DateTime end) async {
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return [];
@@ -874,6 +877,10 @@ class AppState extends ChangeNotifier {
             'lunch': plan['lunch'],
             'dinner': plan['dinner'],
             'total_calories': plan['total_calories'],
+            'breakfast_eaten': plan['breakfast_eaten'] ?? false,
+            'lunch_eaten': plan['lunch_eaten'] ?? false,
+            'dinner_eaten': plan['dinner_eaten'] ?? false,
+            'extra_meals': plan['extra_meals'] ?? [],
           };
           _mealCalendar[dateKey] = menuData;
         }
@@ -904,6 +911,10 @@ class AppState extends ChangeNotifier {
         'lunch': menuData['lunch'],
         'dinner': menuData['dinner'],
         'total_calories': menuData['total_calories'] ?? 2000,
+        'breakfast_eaten': menuData['breakfast_eaten'] ?? false,
+        'lunch_eaten': menuData['lunch_eaten'] ?? false,
+        'dinner_eaten': menuData['dinner_eaten'] ?? false,
+        'extra_meals': menuData['extra_meals'] ?? [],
       };
 
       final response = await http.post(
@@ -976,14 +987,112 @@ class AppState extends ChangeNotifier {
 
         notifyListeners();
         return menuData;
+      } else if (response.statusCode == 400) {
+        // Probablemente "Inventario vacío"
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final detail = data['detail'] ?? 'Error de validación';
+        throw Exception(detail);
       } else {
         debugPrint("Error generating menu: ${response.body}");
+        throw Exception("Error del servidor: ${response.statusCode}");
       }
     } catch (e) {
       debugPrint("Error calling generate-menu: $e");
+      rethrow; // Lanzar para que la UI pueda atraparlo y mostrar SnackBar
+    }
+  }
+
+  Future<bool> markMealEaten(DateTime date, String mealType, bool eaten) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return false;
+
+    final dateKey = _formatDate(date);
+    
+    // Update locally first for fast UI
+    if (_mealCalendar.containsKey(dateKey)) {
+      _mealCalendar[dateKey]!['${mealType}_eaten'] = eaten;
+      notifyListeners();
+    }
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/meal-plans/$dateKey/mark-eaten'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'meal_type': mealType,
+          'eaten': eaten,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error marking meal eaten: $e");
+    }
+    return false;
+  }
+
+  Future<bool> addExtraMeal(DateTime date, Map<String, dynamic> extraMeal) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return false;
+
+    final dateKey = _formatDate(date);
+    
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/meal-plans/$dateKey/extra-meal'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(extraMeal),
+      );
+
+      if (response.statusCode == 200) {
+        // Fetch to sync correctly
+        await fetchMealPlans(date, date);
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error adding extra meal: $e");
+    }
+    return false;
+  }
+
+  Future<Map<String, dynamic>?> analyzeFood({String? text, String? imagePath}) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
+
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/analyze-food'));
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+
+      if (text != null && text.isNotEmpty) {
+        request.fields['text_description'] = text;
+      }
+
+      if (imagePath != null) {
+        request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      }
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        return jsonDecode(responseData);
+      } else {
+        debugPrint("Error analyzeFood: ${response.statusCode} - $responseData");
+      }
+    } catch (e) {
+      debugPrint("Error analyzing food: $e");
     }
     return null;
   }
+
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;

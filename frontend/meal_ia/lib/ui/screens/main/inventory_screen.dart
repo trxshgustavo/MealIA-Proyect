@@ -310,15 +310,26 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
 
     // Ejecutar la generación
-    await appState.generateMenuConIA();
-
-    if (!mounted) return;
-
-    // Cerrar el diálogo
-    Navigator.of(context).pop();
-
-    // Navegar al menú
-    Navigator.pushNamed(context, '/menu');
+    try {
+      await appState.generateMenuConIA();
+      if (!mounted) return;
+      // Cerrar el diálogo
+      Navigator.of(context).pop();
+      // Navegar al menú
+      Navigator.pushNamed(context, '/menu');
+    } catch (e) {
+      if (mounted) {
+        // Cerrar el diálogo
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleShoppingSuggestions() async {

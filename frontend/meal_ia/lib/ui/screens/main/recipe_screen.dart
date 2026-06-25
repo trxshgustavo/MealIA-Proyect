@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
 import '../../../core/providers/app_state.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
@@ -97,6 +98,8 @@ class _RecipeScreenState extends State<RecipeScreen>
     final int cholesterol = recipeData?['cholesterol'] ?? 0;
 
     final String time = recipeData?['time'] ?? '20 min';
+    final String sourceUrl = recipeData?['source_url'] ?? '';
+    final String sourceName = recipeData?['source_name'] ?? '';
 
     final nutrientData = _NutrientData(
       calories: calories,
@@ -117,7 +120,7 @@ class _RecipeScreenState extends State<RecipeScreen>
         child: Column(
           children: [
             // HEADER
-            _buildHeader(context, name, calories, time),
+            _buildHeader(context, name, calories, time, sourceUrl, sourceName),
 
             // CUSTOM TAB SELECTOR
             _buildTabSelector(),
@@ -351,6 +354,8 @@ class _RecipeScreenState extends State<RecipeScreen>
     String name,
     int calories,
     String time,
+    String sourceUrl,
+    String sourceName,
   ) {
     return Container(
       // Remove horizontal padding from container, keep vertical
@@ -482,13 +487,57 @@ class _RecipeScreenState extends State<RecipeScreen>
                                   time,
                                   style: TextStyle(
                                     fontSize: 12.sp,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w600,
                                     color: const Color(0xFF212121),
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                          if (sourceUrl.isNotEmpty) ...[
+                            SizedBox(width: 8.w),
+                            GestureDetector(
+                              onTap: () async {
+                                final uri = Uri.parse(sourceUrl);
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri);
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w,
+                                  vertical: 4.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE3F2FD),
+                                  borderRadius: BorderRadius.circular(20.r),
+                                  border: Border.all(
+                                    color: const Color(0xFF90CAF9),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.link,
+                                      size: 14.sp,
+                                      color: const Color(0xFF1976D2),
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    Text(
+                                      sourceName.isNotEmpty ? sourceName : "Fuente",
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF1976D2),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],

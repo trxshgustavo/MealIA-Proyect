@@ -54,6 +54,7 @@ class User(UserBase):
     inventory_items: List[InventoryItem] = []
     photo_url: str | None = None
     is_premium: bool = False
+    is_admin: bool = False
 
     class Config:
         from_attributes = True
@@ -83,6 +84,9 @@ class MealDetail(BaseModel):
     sodium: int
     # Time
     time: str
+    # Respaldo / Fuente real de la receta
+    source_url: Optional[str] = None   # URL de la receta original
+    source_name: Optional[str] = None  # Nombre de la fuente (TheMealDB, Edamam, USDA)
 
 class MenuGenerationResponse(BaseModel):
     breakfast: MealDetail
@@ -122,6 +126,13 @@ class MealPlan(BaseModel):
     lunch: MealDetail
     dinner: MealDetail
     total_calories: int
+    
+    # Nuevos campos de tracking
+    breakfast_eaten: bool = False
+    lunch_eaten: bool = False
+    dinner_eaten: bool = False
+    extra_meals: List[MealDetail] = []
+    
     owner_id: int
 
     class Config:
@@ -134,3 +145,16 @@ class ShoppingSuggestionItem(BaseModel):
 
 class ShoppingSuggestionResponse(BaseModel):
     suggestions: List[ShoppingSuggestionItem]
+
+# --- Tracking ---
+class MarkMealEatenRequest(BaseModel):
+    meal_type: str  # "breakfast", "lunch", "dinner"
+    eaten: bool
+
+class AnalyzeFoodRequest(BaseModel):
+    text_description: Optional[str] = None
+    # If image, it will come as multipart form data
+
+class ExtraMealCreate(MealDetail):
+    pass
+

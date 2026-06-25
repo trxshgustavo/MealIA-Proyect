@@ -14,3 +14,6 @@ argon2-cffi
 python-jose[cryptography]
 stripe
 psycopg2-binary
+slowapi
+email-validator
+httpx
