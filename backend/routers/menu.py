@@ -67,14 +67,16 @@ def calculate_target_calories(user: models.User) -> int:
 # BUSQUEDA EXTERNA DE RECETAS — TheMealDB (100% gratis, sin API key)
 # ════════════════════════════════════════════════════════════════════════════════
 def search_themealdb_by_ingredient(ingredient: str) -> list:
-    """Busca recetas en TheMealDB por un ingrediente principal."""
+    """Busca recetas en TheMealDB por un ingrediente principal con aleatoriedad."""
     try:
         with httpx.Client(timeout=HTTP_TIMEOUT) as http:
             resp = http.get(THEMEALDB_FILTER_URL, params={"i": ingredient})
             if resp.status_code == 200:
                 data = resp.json()
                 meals = data.get("meals") or []
-                return meals[:10]  # maximo 10 candidatos
+                if meals:
+                    random.shuffle(meals)
+                return meals[:10]  # maximo 10 candidatos aleatorios
     except Exception as e:
         logger.warning(f"TheMealDB filter error: {e}")
     return []
@@ -113,7 +115,11 @@ def search_recipes_for_meal(inventory_names: list, meal_type: str) -> list:
     Retorna una lista de recetas con su URL de fuente.
     """
     candidates = {}  # id -> meal_detail
-    priority_items = inventory_names[:6]
+    
+    # Randomizar los items prioritarios para variedad
+    priority_items = inventory_names[:]
+    random.shuffle(priority_items)
+    priority_items = priority_items[:6]
 
     for ing_name in priority_items:
         meals = search_themealdb_by_ingredient(ing_name)
@@ -123,19 +129,19 @@ def search_recipes_for_meal(inventory_names: list, meal_type: str) -> list:
                 detail = get_themealdb_detail(meal_id)
                 if detail:
                     candidates[meal_id] = detail
-                if len(candidates) >= 20:
+                if len(candidates) >= 10:
                     break
-        if len(candidates) >= 20:
+        if len(candidates) >= 10:
             break
 
     if not candidates:
-        # Fallback: buscar por nombre generico del tipo de comida
+        # Fallback: buscar por nombre generico del tipo de comida con aleatoriedad
         search_terms = {
-            "breakfast": "egg",
-            "lunch": "chicken",
-            "dinner": "beef"
+            "breakfast": ["egg", "bacon", "pancake", "bread", "milk", "oat"],
+            "lunch": ["chicken", "beef", "pasta", "rice", "pork", "fish", "lamb"],
+            "dinner": ["beef", "chicken", "salad", "soup", "fish", "vegetable", "tomato"]
         }
-        fallback_term = search_terms.get(meal_type, "chicken")
+        fallback_term = random.choice(search_terms.get(meal_type, ["chicken"]))
         for meal in search_themealdb_by_ingredient(fallback_term):
             meal_id = meal.get("idMeal", "")
             if meal_id and meal_id not in candidates:
@@ -184,7 +190,11 @@ def search_recipes_edamam(ingredients: list, calories_min: int, calories_max: in
     if not EDAMAM_APP_ID or not EDAMAM_APP_KEY:
         return []
     try:
-        q = ", ".join(ingredients[:4])
+        # Usar ingredientes aleatorios para evitar los mismos resultados siempre
+        sample_ings = ingredients[:]
+        random.shuffle(sample_ings)
+        q = ", ".join(sample_ings[:4]) if sample_ings else random.choice(["chicken", "beef", "egg", "salad"])
+        
         params = {
             "type":      "public",
             "q":         q,
@@ -199,6 +209,8 @@ def search_recipes_edamam(ingredients: list, calories_min: int, calories_max: in
             resp = http.get(EDAMAM_RECIPE_URL, params=params)
             if resp.status_code == 200:
                 hits = resp.json().get("hits", [])
+                if hits:
+                    random.shuffle(hits)
                 results = []
                 for hit in hits[:5]:
                     r        = hit.get("recipe", {})
@@ -233,8 +245,12 @@ def format_recipe_candidates(recipes: list, meal_type: str, max_n: int = 3) -> s
     if not recipes:
         return f"[Sin candidatos para {meal_type} — la IA debe elegir una receta similar conocida y citar la fuente de TheMealDB]"
 
+    # Randomizar el orden de presentacion a GPT
+    random_recipes = recipes[:]
+    random.shuffle(random_recipes)
+
     lines = []
-    for i, r in enumerate(recipes[:max_n], 1):
+    for i, r in enumerate(random_recipes[:max_n], 1):
         ing_preview = "; ".join(r["ingredients"][:8])
         instructions_preview = (r.get("instructions") or "")[:300]
         lines.append(
