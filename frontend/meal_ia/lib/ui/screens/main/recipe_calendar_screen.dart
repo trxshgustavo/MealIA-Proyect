@@ -531,12 +531,19 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     String title = "Plato desconocido";
     String description = "Toca para ver la receta completa";
     String calories = "--- kcal";
+    int carbs = 0;
+    int protein = 0;
+    int fat = 0;
+    
     // Assuming mealData format, extract info
     if (mealData is Map) {
       title = mealData['name'] ?? title;
       if (mealData.containsKey('calories')) {
         calories = "${mealData['calories']} kcal";
       }
+      carbs = (mealData['carbs'] ?? 0) as int;
+      protein = (mealData['protein'] ?? 0) as int;
+      fat = (mealData['fat'] ?? 0) as int;
     } else if (mealData is String) {
       title = mealData;
     }
@@ -692,22 +699,39 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                             ),
                           ),
                           SizedBox(height: 6.h),
-                          Row(
+                          Wrap(
+                            spacing: 8.w,
+                            runSpacing: 4.h,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Icon(
-                                Icons.local_fire_department,
-                                size: 12.sp, // Reducido
-                                color: Colors.orange,
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.local_fire_department,
+                                    size: 12.sp,
+                                    color: Colors.orange,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    calories,
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textLight,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                calories,
-                                style: TextStyle(
-                                  fontSize: 11.sp, // Reducido
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textLight,
+                              if (carbs > 0 || protein > 0 || fat > 0)
+                                Text(
+                                  "•  C: ${carbs}g  P: ${protein}g  G: ${fat}g",
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ],

@@ -534,6 +534,11 @@ FORMATO JSON OBLIGATORIO:
                 if meal["protein"] <= 0: meal["protein"] = int((cal * 0.25) / 4)
                 meal["fat"]     = safe_get_int(meal, "fat")
                 if meal["fat"]     <= 0: meal["fat"]     = int((cal * 0.25) / 9)
+                
+                # ENFORCE EXACT MATH FOR CALORIES
+                cal = (meal["carbs"] * 4) + (meal["protein"] * 4) + (meal["fat"] * 9)
+                meal["calories"] = cal
+                
                 meal["sodium"]  = safe_get_int(meal, "sodium")
                 if meal["sodium"]  <= 0: meal["sodium"]  = int(cal * 0.4)
                 meal["sugar"]   = safe_get_float(meal, "sugar")
@@ -810,6 +815,13 @@ FORMATO JSON OBLIGATORIO:
         
         result_str = response.choices[0].message.content
         result = json.loads(result_str)
+        
+        # Enforce exact mathematical calories
+        carbs = int(result.get("carbs", 0))
+        protein = int(result.get("protein", 0))
+        fat = int(result.get("fat", 0))
+        result["calories"] = (carbs * 4) + (protein * 4) + (fat * 9)
+        
         return result
     except Exception as e:
         logger.error(f"Error analizando comida: {e}")

@@ -494,50 +494,7 @@ class _RecipeScreenState extends State<RecipeScreen>
                               ],
                             ),
                           ),
-                          if (sourceUrl.isNotEmpty) ...[
-                            SizedBox(width: 8.w),
-                            GestureDetector(
-                              onTap: () async {
-                                final uri = Uri.parse(sourceUrl);
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri);
-                                }
-                              },
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w,
-                                  vertical: 4.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE3F2FD),
-                                  borderRadius: BorderRadius.circular(20.r),
-                                  border: Border.all(
-                                    color: const Color(0xFF90CAF9),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.link,
-                                      size: 14.sp,
-                                      color: const Color(0xFF1976D2),
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      sourceName.isNotEmpty ? sourceName : "Fuente",
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF1976D2),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                          // Removed source URL link
                         ],
                       ),
                     ],
