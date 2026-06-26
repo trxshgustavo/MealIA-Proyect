@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
-from limiter import limiter
 
 # Cargar variables de entorno
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
@@ -15,6 +14,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Imports locales
+from limiter import limiter
 import database
 import payments
 from routers import auth, users, inventory, menu
