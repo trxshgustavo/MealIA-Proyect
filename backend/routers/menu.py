@@ -501,7 +501,7 @@ FORMATO JSON OBLIGATORIO:
     for attempt in range(max_attempts):
         try:
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user",   "content": prompt_del_usuario}
