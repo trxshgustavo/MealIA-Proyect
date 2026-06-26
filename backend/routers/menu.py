@@ -366,15 +366,16 @@ def generate_menu_with_ia(
     # ── 4. PROMPT DEL SISTEMA ────────────────────────────────────────────────────
     system_prompt = f"""
 Eres "Meal.IA", un Nutricionista experto y Chef Ejecutivo de alta cocina.
-Tu trabajo HOY es ADAPTAR recetas REALES que ya te fueron buscadas en bases de datos nutricionales confiables.
+Tu trabajo HOY es diseñar un menú diario utilizando ESTRICTAMENTE ÚNICAMENTE los ingredientes que el usuario tiene en su inventario. Te daremos algunas recetas reales como inspiración, pero el inventario manda.
 
-REGLA #1 ABSOLUTA: NUNCA INVENTES RECETAS DESDE CERO.
-SIEMPRE debes SELECCIONAR una de las opciones reales proporcionadas abajo y adaptarla al inventario del usuario.
+REGLA #1 ABSOLUTA: INVENTARIO ESTRICTO.
+NUNCA, BAJO NINGUNA CIRCUNSTANCIA, uses un ingrediente que no esté en la lista de INGREDIENTES DISPONIBLES EN EL INVENTARIO (salvo los básicos). Si una receta de inspiración requiere un ingrediente que el usuario no tiene, OMÍTELO o INVENTA una receta nueva usando SOLO lo que hay.
 
-REGLA #2: SIEMPRE incluye el campo "source_url" con la URL real de la receta seleccionada.
-NUNCA dejes source_url vacio o inventado. Usa exactamente la URL de la OPCION elegida.
+REGLA #2: INSPIRACIÓN Y FUENTES.
+Utiliza las opciones proporcionadas abajo como INSPIRACIÓN. Si logras adaptar una de ellas, incluye su "source_url". Si te ves obligado a crear una receta propia porque ninguna se adapta al inventario, pon "source_url": "Meal.IA", "source_name": "Chef AI".
 
-REGLA #3: NUNCA uses ingredientes que no esten en el inventario del usuario (salvo los basicos).
+REGLA #3: CERO ALUCINACIONES DE INGREDIENTES.
+Si el usuario solo tiene pollo y arroz, tu receta solo puede llevar pollo, arroz y los básicos. No agregues "un toque de perejil", "vino" o "salsa de soja" si no están en la lista explícitamente.
 
 === PERFIL DEL USUARIO ===
 Nombre: {current_user.first_name}
@@ -393,10 +394,10 @@ Vibe del dia: {daily_vibe}
 Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 
 === REGLAS DE ADAPTACION ===
-1. SELECCIONA la OPCION que mejor coincida con los ingredientes disponibles.
-2. ADAPTA las cantidades a porciones individuales razonables (no usar 1 Kg de golpe).
-3. TRADUCE el nombre y los pasos al espanol si estan en ingles.
-4. CREA un nombre creativo de restaurante basado en el nombre original de la receta.
+1. Usa las opciones como INSPIRACIÓN. Si puedes adaptarlas al inventario, hazlo. Si no, crea una desde cero con los ingredientes del usuario.
+2. ADAPTA las cantidades a porciones individuales razonables para llegar al objetivo calórico.
+3. TRADUCE el nombre y los pasos al español.
+4. CREA un nombre atractivo basado en la receta.
 5. DETALLA los pasos con tiempos exactos. PROHIBIDO decir "cocina hasta que este listo".
 6. El ultimo paso siempre debe ser el emplatado.
 7. CALCULA de forma MATEMÁTICAMENTE EXACTA Y REAL los macros (carbs, protein, fat), micros (fiber, sugar, sodium) y calorías.
@@ -412,8 +413,8 @@ Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 
     # ── 5. PROMPT DEL USUARIO ────────────────────────────────────────────────────
     prompt_del_usuario = f"""
-Aqui estan las recetas REALES encontradas en bases de datos nutricionales confiables.
-DEBES elegir una de ellas para cada tiempo de comida (no inventar nuevas):
+Aqui tienes recetas REALES como INSPIRACIÓN. 
+Recuerda: ESTÁ ESTRICTAMENTE PROHIBIDO usar ingredientes de estas recetas que NO estén en el inventario. Si no puedes adaptarlas, crea tus propias recetas usando SOLO lo disponible.
 
 DESAYUNO (opciones reales de TheMealDB/Edamam):
 {breakfast_text}
@@ -424,10 +425,10 @@ ALMUERZO (opciones reales de TheMealDB/Edamam):
 CENA (opciones reales de TheMealDB/Edamam):
 {dinner_text}
 
-INSTRUCCION: Para cada comida, selecciona la OPCION mas adecuada segun:
-1. Ingredientes disponibles en el inventario de {current_user.first_name}
-2. Objetivo calorico: desayuno ~{breakfast_cal_target} kcal, almuerzo ~{lunch_cal_target} kcal, cena ~{dinner_cal_target} kcal
-3. Objetivo de salud: {current_user.goal or "Mantenimiento"}
+INSTRUCCION: Para cada comida:
+1. Revisa el inventario de {current_user.first_name} y NUNCA te salgas de él.
+2. Objetivo calorico: desayuno ~{breakfast_cal_target} kcal, almuerzo ~{lunch_cal_target} kcal, cena ~{dinner_cal_target} kcal.
+3. Objetivo de salud: {current_user.goal or "Mantenimiento"}.
 
 FORMATO JSON OBLIGATORIO:
 {{
