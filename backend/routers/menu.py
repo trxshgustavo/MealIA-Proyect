@@ -383,9 +383,10 @@ Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 4. CREA un nombre creativo de restaurante basado en el nombre original de la receta.
 5. DETALLA los pasos con tiempos exactos. PROHIBIDO decir "cocina hasta que este listo".
 6. El ultimo paso siempre debe ser el emplatado.
-7. CALCULA los macros (carbs, protein, fat) y micros (fiber, sugar, sodium) REALES
-   en base a los ingredientes de la porcion. Usa estimaciones basadas en tablas
-   nutricionales estandar (USDA, INCAP). No inventes valores.
+7. CALCULA de forma MATEMÁTICAMENTE EXACTA Y REAL los macros (carbs, protein, fat), micros (fiber, sugar, sodium) y calorías.
+   - Las calorías DEBEN CUMPLIR EXACTAMENTE con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
+   - Ajusta meticulosamente las cantidades de los ingredientes para cumplir LO MÁS EXACTO POSIBLE con los objetivos calóricos del usuario, sin romper la receta.
+   - Usa datos nutricionales reales (USDA, INCAP). NO inventes valores ni hagas aproximaciones burdas.
 
 === INSTRUCCIONES TECNICAS JSON ===
 - Devuelve SOLO JSON valido, sin comentarios ni trailing commas.
@@ -753,7 +754,7 @@ async def analyze_food(
     messages = [
         {
             "role": "system",
-            "content": "Eres un nutricionista experto. Tu objetivo es analizar la comida (ya sea por descripción o imagen) y devolver una estimación de sus macros y detalles en formato JSON estricto."
+            "content": "Eres un nutricionista experto. Tu objetivo es analizar la comida (ya sea por descripción o imagen) y devolver una estimación de sus ingredientes reales. DEBES devolver macros y calorías EXACTOS y MATEMÁTICAMENTE CORRECTOS. Las calorías totales DEBEN coincidir a la perfección con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal). Utiliza estimaciones rigurosas basadas en bases de datos reales y responde en formato JSON estricto."
         }
     ]
 
