@@ -1,6 +1,7 @@
 import os
 import stripe
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 import security
 import models
 
