@@ -172,12 +172,14 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
 
           final prompt = Content.multi([
             TextPart(
-              'Analiza la imagen y detecta los alimentos. '
+              'Analiza la imagen minuciosamente y detecta todos los alimentos o productos de supermercado presentes. '
               'Devuelve un JSON ARRAY estrictamente válido. '
               'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "info": "breve descripción"}]. '
-              'Intenta estimar la cantidad visible (ej: 2 manzanas -> cantidad=2, unidad=Unidades). '
-              'Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso. '
-              'Si no ves alimentos, devuelve []. '
+              'REGLAS DE PRECISIÓN:\n'
+              '1. Diferencia claramente entre productos (ej: no agrupes "frutas", lista "manzana", "plátano" por separado).\n'
+              '2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo o etiquetas visibles.\n'
+              '3. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
+              '4. Si no ves alimentos, devuelve [].\n'
               'NO uses markdown. Solo JSON plano.',
             ),
             DataPart('image/jpeg', bytes),

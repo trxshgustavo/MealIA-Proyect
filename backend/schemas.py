@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
-from typing import List, Optional, Dict
+from typing import List, Optional
 from datetime import datetime
+
 
 # --- Inventory ---
 class InventoryItemBase(BaseModel):
@@ -8,20 +9,24 @@ class InventoryItemBase(BaseModel):
     quantity: float = 1.0
     unit: str = "Unidades"
 
-class InventoryItemCreate(InventoryItemBase):
-    pass # Solo necesitamos el nombre para crearlo/incrementarlo
 
-class InventoryItemUpdate(BaseModel): # <--- NUEVO ESQUEMA PARA EL PUT
+class InventoryItemCreate(InventoryItemBase):
+    pass  # Solo necesitamos el nombre para crearlo/incrementarlo
+
+
+class InventoryItemUpdate(BaseModel):  # <--- NUEVO ESQUEMA PARA EL PUT
     quantity: float
     unit: str
+
 
 class InventoryItem(InventoryItemBase):
     id: int
     owner_id: int
-    quantity: float # Debe coincidir con el modelo SQLAlchemy (Float)
+    quantity: float  # Debe coincidir con el modelo SQLAlchemy (Float)
 
     class Config:
-        from_attributes = True # Permite a Pydantic leer modelos de SQLAlchemy
+        from_attributes = True  # Permite a Pydantic leer modelos de SQLAlchemy
+
 
 # --- User ---
 class UserBase(BaseModel):
@@ -29,8 +34,10 @@ class UserBase(BaseModel):
     first_name: Optional[str] = None
     last_name: str | None = None
 
+
 class UserCreate(UserBase):
     password: str
+
 
 class UserDataUpdate(BaseModel):
     first_name: Optional[str] = None
@@ -42,8 +49,10 @@ class UserDataUpdate(BaseModel):
     photo_url: Optional[str] = None
     is_premium: Optional[bool] = None
 
+
 class UserPasswordUpdate(BaseModel):
     password: str
+
 
 class User(UserBase):
     id: int
@@ -59,13 +68,16 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+
 # --- Auth ---
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class TokenData(BaseModel):
     email: Optional[str] = None
+
 
 # --- IA Menu Generation ---
 # Define la estructura JSON que esperamos de OpenAI
@@ -82,11 +94,16 @@ class MealDetail(BaseModel):
     fiber: float
     sugar: float
     sodium: int
+    vitamin_a: float = 0.0  # mcg RAE
+    vitamin_c: float = 0.0  # mg
+    calcium: float = 0.0  # mg
+    iron: float = 0.0  # mg
     # Time
     time: str
     # Respaldo / Fuente real de la receta
-    source_url: Optional[str] = None   # URL de la receta original
+    source_url: Optional[str] = None  # URL de la receta original
     source_name: Optional[str] = None  # Nombre de la fuente (TheMealDB, Edamam, USDA)
+
 
 class MenuGenerationResponse(BaseModel):
     breakfast: MealDetail
@@ -94,15 +111,18 @@ class MenuGenerationResponse(BaseModel):
     dinner: MealDetail
     note: str
     total_calories: int
-    
+
+
 class GoogleToken(BaseModel):
     token: str
-    
+
+
 class SavedRecipeCreate(BaseModel):
     name: str
     ingredients: List[str]
     steps: List[str]
     calories: int
+
 
 class SavedRecipe(SavedRecipeCreate):
     id: int
@@ -111,13 +131,15 @@ class SavedRecipe(SavedRecipeCreate):
     class Config:
         from_attributes = True
 
+
 # --- Meal Plan ---
 class MealPlanCreate(BaseModel):
-    date: str # YYYY-MM-DD
+    date: str  # YYYY-MM-DD
     breakfast: MealDetail
     lunch: MealDetail
     dinner: MealDetail
     total_calories: int
+
 
 class MealPlan(BaseModel):
     id: int
@@ -126,35 +148,39 @@ class MealPlan(BaseModel):
     lunch: MealDetail
     dinner: MealDetail
     total_calories: int
-    
+
     # Nuevos campos de tracking
     breakfast_eaten: bool = False
     lunch_eaten: bool = False
     dinner_eaten: bool = False
     extra_meals: List[MealDetail] = []
-    
+
     owner_id: int
 
     class Config:
         from_attributes = True
 
+
 # --- Shopping Suggestion ---
 class ShoppingSuggestionItem(BaseModel):
     name: str
-    reason: str # Por qué se sugiere (ej: "Para hacer Lasagna")
+    reason: str  # Por qué se sugiere (ej: "Para hacer Lasagna")
+
 
 class ShoppingSuggestionResponse(BaseModel):
     suggestions: List[ShoppingSuggestionItem]
+
 
 # --- Tracking ---
 class MarkMealEatenRequest(BaseModel):
     meal_type: str  # "breakfast", "lunch", "dinner"
     eaten: bool
 
+
 class AnalyzeFoodRequest(BaseModel):
     text_description: Optional[str] = None
     # If image, it will come as multipart form data
 
+
 class ExtraMealCreate(MealDetail):
     pass
-

@@ -6,7 +6,7 @@ import 'dart:math' as math;
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
 import '../../../core/providers/app_state.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 
 class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
@@ -91,8 +91,10 @@ class _RecipeScreenState extends State<RecipeScreen>
 
     final double fiber = toDouble(recipeData?['fiber']);
     final double sugar = toDouble(recipeData?['sugar']);
-    final double vitamins = toDouble(recipeData?['vitamins']);
-    final double minerals = toDouble(recipeData?['minerals']);
+    final double vitaminA = toDouble(recipeData?['vitamin_a']);
+    final double vitaminC = toDouble(recipeData?['vitamin_c']);
+    final double calcium = toDouble(recipeData?['calcium']);
+    final double iron = toDouble(recipeData?['iron']);
 
     final int sodium = recipeData?['sodium'] ?? 0;
     final int cholesterol = recipeData?['cholesterol'] ?? 0;
@@ -108,8 +110,10 @@ class _RecipeScreenState extends State<RecipeScreen>
       fat: fat,
       fiber: fiber,
       sugar: sugar,
-      vitamins: vitamins,
-      minerals: minerals,
+      vitaminA: vitaminA,
+      vitaminC: vitaminC,
+      calcium: calcium,
+      iron: iron,
       sodium: sodium,
       cholesterol: cholesterol,
     );
@@ -825,16 +829,32 @@ class _RecipeScreenState extends State<RecipeScreen>
           Divider(height: 24.h, color: Colors.grey.shade100),
 
           _buildNutrientRow(
-            "Vitamina C",
-            "${data.vitamins}",
-            "mg",
+            "Vitamina A",
+            "${data.vitaminA}",
+            "mcg",
             const Color(0xFFAB47BC),
           ),
           Divider(height: 24.h, color: Colors.grey.shade100),
 
           _buildNutrientRow(
+            "Vitamina C",
+            "${data.vitaminC}",
+            "mg",
+            const Color(0xFFFFA726),
+          ),
+          Divider(height: 24.h, color: Colors.grey.shade100),
+
+          _buildNutrientRow(
+            "Calcio",
+            "${data.calcium}",
+            "mg",
+            const Color(0xFF29B6F6),
+          ),
+          Divider(height: 24.h, color: Colors.grey.shade100),
+
+          _buildNutrientRow(
             "Hierro",
-            "${data.minerals}",
+            "${data.iron}",
             "mg",
             const Color(0xFF5C6BC0),
           ),
@@ -1212,9 +1232,11 @@ class _NutrientData {
   final int protein;
   final int fat;
   final double fiber;
-  final double vitamins;
-  final double minerals;
   final double sugar;
+  final double vitaminA;
+  final double vitaminC;
+  final double calcium;
+  final double iron;
   final int sodium;
   final int cholesterol;
 
@@ -1224,9 +1246,11 @@ class _NutrientData {
     required this.protein,
     required this.fat,
     required this.fiber,
-    required this.vitamins,
-    required this.minerals,
     required this.sugar,
+    required this.vitaminA,
+    required this.vitaminC,
+    required this.calcium,
+    required this.iron,
     required this.sodium,
     required this.cholesterol,
   });

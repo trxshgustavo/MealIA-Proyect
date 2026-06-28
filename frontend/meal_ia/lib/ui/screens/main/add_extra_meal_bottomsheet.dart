@@ -148,6 +148,16 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
                         _buildMacroText("Grasa", "${_analyzedMeal!['fat']}g"),
                       ],
                     ),
+                    SizedBox(height: 8.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildMacroText("Vit A", "${_analyzedMeal!['vitamin_a']} mcg"),
+                        _buildMacroText("Vit C", "${_analyzedMeal!['vitamin_c']} mg"),
+                        _buildMacroText("Calcio", "${_analyzedMeal!['calcium']} mg"),
+                        _buildMacroText("Hierro", "${_analyzedMeal!['iron']} mg"),
+                      ],
+                    ),
                   ],
                 ),
               ),
