@@ -484,8 +484,8 @@ Tu trabajo HOY es diseñar un menú diario utilizando ESTRICTAMENTE ÚNICAMENTE 
 REGLA #1 ABSOLUTA: INVENTARIO ESTRICTO.
 NUNCA, BAJO NINGUNA CIRCUNSTANCIA, uses un ingrediente que no esté en la lista de INGREDIENTES DISPONIBLES EN EL INVENTARIO (salvo los básicos). Si una receta de inspiración requiere un ingrediente que el usuario no tiene, OMÍTELO o INVENTA una receta nueva usando SOLO lo que hay.
 
-REGLA #2: INSPIRACIÓN Y FUENTES.
-Utiliza las opciones proporcionadas abajo como INSPIRACIÓN. Si logras adaptar una de ellas, incluye su "source_url". Si te ves obligado a crear una receta propia porque ninguna se adapta al inventario, pon "source_url": "Meal.IA", "source_name": "Chef AI".
+REGLA #2: INSPIRACIÓN Y SUSTENTO CIENTIFICO.
+Utiliza las opciones proporcionadas abajo como INSPIRACIÓN comprobada. Si logras adaptar una de ellas al inventario, incluye su "source_url". Si te ves obligado a crear una adaptación drástica, la receta final DEBE tener un sustento científico nutricional claro que apoye el objetivo del usuario. No inventes mezclas arbitrarias; las recetas deben ser fisiológicamente beneficiosas y culinariamente coherentes. Pon "source_url": "Meal.IA", "source_name": "Nutrición Clínica AI".
 
 REGLA #3: CERO ALUCINACIONES DE INGREDIENTES. ESTRICTO.
 Si el usuario solo tiene pollo y arroz, tu receta solo puede llevar pollo, arroz y los básicos. No agregues "un toque de perejil", "vino", "salsa de soja" o "limón" si no están en la lista explícitamente. DEBES ser creativo SOLO con lo que hay. Si asumes un ingrediente que no está, el sistema fallará.
@@ -506,8 +506,8 @@ Vibe del dia: {daily_vibe}
 === BASICOS SIEMPRE DISPONIBLES (sin necesidad de estar en inventario) ===
 Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 
-=== REGLAS DE ADAPTACION ===
-1. Usa las opciones como INSPIRACIÓN. Si puedes adaptarlas al inventario, hazlo. Si no, crea una desde cero con los ingredientes del usuario.
+=== REGLAS DE ADAPTACION Y BASE CIENTIFICA ===
+1. Las recetas generadas DEBEN estar respaldadas por principios científicos de nutrición para ayudar al usuario con su objetivo de "{current_user.goal or "Mantenimiento"}". No crees platos "inventados" sin sentido nutricional. Prioriza combinaciones de ingredientes comprobadas que ofrezcan un perfil de macronutrientes y micronutrientes adecuado. Usa las opciones externas provistas abajo como guía principal de coherencia. Si debes adaptar una receta al inventario, hazlo respetando la sinergia nutricional.
 2. ADAPTA las cantidades a porciones individuales razonables para llegar al objetivo calórico.
 3. TRADUCE el nombre y los pasos al español.
 4. CREA un nombre atractivo basado en la receta.
