@@ -105,6 +105,9 @@ class MealDetail(BaseModel):
     source_name: Optional[str] = None  # Nombre de la fuente (TheMealDB, Edamam, USDA)
 
 
+class GenerateMenuRequest(BaseModel):
+    rejected_recipes: List[str] = []
+
 class MenuGenerationResponse(BaseModel):
     breakfast: MealDetail
     lunch: MealDetail
@@ -175,6 +178,11 @@ class ShoppingSuggestionResponse(BaseModel):
 class MarkMealEatenRequest(BaseModel):
     meal_type: str  # "breakfast", "lunch", "dinner"
     eaten: bool
+
+
+class MarkMealEatenResponse(BaseModel):
+    plan: MealPlan
+    depleted_items: List[str] = []
 
 
 class AnalyzeFoodRequest(BaseModel):

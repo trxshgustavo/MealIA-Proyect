@@ -250,7 +250,9 @@ class _RecipeScreenState extends State<RecipeScreen>
 
     try {
       // Regenerate the entire menu (the API generates all 3 meals at once)
-      final newMenu = await appState.generateMenuConIA();
+      final currentRecipeName = currentData['name'] as String?;
+      final rejectedList = currentRecipeName != null ? [currentRecipeName] : null;
+      final newMenu = await appState.generateMenuConIA(rejectedRecipes: rejectedList);
 
       if (!mounted) return;
 

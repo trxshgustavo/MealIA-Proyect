@@ -631,8 +631,19 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                     SizedBox(width: 8.w),
                     // Checkbox for eaten
                     GestureDetector(
-                      onTap: () {
-                        appState.markMealEaten(_selectedDate, mealTypeKey, !isEaten);
+                      onTap: () async {
+                        final depleted = await appState.markMealEaten(_selectedDate, mealTypeKey, !isEaten);
+                        if (depleted != null && depleted.isNotEmpty) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Se agotaron: ${depleted.join(", ")}'),
+                                backgroundColor: Colors.orange,
+                                duration: const Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                        }
                       },
                       child: Container(
                         width: 24.w,

@@ -51,5 +51,23 @@
 	<string>Necesitamos acceso a tu cámara para tomar fotos de comida.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Necesitamos acceso al micrófono para videos.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- TODO Replace this value: -->
+				<!-- Copiar el REVERSED_CLIENT_ID de tu GoogleService-Info.plist -->
+				<string>com.googleusercontent.apps.970236848335-p0l27kbi9b7q3g9ackgheem6mm0rqk68</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+	</array>
 </dict>
 </plist>

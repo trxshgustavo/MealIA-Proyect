@@ -951,14 +951,19 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
-  Future<Map<String, dynamic>?> generateMenuConIA({DateTime? date}) async {
+  Future<Map<String, dynamic>?> generateMenuConIA({DateTime? date, List<String>? rejectedRecipes}) async {
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return null;
 
     try {
+      final bodyStr = jsonEncode({'rejected_recipes': rejectedRecipes ?? []});
       final response = await http.post(
         Uri.parse('$_baseUrl/generate-menu'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: bodyStr,
       );
 
       if (response.statusCode == 200) {
@@ -1002,9 +1007,9 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<bool> markMealEaten(DateTime date, String mealType, bool eaten) async {
+  Future<List<String>?> markMealEaten(DateTime date, String mealType, bool eaten) async {
     final token = await _storage.read(key: 'auth_token');
-    if (token == null) return false;
+    if (token == null) return null;
 
     final dateKey = _formatDate(date);
     
@@ -1028,12 +1033,21 @@ class AppState extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        return true;
+        final responseData = jsonDecode(utf8.decode(response.bodyBytes));
+        if (eaten) {
+          // Refrescar inventario si se ha consumido la comida
+          await refreshAppData();
+        }
+        if (responseData.containsKey('depleted_items')) {
+           final List<dynamic> depleted = responseData['depleted_items'];
+           return depleted.map((e) => e.toString()).toList();
+        }
+        return [];
       }
     } catch (e) {
       debugPrint("Error marking meal eaten: $e");
     }
-    return false;
+    return null;
   }
 
   Future<bool> addExtraMeal(DateTime date, Map<String, dynamic> extraMeal) async {

@@ -347,6 +347,7 @@ def save_recipe(
 # ════════════════════════════════════════════════════════════════════════════════
 @router.post("/generate-menu", response_model=schemas.MenuGenerationResponse)
 def generate_menu_with_ia(
+    request: schemas.GenerateMenuRequest = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_user),
 ):
@@ -369,6 +370,35 @@ def generate_menu_with_ia(
             for i, item in enumerate(inventory_items)
         ]
     )
+
+    # ── 1.5 Memoria de recetas recientes y rechazadas ─────────────────────────
+    recent_plans = (
+        db.query(models.MealPlan)
+        .filter(models.MealPlan.owner_id == current_user.id)
+        .order_by(models.MealPlan.date.desc())
+        .limit(5)
+        .all()
+    )
+    recent_names = []
+    for plan in recent_plans:
+        if plan.breakfast and isinstance(plan.breakfast, dict):
+            recent_names.append(plan.breakfast.get("name", ""))
+        if plan.lunch and isinstance(plan.lunch, dict):
+            recent_names.append(plan.lunch.get("name", ""))
+        if plan.dinner and isinstance(plan.dinner, dict):
+            recent_names.append(plan.dinner.get("name", ""))
+            
+    recent_names = [n for n in recent_names if n]
+    
+    memory_constraint = ""
+    if recent_names:
+        memory_constraint += f"\n- RECIENTEMENTE CONSUMIDAS (NO REPETIR, debe haber 5 dias de diferencia): {', '.join(set(recent_names))}"
+        
+    if request and request.rejected_recipes:
+        memory_constraint += f"\n- RECETAS RECHAZADAS AHORA MISMO (ESTRICTAMENTE PROHIBIDO REPETIR ESTAS): {', '.join(request.rejected_recipes)}"
+        
+    if memory_constraint:
+        memory_constraint = f"\n=== RESTRICCIONES DE MEMORIA ==={memory_constraint}\n"
 
     target_calories = calculate_target_calories(current_user)
 
@@ -484,7 +514,7 @@ Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
    - Las calorías DEBEN CUMPLIR EXACTAMENTE con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
    - Ajusta meticulosamente las cantidades de los ingredientes para cumplir LO MÁS EXACTO POSIBLE con los objetivos calóricos del usuario, sin romper la receta.
    - Usa datos nutricionales reales (USDA, INCAP). NO inventes valores ni hagas aproximaciones burdas. DEBES incluir Vitamina A (mcg), Vitamina C (mg), Calcio (mg) y Hierro (mg).
-
+{memory_constraint}
 === INSTRUCCIONES TECNICAS JSON ===
 - Devuelve SOLO JSON valido, sin comentarios ni trailing commas.
 - El campo "source_url" debe ser la URL exacta de la OPCION elegida.
@@ -833,7 +863,7 @@ def save_meal_plan(
 # ════════════════════════════════════════════════════════════════════════════════
 
 
-@router.patch("/meal-plans/{date}/mark-eaten", response_model=schemas.MealPlan)
+@router.patch("/meal-plans/{date}/mark-eaten", response_model=schemas.MarkMealEatenResponse)
 def mark_meal_eaten(
     date: str,
     request: schemas.MarkMealEatenRequest,
@@ -869,9 +899,73 @@ def mark_meal_eaten(
     else:
         raise HTTPException(status_code=400, detail="Tipo de comida invalido")
 
+    depleted_items = []
+    
+    if request.eaten:
+        # Deduct inventory using AI for parsing
+        meal_data = {}
+        if request.meal_type == "breakfast":
+            meal_data = plan.breakfast
+        elif request.meal_type == "lunch":
+            meal_data = plan.lunch
+        elif request.meal_type == "dinner":
+            meal_data = plan.dinner
+            
+        if isinstance(meal_data, dict) and "ingredients" in meal_data:
+            ingredients_list = meal_data["ingredients"]
+            inventory = db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id).all()
+            
+            if inventory and ingredients_list and client:
+                inv_dict = {i.name: {"id": i.id, "qty": i.quantity, "unit": i.unit} for i in inventory}
+                inv_str = ", ".join([f"{k} (ID: {v['id']}): {v['qty']} {v['unit']}" for k, v in inv_dict.items()])
+                ing_str = "\n".join(ingredients_list)
+                
+                prompt = f"""
+                El usuario ha cocinado una receta con estos ingredientes:
+                {ing_str}
+                
+                Su inventario actual es:
+                {inv_str}
+                
+                Analiza las cantidades usadas en la receta y deduce exactamente cuánto restar de cada item del inventario.
+                Debes emparejar el ingrediente de la receta con el ID correcto del inventario. 
+                Devuelve SOLO un JSON valido con este formato estricto:
+                {{
+                  "deductions": [
+                    {{"id": 1, "amount_to_subtract": 100.5}}
+                  ]
+                }}
+                Si un ingrediente de la receta no esta en el inventario, omitelo. Asegúrate de hacer conversiones de unidades si es evidente (ej. si la receta pide 1kg y el inventario esta en g, resta 1000). Si no sabes la cantidad exacta, asume 1 o omítelo.
+                """
+                try:
+                    completion = client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0,
+                        response_format={ "type": "json_object" }
+                    )
+                    import json
+                    result = json.loads(completion.choices[0].message.content)
+                    deductions = result.get("deductions", [])
+                    
+                    for ded in deductions:
+                        item_id = ded.get("id")
+                        sub = ded.get("amount_to_subtract")
+                        if item_id and sub:
+                            item = db.query(models.InventoryItem).filter(models.InventoryItem.id == item_id).first()
+                            if item:
+                                item.quantity -= sub
+                                if item.quantity <= 0:
+                                    depleted_items.append(item.name)
+                                    db.delete(item)
+                                else:
+                                    db.add(item)
+                except Exception as e:
+                    logger.warning(f"Error parseando deduccion de inventario con IA: {e}")
+
     db.commit()
     db.refresh(plan)
-    return plan
+    return schemas.MarkMealEatenResponse(plan=plan, depleted_items=depleted_items)
 
 
 @router.post("/meal-plans/{date}/extra-meal", response_model=schemas.MealPlan)

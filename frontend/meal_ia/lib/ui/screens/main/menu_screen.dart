@@ -17,8 +17,6 @@ class _MenuScreenState extends State<MenuScreen> {
 
   // Lógica para regenerar menú con pantalla de carga (Copiado y adaptado de InventoryScreen)
   Future<void> _handleRegenerate() async {
-    final appState = Provider.of<AppState>(context, listen: false);
-
     // Mostrar diálogo de carga (fullscreen)
     showDialog(
       context: context,
@@ -70,7 +68,16 @@ class _MenuScreenState extends State<MenuScreen> {
 
     // Ejecutar la generación (Esto actualiza el estado en AppState)
     try {
-      await appState.generateMenuConIA();
+      final appState = Provider.of<AppState>(context, listen: false);
+      List<String> rejected = [];
+      if (appState.generatedMenu != null) {
+        if (appState.generatedMenu!['breakfast'] != null) rejected.add(appState.generatedMenu!['breakfast']['name'] ?? '');
+        if (appState.generatedMenu!['lunch'] != null) rejected.add(appState.generatedMenu!['lunch']['name'] ?? '');
+        if (appState.generatedMenu!['dinner'] != null) rejected.add(appState.generatedMenu!['dinner']['name'] ?? '');
+      }
+      rejected.removeWhere((element) => element.isEmpty);
+
+      await appState.generateMenuConIA(rejectedRecipes: rejected.isNotEmpty ? rejected : null);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
