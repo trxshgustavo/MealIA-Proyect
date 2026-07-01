@@ -398,7 +398,10 @@ def generate_menu_with_ia(
         memory_constraint += f"\n- RECETAS RECHAZADAS AHORA MISMO (ESTRICTAMENTE PROHIBIDO REPETIR ESTAS): {', '.join(request.rejected_recipes)}"
         
     if memory_constraint:
-        memory_constraint = f"\n=== RESTRICCIONES DE MEMORIA ==={memory_constraint}\n"
+        memory_constraint = f"""
+=== RESTRICCIONES DE MEMORIA ==={memory_constraint}
+- REGLA ANTI-TRAMPA (CRITICA): No basta con cambiarle el nombre a la receta para evadir esta lista. DEBES generar una receta sustancialmente distinta en concepto, técnica principal o perfil de sabor. Si la receta rechazada o consumida era un pollo a la plancha, NO ofrezcas otro pollo a la plancha con un nombre distinto. Cambia radicalmente la propuesta (ej. haz un guiso, un horneado o usa otra proteína/carbohidrato principal) respetando el inventario.
+"""
 
     target_calories = calculate_target_calories(current_user)
 
