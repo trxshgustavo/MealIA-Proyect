@@ -921,21 +921,25 @@ def mark_meal_eaten(
                 ing_str = "\n".join(ingredients_list)
                 
                 prompt = f"""
-                El usuario ha cocinado una receta con estos ingredientes:
+                El usuario ha cocinado una receta con los siguientes ingredientes (texto libre):
                 {ing_str}
                 
-                Su inventario actual es:
+                Su inventario actual estructurado en la base de datos es:
                 {inv_str}
                 
-                Analiza las cantidades usadas en la receta y deduce exactamente cuánto restar de cada item del inventario.
-                Debes emparejar el ingrediente de la receta con el ID correcto del inventario. 
+                Tu trabajo es extraer la cantidad usada de cada ingrediente en la receta para saber cuánto descontar del inventario.
+                Debes emparejar el ingrediente de la receta con el ID numérico correcto del inventario.
+                CRÍTICO: NO restes todo el inventario. SOLO deduce la porción usada en la receta.
+                Ejemplo: Si la receta pide '2 huevos' y el inventario tiene '12', amount_to_subtract debe ser 2.
+                Convierte las unidades matemáticamente si es necesario (ej: si la receta usa 500g y el inventario está en kg, amount_to_subtract es 0.5).
+                Si la receta no especifica cantidad o usa términos abstractos ("una pizca"), asume un valor numérico pequeño o asume 0 para no restar.
+                NUNCA devuelvas un amount_to_subtract igual a la cantidad total del inventario a menos que la receta demande usar esa cantidad exacta.
                 Devuelve SOLO un JSON valido con este formato estricto:
                 {{
                   "deductions": [
-                    {{"id": 1, "amount_to_subtract": 100.5}}
+                    {{"id": 1, "amount_to_subtract": 2}}
                   ]
                 }}
-                Si un ingrediente de la receta no esta en el inventario, omitelo. Asegúrate de hacer conversiones de unidades si es evidente (ej. si la receta pide 1kg y el inventario esta en g, resta 1000). Si no sabes la cantidad exacta, asume 1 o omítelo.
                 """
                 try:
                     completion = client.chat.completions.create(

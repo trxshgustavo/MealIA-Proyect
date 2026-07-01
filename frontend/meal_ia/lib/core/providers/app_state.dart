@@ -1036,7 +1036,7 @@ class AppState extends ChangeNotifier {
         final responseData = jsonDecode(utf8.decode(response.bodyBytes));
         if (eaten) {
           // Refrescar inventario si se ha consumido la comida
-          await refreshAppData();
+          await fetchInventory();
         }
         if (responseData.containsKey('depleted_items')) {
            final List<dynamic> depleted = responseData['depleted_items'];
@@ -1048,6 +1048,34 @@ class AppState extends ChangeNotifier {
       debugPrint("Error marking meal eaten: $e");
     }
     return null;
+  }
+
+  Future<void> fetchInventory() async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return;
+    
+    try {
+      final invResponse = await http
+          .get(
+            Uri.parse('$_baseUrl/inventory'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (invResponse.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(invResponse.body);
+        _inventory.clear();
+        for (var item in data) {
+          _inventory[item['name']] = {
+            'quantity': (item['quantity'] ?? 0).toDouble(),
+            'unit': item['unit'] ?? 'Unidades',
+          };
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error fetching inventory from network: $e");
+    }
   }
 
   Future<bool> addExtraMeal(DateTime date, Map<String, dynamic> extraMeal) async {
