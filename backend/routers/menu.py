@@ -900,16 +900,59 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
         ).delete()
         db.commit()
         
+        def safe_get_int(data, key, default=0):
+            val = data.get(key)
+            if val is None: return default
+            try: return int(str(val).replace("g", "").replace("mg", "").replace("kcal", "").strip())
+            except (ValueError, TypeError): return default
+
+        def safe_get_float(data, key, default=0.0):
+            val = data.get(key)
+            if val is None: return default
+            try: return float(str(val).replace("g", "").strip())
+            except (ValueError, TypeError): return default
+            
         for idx, day_data in enumerate(days_generated[:7]):
             plan_date = today_datetime + timedelta(days=idx)
             
-            # Asegurar calculos exactos
-            for meal_key in ["breakfast", "lunch", "dinner"]:
-                meal = day_data.get(meal_key, {})
-                c = int(meal.get("carbs", 0))
-                p = int(meal.get("protein", 0))
-                f = int(meal.get("fat", 0))
-                meal["calories"] = (c * 4) + (p * 4) + (f * 9)
+            # Asegurar calculos exactos y sanitizacion
+            for meal_key, meal_cal_target in [("breakfast", breakfast_cal_target), ("lunch", lunch_cal_target), ("dinner", dinner_cal_target)]:
+                meal = day_data.get(meal_key)
+                if not isinstance(meal, dict):
+                    meal = {}
+                    
+                meal["name"] = meal.get("name") or "Plato Especial del Chef"
+                if not isinstance(meal.get("ingredients"), list) or not meal.get("ingredients"):
+                    meal["ingredients"] = ["Ingredientes variados al gusto"]
+                if not isinstance(meal.get("steps"), list) or not meal.get("steps"):
+                    meal["steps"] = ["Preparar según receta original.", "Emplatar y servir."]
+                    
+                cal = safe_get_int(meal, "calories", meal_cal_target)
+                if cal <= 0: cal = meal_cal_target
+                
+                meal["carbs"] = safe_get_int(meal, "carbs", int((cal * 0.50) / 4))
+                meal["protein"] = safe_get_int(meal, "protein", int((cal * 0.25) / 4))
+                meal["fat"] = safe_get_int(meal, "fat", int((cal * 0.25) / 9))
+                
+                # ENFORCE EXACT MATH FOR CALORIES
+                cal = (meal["carbs"] * 4) + (meal["protein"] * 4) + (meal["fat"] * 9)
+                meal["calories"] = cal
+                
+                meal["sodium"] = safe_get_int(meal, "sodium", int(cal * 0.4))
+                meal["sugar"] = safe_get_float(meal, "sugar", round(cal * 0.02, 1))
+                meal["fiber"] = safe_get_float(meal, "fiber", round(cal * 0.012, 1))
+                
+                meal["vitamin_a"] = safe_get_float(meal, "vitamin_a", 0.0)
+                meal["vitamin_c"] = safe_get_float(meal, "vitamin_c", 0.0)
+                meal["calcium"] = safe_get_float(meal, "calcium", 0.0)
+                meal["iron"] = safe_get_float(meal, "iron", 0.0)
+                
+                if not isinstance(meal.get("time"), str) or not meal.get("time") or meal["time"].startswith("0"):
+                    meal["time"] = "15 min"
+                    
+                meal["source_url"] = meal.get("source_url") or "Meal.IA"
+                meal["source_name"] = meal.get("source_name") or "Nutrición IA"
+                
                 day_data[meal_key] = meal
                 
             total_cal = day_data.get("breakfast", {}).get("calories", 0) + \
