@@ -123,7 +123,7 @@ def parse_themealdb_ingredients(meal: dict) -> list:
     return ingredients
 
 
-def search_recipes_for_meal(inventory_names: list, meal_type: str) -> list:
+def search_recipes_for_meal(inventory_names: list, meal_type: str, limit: int = 5) -> list:
     """
     Busca recetas reales en TheMealDB usando los ingredientes disponibles.
     Retorna una lista de recetas con su URL de fuente.
@@ -203,14 +203,14 @@ def search_recipes_for_meal(inventory_names: list, meal_type: str) -> list:
         )
 
     scored.sort(key=lambda x: x["match_score"], reverse=True)
-    return scored[:5]  # top 5 candidatos
+    return scored[:limit]  # top N candidatos
 
 
 # ════════════════════════════════════════════════════════════════════════════════
 # BUSQUEDA EN EDAMAM (si hay API keys configuradas)
 # ════════════════════════════════════════════════════════════════════════════════
 def search_recipes_edamam(
-    ingredients: list, calories_min: int, calories_max: int, meal_type: str
+    ingredients: list, calories_min: int, calories_max: int, meal_type: str, limit: int = 5
 ) -> list:
     """Busca recetas en Edamam filtrando por calorias. Solo si hay API key."""
     if not EDAMAM_APP_ID or not EDAMAM_APP_KEY:
@@ -249,7 +249,7 @@ def search_recipes_edamam(
                 if hits:
                     random.shuffle(hits)
                 results = []
-                for hit in hits[:5]:
+                for hit in hits[:limit]:
                     r = hit.get("recipe", {})
                     nutrients = r.get("totalNutrients", {})
                     results.append(
@@ -300,9 +300,15 @@ def format_recipe_candidates(recipes: list, meal_type: str, max_n: int = 3) -> s
     for i, r in enumerate(random_recipes[:max_n], 1):
         ing_preview = "; ".join(r["ingredients"][:8])
         instructions_preview = (r.get("instructions") or "")[:300]
+        
+        macros_info = ""
+        if r.get("calories"):
+            macros_info = f"  Macros Reales: {r.get('calories')} kcal (Carbs: {r.get('carbs')}g, Proteína: {r.get('protein')}g, Grasa: {r.get('fat')}g)\n"
+            
         lines.append(
-            f"OPCION {i}: \"{r['name']}\"\n"
+            f"OPCIÓN {i}: \"{r['name']}\"\n"
             f"  Fuente: {r.get('source_name','?')} | URL: {r.get('source_url','')}\n"
+            f"{macros_info}"
             f"  Ingredientes reales: {ing_preview}\n"
             f"  Instrucciones base: {instructions_preview}..."
         )
@@ -814,6 +820,7 @@ def generate_weekly_menu_with_ia(
     if not inventory_items:
         raise HTTPException(status_code=400, detail="Inventario vacio")
 
+    inventory_names = [item.name.strip().lower() for item in inventory_items]
     inventory_numbered = "\n".join(
         [
             f"  {i+1}. {item.name} ({item.quantity} {item.unit})"
@@ -825,6 +832,23 @@ def generate_weekly_menu_with_ia(
     breakfast_cal_target = int(target_calories * 0.25)
     lunch_cal_target = int(target_calories * 0.40)
     dinner_cal_target = int(target_calories * 0.35)
+
+    # ── BÚSQUEDA DE RECETAS REALES ──
+    logger.info(f"Buscando recetas externas (semanal) para {current_user.first_name}")
+    breakfast_candidates = search_recipes_edamam(inventory_names, breakfast_cal_target - 150, breakfast_cal_target + 150, "breakfast", limit=14)
+    lunch_candidates = search_recipes_edamam(inventory_names, lunch_cal_target - 150, lunch_cal_target + 150, "lunch", limit=14)
+    dinner_candidates = search_recipes_edamam(inventory_names, dinner_cal_target - 150, dinner_cal_target + 150, "dinner", limit=14)
+
+    if not breakfast_candidates:
+        breakfast_candidates = search_recipes_for_meal(inventory_names, "breakfast", limit=14)
+    if not lunch_candidates:
+        lunch_candidates = search_recipes_for_meal(inventory_names, "lunch", limit=14)
+    if not dinner_candidates:
+        dinner_candidates = search_recipes_for_meal(inventory_names, "dinner", limit=14)
+
+    breakfast_text = format_recipe_candidates(breakfast_candidates, "desayuno", max_n=10)
+    lunch_text = format_recipe_candidates(lunch_candidates, "almuerzo", max_n=10)
+    dinner_text = format_recipe_candidates(dinner_candidates, "cena", max_n=10)
 
     system_prompt = f"""
 Eres "Meal.IA", un Nutricionista experto y Chef Ejecutivo de alta cocina.
@@ -848,26 +872,39 @@ Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 === INSTRUCCIONES ===
 1. Genera un JSON con un array "days" de 7 días exactos.
 2. Cada día debe tener "breakfast", "lunch", "dinner", "note", y "total_calories".
-3. Calcula de forma MATEMÁTICAMENTE EXACTA Y REAL los macros (carbs, protein, fat), micros (fiber, sugar, sodium) y calorías. Las calorías DEBEN coincidir a la perfección con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
-4. El "source_url" debe ser "Meal.IA" y el "source_name" debe ser "Nutrición IA".
-5. NO asumas ingredientes externos.
-6. La estructura debe ser estrictamente válida.
+3. REGLA DE ORO MACROS: Selecciona de las recetas de INSPIRACIÓN entregadas por el usuario. COPIA LOS MACROS REALES (carbs, protein, fat) proporcionados en las opciones y cópialos en tu JSON para que sean 100% REALES. 
+4. Calcula de forma MATEMÁTICAMENTE EXACTA las calorías usando esta ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
+5. El "source_url" y "source_name" debe ser de la receta original si la usaste.
+6. NO asumas ingredientes externos.
+7. La estructura debe ser estrictamente válida.
 """
-    prompt_user = """Genera mi menú semanal de 7 días exactos.
+    prompt_user = f"""Genera mi menú semanal de 7 días exactos.
+Aquí tienes un catálogo de recetas 100% REALES con sus macros verdaderos para usar de INSPIRACIÓN y que distribuyas en la semana:
+
+DESAYUNOS REALES DISPONIBLES:
+{breakfast_text}
+
+ALMUERZOS REALES DISPONIBLES:
+{lunch_text}
+
+CENAS REALES DISPONIBLES:
+{dinner_text}
+
+INSTRUCCIÓN: Para cada uno de los 7 días, elige una receta de este catálogo (¡no las inventes!), adáptala si falta algún ingrediente basándote en mi inventario, y copia sus macros exactos al JSON. 
 FORMATO JSON OBLIGATORIO:
-{
+{{
   "days": [
-    {
-      "breakfast": {
-        "name": "...", "ingredients": ["..."], "steps": ["..."], "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0, "vitamin_a": 0, "vitamin_c": 0, "calcium": 0, "iron": 0, "time": "15 min", "source_url": "Meal.IA", "source_name": "Nutrición IA"
-      },
-      "lunch": { ... },
-      "dinner": { ... },
+    {{
+      "breakfast": {{
+        "name": "...", "ingredients": ["..."], "steps": ["..."], "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0, "vitamin_a": 0, "vitamin_c": 0, "calcium": 0, "iron": 0, "time": "15 min", "source_url": "URL", "source_name": "Edamam"
+      }},
+      "lunch": {{ ... }},
+      "dinner": {{ ... }},
       "note": "Breve nota del dia",
       "total_calories": 0
-    }
+    }}
   ]
-}
+}}
 Asegúrate de que haya exactamente 7 elementos en el array "days".
 """
     try:
