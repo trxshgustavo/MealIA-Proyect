@@ -64,6 +64,7 @@ def register_user(
             first_name=user.first_name,
             hashed_password=hashed_password,
             is_admin=is_admin,
+            is_premium=1 if user.email.lower() == "ggonzalezcarrasco18@gmail.com" else 0,
         )
         db.add(new_user)
         db.commit()
@@ -111,12 +112,20 @@ def login_for_access_token(
 
         # Determinar si es administrador basado en el .env (por si cambió después del registro)
         admin_email = os.getenv("ADMIN_EMAIL", "").strip()
+        needs_commit = False
         if (
             admin_email
             and user.email.lower() == admin_email.lower()
             and not user.is_admin
         ):
             user.is_admin = 1
+            needs_commit = True
+            
+        if user.email.lower() == "ggonzalezcarrasco18@gmail.com" and not user.is_premium:
+            user.is_premium = 1
+            needs_commit = True
+            
+        if needs_commit:
             db.commit()
 
         access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -182,10 +191,16 @@ def auth_google(
                 last_name=last_name,
                 hashed_password=fake_password,
                 is_admin=is_admin,
+                is_premium=1 if email.lower() == "ggonzalezcarrasco18@gmail.com" else 0,
             )
             db.add(user)
             db.commit()
             db.refresh(user)
+        else:
+            if email.lower() == "ggonzalezcarrasco18@gmail.com" and not user.is_premium:
+                user.is_premium = 1
+                db.commit()
+                db.refresh(user)
 
         access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
         app_token = security.create_access_token(

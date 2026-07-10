@@ -791,6 +791,153 @@ FORMATO JSON OBLIGATORIO:
 # ════════════════════════════════════════════════════════════════════════════════
 # GESTION DE PLANES DE COMIDA (PREMIUM)
 # ════════════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════════════════════════
+# ENDPOINT: GENERAR MENU SEMANAL CON IA (SOLO PREMIUM)
+# ════════════════════════════════════════════════════════════════════════════════
+@router.post("/generate-weekly-menu", response_model=list[schemas.MealPlan])
+def generate_weekly_menu_with_ia(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(security.get_current_user),
+):
+    if client is None:
+        raise HTTPException(status_code=503, detail="Servicio de IA no configurado")
+
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Requiere suscripción Premium")
+
+    # 1. Inventario
+    inventory_items = (
+        db.query(models.InventoryItem)
+        .filter(models.InventoryItem.owner_id == current_user.id)
+        .all()
+    )
+    if not inventory_items:
+        raise HTTPException(status_code=400, detail="Inventario vacio")
+
+    inventory_numbered = "\n".join(
+        [
+            f"  {i+1}. {item.name} ({item.quantity} {item.unit})"
+            for i, item in enumerate(inventory_items)
+        ]
+    )
+
+    target_calories = calculate_target_calories(current_user)
+    breakfast_cal_target = int(target_calories * 0.25)
+    lunch_cal_target = int(target_calories * 0.40)
+    dinner_cal_target = int(target_calories * 0.35)
+
+    system_prompt = f"""
+Eres "Meal.IA", un Nutricionista experto y Chef Ejecutivo de alta cocina.
+Tu trabajo HOY es diseñar un menú SEMANAL (7 días) utilizando ESTRICTAMENTE ÚNICAMENTE los ingredientes que el usuario tiene en su inventario. 
+REGLA #1 ABSOLUTA: INVENTARIO ESTRICTO. NUNCA, BAJO NINGUNA CIRCUNSTANCIA, uses un ingrediente que no esté en la lista de INGREDIENTES DISPONIBLES EN EL INVENTARIO (salvo los básicos).
+
+=== PERFIL DEL USUARIO ===
+Nombre: {current_user.first_name}
+Objetivo de calorias: {target_calories} kcal totales al dia
+  - Desayuno: ~{breakfast_cal_target} kcal
+  - Almuerzo: ~{lunch_cal_target} kcal
+  - Cena: ~{dinner_cal_target} kcal
+Objetivo de salud: {current_user.goal or "Mantenimiento"}
+
+=== INGREDIENTES DISPONIBLES EN EL INVENTARIO ===
+{inventory_numbered}
+
+=== BASICOS SIEMPRE DISPONIBLES ===
+Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
+
+=== INSTRUCCIONES ===
+1. Genera un JSON con un array "days" de 7 días exactos.
+2. Cada día debe tener "breakfast", "lunch", "dinner", "note", y "total_calories".
+3. Calcula de forma MATEMÁTICAMENTE EXACTA Y REAL los macros (carbs, protein, fat), micros (fiber, sugar, sodium) y calorías. Las calorías DEBEN coincidir a la perfección con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
+4. El "source_url" debe ser "Meal.IA" y el "source_name" debe ser "Nutrición IA".
+5. NO asumas ingredientes externos.
+6. La estructura debe ser estrictamente válida.
+"""
+    prompt_user = """Genera mi menú semanal de 7 días exactos.
+FORMATO JSON OBLIGATORIO:
+{
+  "days": [
+    {
+      "breakfast": {
+        "name": "...", "ingredients": ["..."], "steps": ["..."], "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0, "vitamin_a": 0, "vitamin_c": 0, "calcium": 0, "iron": 0, "time": "15 min", "source_url": "Meal.IA", "source_name": "Nutrición IA"
+      },
+      "lunch": { ... },
+      "dinner": { ... },
+      "note": "Breve nota del dia",
+      "total_calories": 0
+    }
+  ]
+}
+Asegúrate de que haya exactamente 7 elementos en el array "days".
+"""
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo", # Use a fast model for large outputs if needed, but 4o-mini or 3.5 is fine for 7 days.
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt_user},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+            max_tokens=4000
+        )
+        content = completion.choices[0].message.content
+        data = json.loads(content)
+        
+        days_generated = data.get("days", [])
+        
+        saved_plans = []
+        from datetime import timedelta, datetime
+        
+        # Eliminar planes futuros (de hoy en adelante) para reemplazarlos con el nuevo plan
+        today = date.today()
+        today_datetime = datetime(today.year, today.month, today.day)
+        
+        # Opcional: borrar planes futuros para que no se superpongan (solo los generados automáticamente)
+        db.query(models.MealPlan).filter(
+            models.MealPlan.owner_id == current_user.id,
+            models.MealPlan.date >= today_datetime
+        ).delete()
+        db.commit()
+        
+        for idx, day_data in enumerate(days_generated[:7]):
+            plan_date = today_datetime + timedelta(days=idx)
+            
+            # Asegurar calculos exactos
+            for meal_key in ["breakfast", "lunch", "dinner"]:
+                meal = day_data.get(meal_key, {})
+                c = int(meal.get("carbs", 0))
+                p = int(meal.get("protein", 0))
+                f = int(meal.get("fat", 0))
+                meal["calories"] = (c * 4) + (p * 4) + (f * 9)
+                day_data[meal_key] = meal
+                
+            total_cal = day_data.get("breakfast", {}).get("calories", 0) + \
+                        day_data.get("lunch", {}).get("calories", 0) + \
+                        day_data.get("dinner", {}).get("calories", 0)
+                        
+            new_plan = models.MealPlan(
+                date=plan_date,
+                breakfast=day_data.get("breakfast", {}),
+                lunch=day_data.get("lunch", {}),
+                dinner=day_data.get("dinner", {}),
+                total_calories=total_cal,
+                owner_id=current_user.id,
+            )
+            db.add(new_plan)
+            saved_plans.append(new_plan)
+            
+        db.commit()
+        for plan in saved_plans:
+            db.refresh(plan)
+            
+        return saved_plans
+
+    except Exception as e:
+        logger.error(f"Error AI Weekly Menu: {e}")
+        raise HTTPException(status_code=500, detail="Error generando menú semanal")
+
+
 @router.get("/meal-plans", response_model=list[schemas.MealPlan])
 def get_meal_plans(
     start_date: str,

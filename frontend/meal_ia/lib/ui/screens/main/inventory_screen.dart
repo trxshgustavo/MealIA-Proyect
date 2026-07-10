@@ -248,7 +248,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   // Lógica para generar menú con pantalla de carga
-  Future<void> _handleGenerateMenu() async {
+  Future<void> _generateMenuForDay() async {
     final appState = Provider.of<AppState>(context, listen: false);
 
     if (appState.inventoryMap.isEmpty) {
@@ -330,6 +330,155 @@ class _InventoryScreenState extends State<InventoryScreen> {
         );
       }
     }
+  }
+
+  Future<void> _generateMenuForWeek() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    if (!appState.isPremium) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('¡Esta función es exclusiva para Premium!'),
+          action: SnackBarAction(
+            label: "Ver Premium",
+            onPressed: () => Navigator.pushNamed(context, '/subscription'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (appState.inventoryMap.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Añade alimentos antes de generar un menú!'),
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            insetPadding: EdgeInsets.zero,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.white,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/animation1_transparent.gif',
+                    height: 400.h,
+                    width: 400.w,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.calendar_month,
+                      size: 80.sp,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 0),
+                  Text(
+                    "Generando menú semanal...",
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    try {
+      await appState.generateWeeklyMenuConIA();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      // Optionally redirect to a weekly calendar view, but /menu handles today.
+      Navigator.pushNamed(context, '/menu');
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleGenerateMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (context) {
+        final isPremium = Provider.of<AppState>(context, listen: false).isPremium;
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Opciones de Generación",
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              SizedBox(height: 24.h),
+              ListTile(
+                leading: Icon(Icons.wb_sunny_outlined, color: AppColors.accentColor, size: 28.sp),
+                title: Text("Generar para el día", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16.sp)),
+                subtitle: const Text("Crea un menú para hoy basado en tu despensa"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _generateMenuForDay();
+                },
+              ),
+              Divider(height: 16.h, color: Colors.grey.shade200),
+              ListTile(
+                leading: Icon(Icons.calendar_month_outlined, color: isPremium ? AppColors.accentColor : Colors.grey, size: 28.sp),
+                title: Row(
+                  children: [
+                    Text("Generar para la semana", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16.sp, color: isPremium ? AppColors.textDark : Colors.grey)),
+                    if (!isPremium) ...[
+                      SizedBox(width: 8.w),
+                      Icon(Icons.star, color: Colors.amber, size: 16.sp),
+                    ]
+                  ],
+                ),
+                subtitle: const Text("Planifica tus comidas para los próximos 7 días"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _generateMenuForWeek();
+                },
+              ),
+              SizedBox(height: 16.h),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _handleShoppingSuggestions() async {

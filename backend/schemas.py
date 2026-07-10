@@ -116,6 +116,10 @@ class MenuGenerationResponse(BaseModel):
     total_calories: int
 
 
+class WeeklyMenuResponse(BaseModel):
+    days: List[MenuGenerationResponse]
+
+
 class GoogleToken(BaseModel):
     token: str
 

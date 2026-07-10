@@ -168,16 +168,19 @@ def suggest_shopping_list(
     inventory_str = ", ".join(inv_names) if inv_names else "Nada"
 
     # 2. Prompt para OpenAI
-    prompt_sys = """
+    prompt_sys = f"""
     Eres un asistente de compras experto. Tu trabajo es sugerir 5 a 10 ingredientes CLAVE que le faltan al usuario para poder cocinar una mayor variedad de recetas saludables y deliciosas, basándote en lo que YA TIENE.
-    NO surgieras cosas obvias si ya las tiene.
+    NO sugieras cosas obvias si ya las tiene.
+    
+    El objetivo de salud/nutricional del usuario es: "{current_user.goal}".
+    Tus sugerencias DEBEN estar directamente alineadas con este objetivo. Por ejemplo, si busca ganar masa muscular, sugiere alimentos altos en proteína. Si busca déficit, sugiere vegetales de baja densidad calórica, etc.
     
     Devuelve un JSON con el formato:
-    {
+    {{
       "suggestions": [
-        {"name": "Ingrediente", "reason": "Razón corta"}
+        {{"name": "Ingrediente", "reason": "Razón corta relacionada al objetivo"}}
       ]
-    }
+    }}
     """
 
     prompt_user = f"Mi inventario actual es: [{inventory_str}]. ¿Qué debería comprar para complementar esto y cocinar mejor?"

@@ -122,6 +122,8 @@ class AppState extends ChangeNotifier {
               photoUrl = cachedPhotoUrl;
             }
             goal = data['goal'] ?? 'Mantenimiento';
+            isPremium = data['is_premium'] ?? false;
+            isAdmin = data['is_admin'] ?? false;
             debugPrint("Loaded Profile from Cache for ${user.uid}");
           }
         } catch (e) {
@@ -1004,6 +1006,82 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint("Error calling generate-menu: $e");
       rethrow; // Lanzar para que la UI pueda atraparlo y mostrar SnackBar
+    }
+  }
+
+  Future<void> generateWeeklyMenuConIA() async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return;
+
+    if (!isPremium) {
+      throw Exception("Esta función es solo para usuarios Premium");
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/generate-weekly-menu'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        // We can pass an empty body or {}
+      ).timeout(const Duration(seconds: 120)); // Allow 2 minutes for 7-day generation
+
+      if (response.statusCode == 200) {
+        final List<dynamic> plans = jsonDecode(utf8.decode(response.bodyBytes));
+        
+        final user = FirebaseAuth.instance.currentUser;
+        
+        for (var plan in plans) {
+          final dateStr = plan['date'];
+          DateTime dateObj = DateTime.parse(dateStr);
+          final dateKey = _formatDate(dateObj);
+          
+          final menuData = {
+            'breakfast': plan['breakfast'],
+            'lunch': plan['lunch'],
+            'dinner': plan['dinner'],
+            'total_calories': plan['total_calories'],
+            'breakfast_eaten': plan['breakfast_eaten'] ?? false,
+            'lunch_eaten': plan['lunch_eaten'] ?? false,
+            'dinner_eaten': plan['dinner_eaten'] ?? false,
+            'extra_meals': plan['extra_meals'] ?? [],
+          };
+          
+          _mealCalendar[dateKey] = menuData;
+          
+          if (_isSameDay(dateObj, DateTime.now())) {
+            generatedMenu = menuData;
+            totalCalories = menuData['total_calories'] as int? ?? 0;
+          }
+          
+          if (user != null) {
+            try {
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .collection('daily_menus')
+                  .doc(dateKey)
+                  .set(menuData, SetOptions(merge: true));
+            } catch (e) {
+              debugPrint("Error saving to firestore: $e");
+            }
+          }
+        }
+        
+        notifyListeners();
+      } else if (response.statusCode == 400) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final detail = data['detail'] ?? 'Error de validación';
+        throw Exception(detail);
+      } else if (response.statusCode == 403) {
+        throw Exception("Requiere suscripción Premium");
+      } else {
+        throw Exception("Error del servidor: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Error calling generate-weekly-menu: $e");
+      rethrow;
     }
   }
 
