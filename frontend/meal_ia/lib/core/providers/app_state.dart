@@ -1077,7 +1077,14 @@ class AppState extends ChangeNotifier {
       } else if (response.statusCode == 403) {
         throw Exception("Requiere suscripción Premium");
       } else {
-        throw Exception("Error del servidor: ${response.statusCode}");
+        String errorMessage = "Error del servidor: ${response.statusCode}";
+        try {
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
+          if (data['detail'] != null) {
+            errorMessage = data['detail'].toString();
+          }
+        } catch (_) {}
+        throw Exception(errorMessage);
       }
     } catch (e) {
       debugPrint("Error calling generate-weekly-menu: $e");
