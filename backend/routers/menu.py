@@ -1015,7 +1015,7 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
 
     except Exception as e:
         logger.error(f"Error AI Weekly Menu: {e}")
-        raise HTTPException(status_code=500, detail="Error generando menú semanal")
+        raise HTTPException(status_code=500, detail=f"Error generando menú semanal: {str(e)}")
 
 
 @router.get("/meal-plans", response_model=list[schemas.MealPlan])
