@@ -49,7 +49,7 @@ class _AuthCheckScreenState extends State<AuthCheckScreen>
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final isLoggedIn = await appState.checkLoginStatus().timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 60), // Aumentado a 60s para Render cold start
         onTimeout: () {
           debugPrint("Timeout verificando estado de autenticación");
           return false;

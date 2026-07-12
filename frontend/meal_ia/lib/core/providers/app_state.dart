@@ -139,7 +139,7 @@ class AppState extends ChangeNotifier {
                 Uri.parse('$_baseUrl/users/me'),
                 headers: {'Authorization': 'Bearer $token'},
               )
-              .timeout(const Duration(seconds: 20));
+              .timeout(const Duration(seconds: 60));
 
           if (userResponse.statusCode == 200) {
             final userData = jsonDecode(utf8.decode(userResponse.bodyBytes));
@@ -267,7 +267,7 @@ class AppState extends ChangeNotifier {
                 Uri.parse('$_baseUrl/inventory'),
                 headers: {'Authorization': 'Bearer $token'},
               )
-              .timeout(const Duration(seconds: 10));
+              .timeout(const Duration(seconds: 60));
 
           if (invResponse.statusCode == 200) {
             final List<dynamic> data = jsonDecode(invResponse.body);
@@ -440,7 +440,7 @@ class AppState extends ChangeNotifier {
             'quantity': entry.value['quantity'],
             'unit': entry.value['unit'],
           }),
-        ).timeout(const Duration(seconds: 5));
+        ).timeout(const Duration(seconds: 60));
       } catch (e) {
         debugPrint("Error sincronizando ${entry.key}: $e");
       }
