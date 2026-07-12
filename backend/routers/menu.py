@@ -909,14 +909,14 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
 """
     try:
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo", # Use a fast model for large outputs if needed, but 4o-mini or 3.5 is fine for 7 days.
+            model="gpt-4o-mini", # Usar gpt-4o-mini para mayor límite de tokens de salida
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt_user},
             ],
             response_format={"type": "json_object"},
             temperature=0.7,
-            max_tokens=4000
+            max_tokens=10000
         )
         content = completion.choices[0].message.content
         data = json.loads(content)
