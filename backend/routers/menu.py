@@ -514,10 +514,10 @@ Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 
 === REGLAS DE ADAPTACION Y BASE CIENTIFICA ===
 1. Las recetas generadas DEBEN estar respaldadas por principios científicos de nutrición para ayudar al usuario con su objetivo de "{current_user.goal or "Mantenimiento"}". No crees platos "inventados" sin sentido nutricional. Prioriza combinaciones de ingredientes comprobadas que ofrezcan un perfil de macronutrientes y micronutrientes adecuado. Usa las opciones externas provistas abajo como guía principal de coherencia. Si debes adaptar una receta al inventario, hazlo respetando la sinergia nutricional.
-2. ADAPTA las cantidades a porciones individuales razonables para llegar al objetivo calórico.
+2. ADAPTA y ESPECIFICA las cantidades exactas de cada ingrediente (ej. "150g de pollo", "2 tazas de arroz") a porciones individuales para llegar al objetivo calórico.
 3. TRADUCE el nombre y los pasos al español.
 4. CREA un nombre atractivo basado en la receta.
-5. DETALLA los pasos con tiempos exactos. PROHIBIDO decir "cocina hasta que este listo".
+5. DETALLA los pasos paso a paso con tiempos exactos de preparación y cocción. PROHIBIDO dar instrucciones vagas como "cocina hasta que este listo".
 6. El ultimo paso siempre debe ser el emplatado.
 7. CALCULA de forma MATEMÁTICAMENTE EXACTA Y REAL los macros (carbs, protein, fat), micros (fiber, sugar, sodium) y calorías.
    - Las calorías DEBEN CUMPLIR EXACTAMENTE con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
@@ -877,7 +877,12 @@ Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 4. Calcula de forma MATEMÁTICAMENTE EXACTA las calorías usando esta ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
 5. El "source_url" y "source_name" debe ser de la receta original si la usaste.
 6. NO asumas ingredientes externos.
-7. La estructura debe ser estrictamente válida.
+7. Para cada receta:
+   - ADAPTA y ESPECIFICA las cantidades exactas de cada ingrediente (ej. "150g de pollo", "2 tazas de arroz") a porciones individuales para llegar al objetivo calórico.
+   - TRADUCE el nombre y los pasos al español.
+   - DETALLA los pasos paso a paso con tiempos exactos de preparación y cocción. PROHIBIDO dar instrucciones vagas como "cocina hasta que esté listo".
+   - El último paso siempre debe ser el emplatado.
+8. La estructura debe ser estrictamente válida JSON.
 """
     prompt_user = f"""Genera mi menú semanal de 7 días exactos.
 Aquí tienes un catálogo de recetas 100% REALES con sus macros verdaderos para usar de INSPIRACIÓN y que distribuyas en la semana:

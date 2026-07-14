@@ -284,15 +284,35 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
               appState,
             )).toList()),
           SizedBox(height: 12.h),
-          ElevatedButton.icon(
-            onPressed: () => showAddExtraMealSheet(context, appState, _selectedDate),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text("Añadir Comida Extra", style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.buttonDark,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => showAddExtraMealSheet(context, appState, _selectedDate),
+                  icon: const Icon(Icons.add, color: Colors.white, size: 20),
+                  label: const Text("Añadir Extra", style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.buttonDark,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                  ),
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showRegenerateConfirmation(context),
+                  icon: Icon(Icons.refresh, color: AppColors.accentColor, size: 20),
+                  label: Text("Regenerar Día", style: TextStyle(color: AppColors.accentColor)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.accentColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       );
@@ -1020,8 +1040,38 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     await appState.generateMenuConIA(date: date);
 
     if (context.mounted) {
-      Navigator.pop(context); // Close loading
-      // Stay on page, UI will update via Provider
+      Navigator.of(context).pop();
+      // Refrescar el día
+      setState(() {});
     }
+  }
+
+  void _showRegenerateConfirmation(BuildContext outerContext) {
+    showDialog(
+      context: outerContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("¿Regenerar menú?"),
+        content: Text(
+          "Esto reemplazará el menú actual de ${_getDayShortName(_selectedDate.weekday)} ${_selectedDate.day}. ¿Estás seguro?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Cancelar"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext); // Close dialog
+              _handleGenerateMenuForDate(outerContext, _selectedDate); // Trigger generation
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("Sí, regenerar"),
+          ),
+        ],
+      ),
+    );
   }
 }
