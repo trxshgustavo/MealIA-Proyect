@@ -802,6 +802,7 @@ FORMATO JSON OBLIGATORIO:
 # ════════════════════════════════════════════════════════════════════════════════
 @router.post("/generate-weekly-menu", response_model=list[schemas.MealPlan])
 def generate_weekly_menu_with_ia(
+    client_date: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_user),
 ):
@@ -928,6 +929,12 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
         
         # Eliminar planes futuros (de hoy en adelante) para reemplazarlos con el nuevo plan
         today = date.today()
+        if client_date:
+            try:
+                dt = datetime.strptime(client_date, "%Y-%m-%d")
+                today = dt.date()
+            except ValueError:
+                pass
         today_datetime = datetime(today.year, today.month, today.day)
         
         # Opcional: borrar planes futuros para que no se superpongan (solo los generados automáticamente)

@@ -1018,8 +1018,9 @@ class AppState extends ChangeNotifier {
     }
 
     try {
+      final clientDate = _formatDate(DateTime.now());
       final response = await http.post(
-        Uri.parse('$_baseUrl/generate-weekly-menu'),
+        Uri.parse('$_baseUrl/generate-weekly-menu?client_date=$clientDate'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
