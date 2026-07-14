@@ -407,8 +407,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       await appState.generateWeeklyMenuConIA();
       if (!mounted) return;
       Navigator.of(context).pop();
-      // Optionally redirect to a weekly calendar view, but /menu handles today.
-      Navigator.pushNamed(context, '/menu');
+      // Redirect to the main shell (which defaults to the calendar tab)
+      Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop();
