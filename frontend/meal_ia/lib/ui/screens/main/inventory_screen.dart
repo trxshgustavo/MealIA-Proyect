@@ -5,6 +5,7 @@ import '../../../core/data/food_database.dart';
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
 import '../../screens/main/food_scanner_screen.dart';
+import '../../screens/main/receipt_scanner_screen.dart';
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -293,9 +294,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                   const SizedBox(height: 0),
                   Text(
-                    "Generando menú con IA...",
+                    "¡Generando menú para que cumplas tus objetivos!",
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 18.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textDark,
                       decoration: TextDecoration.none,
@@ -448,8 +450,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
               SizedBox(height: 24.h),
               ListTile(
                 leading: Icon(Icons.wb_sunny_outlined, color: AppColors.accentColor, size: 28.sp),
-                title: Text("Generar para el día", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16.sp)),
-                subtitle: const Text("Crea un menú para hoy basado en tu despensa"),
+                title: Text("Genera para tú día", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16.sp)),
+                subtitle: const Text("Crea un menú para hoy basado en tus ingredientes"),
                 onTap: () {
                   Navigator.pop(context);
                   _generateMenuForDay();
@@ -460,7 +462,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 leading: Icon(Icons.calendar_month_outlined, color: isPremium ? AppColors.accentColor : Colors.grey, size: 28.sp),
                 title: Row(
                   children: [
-                    Text("Generar para la semana", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16.sp, color: isPremium ? AppColors.textDark : Colors.grey)),
+                    Text("Genera tu plan semanal", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16.sp, color: isPremium ? AppColors.textDark : Colors.grey)),
                     if (!isPremium) ...[
                       SizedBox(width: 8.w),
                       Icon(Icons.star, color: Colors.amber, size: 16.sp),
@@ -742,7 +744,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                           decoration: InputDecoration(
                             hintText:
-                                "Agrega tus ingredientes...", // Texto más corto
+                                "Agrega tus ingredientes", // Texto más corto
                             hintStyle: TextStyle(
                               color: Colors.grey[400],
                               fontSize: 15.sp,
@@ -894,7 +896,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           10.w, // Reducido
                           10.h,
                           10.w,
-                          100.h, // Increased padding for navbar
+                          160.h, // Increased padding for navbar and FAB
                         ),
                         itemCount: itemKeys.length,
                         separatorBuilder: (context, index) =>
@@ -1051,7 +1053,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.auto_awesome, color: Colors.white),
                         SizedBox(
                           width: ScreenUtils.getElementSpacing(
                             context,
@@ -1155,6 +1156,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           item.name,
                           quantity: item.quantity,
                           unit: item.unit,
+                          exactCalories: item.exactCalories,
+                          exactProteins: item.exactProteins,
+                          exactFats: item.exactFats,
+                          exactCarbs: item.exactCarbs,
                         );
                       } else if (item is String) {
                         debugPrint("InventoryScreen: Adding String $item");
@@ -1165,6 +1170,101 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         );
                       }
 
+                      if (success) {
+                        addedCount++;
+                      } else {
+                        failedCount++;
+                      }
+                    }
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      String msg =
+                          "Se agregaron $addedCount alimentos correctamente.";
+                      if (failedCount > 0) {
+                        msg += " ($failedCount fallaron)";
+                      }
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(msg),
+                          backgroundColor: failedCount > 0
+                              ? Colors.orange
+                              : null,
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long,
+                    color: AppColors.accentColor,
+                  ),
+                ),
+                title: const Text(
+                  "Escanear Boleta de Supermercado",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text("Usa la cámara para leer tu ticket de compra"),
+                onTap: () async {
+                  Navigator.pop(sheetContext); // Close modal
+                  // Navigate to Scanner
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ReceiptScannerScreen(),
+                    ),
+                  );
+
+                  if (!mounted) return;
+
+                  if (result != null && result is List) {
+                    final appState = Provider.of<AppState>(
+                      context,
+                      listen: false,
+                    );
+
+                    // Show loading
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Guardando alimentos..."),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+
+                    int addedCount = 0;
+                    int failedCount = 0;
+
+                    for (var item in result) {
+                      bool success = false;
+                      // Since ReceiptScannerScreen returns ScannedFood which is technically imported from food_scanner_screen
+                      // we can just treat it the same way. The types are identical in runtime if imported correctly.
+                      if (item is ScannedFood) {
+                        debugPrint(
+                          "InventoryScreen: Adding ReceiptFood ${item.name}",
+                        );
+                        success = await appState.addFood(
+                          item.name,
+                          quantity: item.quantity,
+                          unit: item.unit,
+                          exactCalories: item.exactCalories,
+                          exactProteins: item.exactProteins,
+                          exactFats: item.exactFats,
+                          exactCarbs: item.exactCarbs,
+                        );
+                      } else if (item is String) {
+                        success = await appState.addFood(item);
+                      }
                       if (success) {
                         addedCount++;
                       } else {

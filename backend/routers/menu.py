@@ -445,6 +445,8 @@ def generate_menu_with_ia(
         f"Buscando recetas externas para {current_user.first_name} (objetivo: {target_calories} kcal)"
     )
 
+    inventory_usda_context = get_inventory_usda_macros(inventory_items)
+
     # Intentar Edamam primero (tiene datos nutricionales integrados)
     breakfast_candidates = search_recipes_edamam(
         inventory_names,
@@ -503,6 +505,8 @@ Objetivo de calorias: {target_calories} kcal totales al dia
   - Almuerzo: ~{lunch_cal_target} kcal (comida principal)
   - Cena: ~{dinner_cal_target} kcal
 Objetivo de salud: {current_user.goal or "Mantenimiento"}
+Sexo biológico: {current_user.gender or "No especificado"}
+**IMPORTANTE**: Ajusta las porciones, distribución de macronutrientes y metabolismo basal considerando el sexo biológico proporcionado.
 {fav_txt}
 Vibe del dia: {daily_vibe}
 
@@ -511,6 +515,10 @@ Vibe del dia: {daily_vibe}
 
 === BASICOS SIEMPRE DISPONIBLES (sin necesidad de estar en inventario) ===
 Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
+
+=== BASE DE DATOS USDA EN VIVO PARA TUS CÁLCULOS ===
+Utiliza OBLIGATORIAMENTE la siguiente información nutricional (obtenida de la base de datos oficial del USDA) para calcular los macros de los platillos que generes. Multiplica/ajusta estos valores a las cantidades exactas que asignes en tu receta para obtener los macros finales.
+{inventory_usda_context}
 
 === REGLAS DE ADAPTACION Y BASE CIENTIFICA ===
 1. Las recetas generadas DEBEN estar respaldadas por principios científicos de nutrición para ayudar al usuario con su objetivo de "{current_user.goal or "Mantenimiento"}". No crees platos "inventados" sin sentido nutricional. Prioriza combinaciones de ingredientes comprobadas que ofrezcan un perfil de macronutrientes y micronutrientes adecuado. Usa las opciones externas provistas abajo como guía principal de coherencia. Si debes adaptar una receta al inventario, hazlo respetando la sinergia nutricional.
@@ -522,7 +530,7 @@ Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 7. CALCULA de forma MATEMÁTICAMENTE EXACTA Y REAL los macros (carbs, protein, fat), micros (fiber, sugar, sodium) y calorías.
    - Las calorías DEBEN CUMPLIR EXACTAMENTE con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
    - Ajusta meticulosamente las cantidades de los ingredientes para cumplir LO MÁS EXACTO POSIBLE con los objetivos calóricos del usuario, sin romper la receta.
-   - Usa datos nutricionales reales (USDA, INCAP). NO inventes valores ni hagas aproximaciones burdas. DEBES incluir Vitamina A (mcg), Vitamina C (mg), Calcio (mg) y Hierro (mg).
+   - Usa exclusivamente los datos nutricionales reales provistos arriba en la sección USDA. NO inventes valores. DEBES incluir Vitamina A (mcg), Vitamina C (mg), Calcio (mg) y Hierro (mg).
 {memory_constraint}
 === INSTRUCCIONES TECNICAS JSON ===
 - Devuelve SOLO JSON valido, sin comentarios ni trailing commas.
@@ -548,6 +556,7 @@ INSTRUCCION: Para cada comida:
 1. Revisa el inventario de {current_user.first_name} y NUNCA te salgas de él.
 2. Objetivo calorico: desayuno ~{breakfast_cal_target} kcal, almuerzo ~{lunch_cal_target} kcal, cena ~{dinner_cal_target} kcal.
 3. Objetivo de salud: {current_user.goal or "Mantenimiento"}.
+4. Considera el sexo biológico ({current_user.gender or "No especificado"}) para calcular las necesidades reales de macronutrientes y calorías basales de manera más precisa.
 
 FORMATO JSON OBLIGATORIO:
 {{
@@ -836,6 +845,9 @@ def generate_weekly_menu_with_ia(
 
     # ── BÚSQUEDA DE RECETAS REALES ──
     logger.info(f"Buscando recetas externas (semanal) para {current_user.first_name}")
+
+    inventory_usda_context = get_inventory_usda_macros(inventory_items)
+
     breakfast_candidates = search_recipes_edamam(inventory_names, breakfast_cal_target - 150, breakfast_cal_target + 150, "breakfast", limit=14)
     lunch_candidates = search_recipes_edamam(inventory_names, lunch_cal_target - 150, lunch_cal_target + 150, "lunch", limit=14)
     dinner_candidates = search_recipes_edamam(inventory_names, dinner_cal_target - 150, dinner_cal_target + 150, "dinner", limit=14)
@@ -863,6 +875,8 @@ Objetivo de calorias: {target_calories} kcal totales al dia
   - Almuerzo: ~{lunch_cal_target} kcal
   - Cena: ~{dinner_cal_target} kcal
 Objetivo de salud: {current_user.goal or "Mantenimiento"}
+Sexo biológico: {current_user.gender or "No especificado"}
+**IMPORTANTE**: Ajusta las porciones, distribución de macronutrientes y metabolismo basal considerando el sexo biológico proporcionado.
 
 === INGREDIENTES DISPONIBLES EN EL INVENTARIO ===
 {inventory_numbered}
@@ -870,12 +884,16 @@ Objetivo de salud: {current_user.goal or "Mantenimiento"}
 === BASICOS SIEMPRE DISPONIBLES ===
 Sal, Pimienta, Aceite, Agua, Azucar, Vinagre, Ajo, Cebolla
 
+=== BASE DE DATOS USDA EN VIVO PARA TUS CÁLCULOS ===
+Utiliza OBLIGATORIAMENTE la siguiente información nutricional (obtenida de la base de datos oficial del USDA) para calcular los macros de los platillos que generes. Multiplica/ajusta estos valores a las cantidades exactas que asignes en tu receta para obtener los macros finales.
+{inventory_usda_context}
+
 === INSTRUCCIONES ===
 1. Genera un JSON con un array "days" de 7 días exactos.
 2. Cada día debe tener "breakfast", "lunch", "dinner", "note", y "total_calories".
-3. REGLA DE ORO MACROS: Selecciona de las recetas de INSPIRACIÓN entregadas por el usuario. COPIA LOS MACROS REALES (carbs, protein, fat) proporcionados en las opciones y cópialos en tu JSON para que sean 100% REALES. 
+3. REGLA DE ORO MACROS: Selecciona de las recetas de INSPIRACIÓN entregadas por el usuario. Calcula los macros EXACTOS basándote EXCLUSIVAMENTE en los valores USDA proporcionados arriba para los ingredientes que uses. Usa los macros de inspiración solo como referencia general, los tuyos deben ser matemáticamente correctos basados en USDA.
 4. Calcula de forma MATEMÁTICAMENTE EXACTA las calorías usando esta ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal).
-5. El "source_url" y "source_name" debe ser de la receta original si la usaste.
+5. El "source_url" y "source_name" debe ser de la receta original si la usaste, o "USDA FoodData Central" si la creaste 100% de ingredientes base.
 6. NO asumas ingredientes externos.
 7. Para cada receta:
    - ADAPTA y ESPECIFICA las cantidades exactas de cada ingrediente (ej. "150g de pollo", "2 tazas de arroz") a porciones individuales para llegar al objetivo calórico.
@@ -1259,6 +1277,64 @@ def add_extra_meal(
     return plan
 
 
+async def search_usda_database(query: str) -> Optional[dict]:
+    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+    params = {
+        "api_key": USDA_API_KEY,
+        "query": query,
+        "pageSize": 2
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client_http:
+            resp = await client_http.get(url, params=params)
+            if resp.status_code == 200:
+                return resp.json()
+    except Exception as e:
+        logger.warning(f"USDA search error: {e}")
+    return None
+
+def get_inventory_usda_macros(inventory_items: list) -> str:
+    """Obtiene los macros exactos de la BD, o del USDA si no existen."""
+    usda_data = {}
+    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+    try:
+        with httpx.Client(timeout=10) as client_http:
+            for item in inventory_items:
+                # Si el item tiene macros exactos guardados (por escáner de boletas, etc)
+                if getattr(item, "calories", None) is not None:
+                    usda_data[item.name] = {
+                        "description": f"{item.name} (MACROS EXACTOS DE BOLETA)",
+                        "servingSize": 100,
+                        "servingSizeUnit": "g",
+                        "nutrients": {
+                            "Energy": item.calories,
+                            "Protein": getattr(item, "proteins", 0.0),
+                            "Total lipid (fat)": getattr(item, "fats", 0.0),
+                            "Carbohydrate, by difference": getattr(item, "carbs", 0.0)
+                        }
+                    }
+                    continue
+
+                # Si no tiene macros exactos, buscamos en USDA
+                params = {"api_key": USDA_API_KEY, "query": item.name, "pageSize": 1}
+                resp = client_http.get(url, params=params)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("foods"):
+                        food = data["foods"][0]
+                        nutrients = {n.get("nutrientName"): n.get("value") for n in food.get("foodNutrients", []) if n.get("value")}
+                        usda_data[item.name] = {
+                            "description": food.get("description"),
+                            "servingSize": food.get("servingSize", 100),
+                            "servingSizeUnit": food.get("servingSizeUnit", "g"),
+                            "nutrients": nutrients
+                        }
+    except Exception as e:
+        logger.warning(f"Error fetching USDA for inventory: {e}")
+    if not usda_data:
+        return "Sin datos nutricionales disponibles."
+    return json.dumps(usda_data, ensure_ascii=False)
+
 @router.post("/analyze-food", response_model=schemas.MealDetail)
 async def analyze_food(
     text_description: Optional[str] = Form(None),
@@ -1271,26 +1347,19 @@ async def analyze_food(
     if not text_description and not image:
         raise HTTPException(status_code=400, detail="Debe proporcionar texto o imagen")
 
-    messages = [
-        {
-            "role": "system",
-            "content": "Eres un nutricionista experto. Tu objetivo es analizar la comida (ya sea por descripción o imagen) y devolver una estimación de sus ingredientes reales. DEBES devolver macros y calorías EXACTOS y MATEMÁTICAMENTE CORRECTOS. Las calorías totales DEBEN coincidir a la perfección con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal). Utiliza estimaciones rigurosas basadas en bases de datos reales y responde en formato JSON estricto. Incluye estimaciones precisas de vitaminas (A, C), Calcio y Hierro.",
-        }
-    ]
-
     content = []
     if text_description:
         content.append(
             {
                 "type": "text",
-                "text": f"Analiza esta comida y estima sus macros: {text_description}",
+                "text": f"Analiza esta comida: {text_description}",
             }
         )
     else:
         content.append(
             {
                 "type": "text",
-                "text": "Analiza esta imagen de comida, identifica qué es, sus ingredientes probables y estima sus macros para una porción normal.",
+                "text": "Analiza esta imagen de comida e identifica qué es.",
             }
         )
 
@@ -1305,14 +1374,56 @@ async def analyze_food(
             }
         )
 
-    messages.append({"role": "user", "content": content})
+    # 1. Extraer término de búsqueda para USDA
+    query_messages = [
+        {
+            "role": "system",
+            "content": "Devuelve ÚNICAMENTE un término de búsqueda corto y preciso (en inglés) para esta comida, ideal para buscar en la base de datos USDA (ej: 'Cooked white rice', 'Grilled chicken breast'). No agregues explicaciones."
+        },
+        {"role": "user", "content": content}
+    ]
+    try:
+        query_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=query_messages,
+            max_tokens=30,
+        )
+        search_query = query_response.choices[0].message.content.strip()
+    except Exception as e:
+        logger.warning(f"Error en extracción de query: {e}")
+        search_query = text_description or "food"
+
+    # 2. Consultar USDA API
+    usda_data = await search_usda_database(search_query)
+    usda_context = "No se encontraron datos en USDA."
+    if usda_data and "foods" in usda_data and len(usda_data["foods"]) > 0:
+        # Extraer info relevante para no saturar tokens
+        simplified_foods = []
+        for food in usda_data["foods"]:
+            nutrients = {n.get("nutrientName"): n.get("value") for n in food.get("foodNutrients", []) if n.get("value")}
+            simplified_foods.append({
+                "description": food.get("description"),
+                "servingSize": food.get("servingSize", 100),
+                "servingSizeUnit": food.get("servingSizeUnit", "g"),
+                "nutrients": nutrients
+            })
+        usda_context = f"Datos obtenidos de USDA para '{search_query}': {json.dumps(simplified_foods)}"
+
+    # 3. Generar respuesta final con macros exactos basados en USDA
+    final_messages = [
+        {
+            "role": "system",
+            "content": f"Eres un nutricionista de élite experto en composición de alimentos. Tu objetivo es devolver los MACROS REALES de la comida que el usuario solicita. Usa OBLIGATORIAMENTE la siguiente información obtenida de la base de datos de la USDA como referencia (ajusta las matemáticas a la porción estimada si es diferente a 100g):\n\n{usda_context}\n\nNO INVENTES DATOS. DEBES devolver macros y calorías EXACTOS y MATEMÁTICAMENTE CORRECTOS. Las calorías totales DEBEN coincidir a la perfección con la ecuación: (1g proteína = 4 kcal, 1g carbs = 4 kcal, 1g grasa = 9 kcal). Responde en formato JSON estricto."
+        },
+        {"role": "user", "content": content}
+    ]
 
     system_prompt_format = """
 FORMATO JSON OBLIGATORIO:
 {
-  "name": "Nombre de la comida identificada",
+  "name": "Nombre de la comida identificada (en español)",
   "ingredients": ["ingrediente 1", "ingrediente 2"],
-  "steps": ["Analizado desde foto/texto."],
+  "steps": ["Analizado desde foto/texto usando datos reales de USDA."],
   "calories": int,
   "carbs": int,
   "protein": int,
@@ -1325,16 +1436,16 @@ FORMATO JSON OBLIGATORIO:
   "calcium": float,
   "iron": float,
   "time": "0 min",
-  "source_url": "Extra Meal",
-  "source_name": "Usuario"
+  "source_url": "USDA FoodData Central",
+  "source_name": "USDA API"
 }
 """
-    messages[0]["content"] += system_prompt_format
+    final_messages[0]["content"] += system_prompt_format
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",  # Model with vision
-            messages=messages,
+            model="gpt-4o",
+            messages=final_messages,
             response_format={"type": "json_object"},
             max_tokens=500,
         )

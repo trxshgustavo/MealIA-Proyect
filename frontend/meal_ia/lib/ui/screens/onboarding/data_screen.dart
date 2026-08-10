@@ -20,6 +20,7 @@ class _DataScreenState extends State<DataScreen> {
   double _currentWeight = 70.5;
   final _dateCtl = TextEditingController();
   bool _isLoading = false;
+  String? _selectedGender;
 
   @override
   void initState() {
@@ -34,6 +35,9 @@ class _DataScreenState extends State<DataScreen> {
     if (appState.birthdate != null) {
       _birthdate = appState.birthdate;
       _dateCtl.text = DateFormat('dd/MM/yyyy').format(_birthdate!);
+    }
+    if (appState.gender != null) {
+      _selectedGender = appState.gender;
     }
   }
 
@@ -138,6 +142,7 @@ class _DataScreenState extends State<DataScreen> {
         birthdate: _birthdate,
         height: _currentHeight / 100.0,
         weight: _currentWeight,
+        gender: _selectedGender,
       );
 
       if (!mounted) return;
@@ -214,7 +219,9 @@ class _DataScreenState extends State<DataScreen> {
                 icon: const Icon(
                   Icons.arrow_back,
                   color: AppColors.primaryText,
+                  size: 42,
                 ),
+                padding: const EdgeInsets.only(top: 16.0, left: 16.0),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
@@ -271,6 +278,20 @@ class _DataScreenState extends State<DataScreen> {
                             fontWeight: FontWeight.bold,
                             color: AppColors.primaryText,
                           ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        DropdownButtonFormField<String>(
+                          value: _selectedGender,
+                          // ignore: deprecated_member_use
+                          decoration: _inputDecoration('Selecciona tu género', Icons.person),
+                          items: const [
+                            DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),
+                            DropdownMenuItem(value: 'Mujer', child: Text('Mujer')),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _selectedGender = value);
+                          },
                         ),
                         const SizedBox(height: 20),
 

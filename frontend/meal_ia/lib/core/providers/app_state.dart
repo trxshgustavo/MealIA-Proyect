@@ -33,6 +33,7 @@ class AppState extends ChangeNotifier {
   DateTime? birthdate;
   double? height;
   double? weight;
+  String? gender;
   String goal = 'Mantenimiento';
   String? photoUrl;
   bool isPremium = false; // Premium Status
@@ -152,6 +153,7 @@ class AppState extends ChangeNotifier {
                 ? DateTime.tryParse(userData['birthdate'])
                 : null;
             backendGoal = userData['goal'];
+            gender = userData['gender'];
             final backendPhotoUrl = userData['photo_url'] as String?;
             if (backendPhotoUrl != null && backendPhotoUrl.isNotEmpty) {
               photoUrl = backendPhotoUrl;
@@ -169,6 +171,7 @@ class AppState extends ChangeNotifier {
                 'birthdate': birthdate?.toIso8601String(),
                 'photo_url': photoUrl,
                 'goal': backendGoal,
+                'gender': gender,
                 'is_premium': isPremium,
                 'is_admin': isAdmin,
               };
@@ -427,7 +430,7 @@ class AppState extends ChangeNotifier {
   Future<void> _syncInventoryToBackend(String token) async {
     if (_inventory.isEmpty) return;
     debugPrint("🔄 Sincronizando ${_inventory.length} items al backend...");
-    for (var entry in _inventory.entries) {
+    for (var entry in _inventory.entries.toList()) {
       try {
         await http.post(
           Uri.parse('$_baseUrl/inventory'),
@@ -1295,7 +1298,7 @@ class AppState extends ChangeNotifier {
 
       final response = await http
           .put(
-            Uri.parse('$_baseUrl/inventory/$foodKey'),
+            Uri.parse('$_baseUrl/inventory/${Uri.encodeComponent(foodKey)}'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
@@ -1370,6 +1373,10 @@ class AppState extends ChangeNotifier {
     String food, {
     double quantity = 1.0,
     String unit = 'Unidades',
+    double? exactCalories,
+    double? exactProteins,
+    double? exactFats,
+    double? exactCarbs,
   }) async {
     String normalizedKey = food.trim().toLowerCase();
     if (normalizedKey.isEmpty) return false;
@@ -1460,6 +1467,10 @@ class AppState extends ChangeNotifier {
               'name': normalizedKey,
               'quantity': backendQuantity,
               'unit': backendUnit,
+              'calories': ?exactCalories,
+              'proteins': ?exactProteins,
+              'fats': ?exactFats,
+              'carbs': ?exactCarbs,
             }),
           )
           .timeout(const Duration(seconds: 10));
@@ -1521,7 +1532,7 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http
           .delete(
-            Uri.parse('$_baseUrl/inventory/remove/$foodKey'),
+            Uri.parse('$_baseUrl/inventory/remove/${Uri.encodeComponent(foodKey)}'),
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(const Duration(seconds: 10));
@@ -1550,6 +1561,7 @@ class AppState extends ChangeNotifier {
     double? height,
     double? weight,
     String? goal,
+    String? gender,
   }) async {
     final token = await _storage.read(key: 'auth_token');
 
@@ -1562,6 +1574,7 @@ class AppState extends ChangeNotifier {
     if (height != null) this.height = height;
     if (weight != null) this.weight = weight;
     if (goal != null) this.goal = goal;
+    if (gender != null) this.gender = gender;
 
     notifyListeners(); // Immediate UI feedback
 
@@ -1577,6 +1590,7 @@ class AppState extends ChangeNotifier {
       if (height != null) body['height'] = height;
       if (weight != null) body['weight'] = weight;
       if (goal != null) body['goal'] = goal;
+      if (gender != null) body['gender'] = gender;
 
       try {
         final response = await http
@@ -2063,7 +2077,7 @@ class AppState extends ChangeNotifier {
     String? matchedKey;
     final normalizedSearch = ingredientName.toLowerCase().trim();
 
-    for (var key in _inventory.keys) {
+    for (var key in _inventory.keys.toList()) {
       if (normalizedSearch.contains(key.toLowerCase()) ||
           key.toLowerCase().contains(normalizedSearch)) {
         matchedKey = key;

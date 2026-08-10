@@ -8,6 +8,10 @@ class InventoryItemBase(BaseModel):
     name: str
     quantity: float = 1.0
     unit: str = "Unidades"
+    calories: Optional[float] = None
+    proteins: Optional[float] = None
+    fats: Optional[float] = None
+    carbs: Optional[float] = None
 
 
 class InventoryItemCreate(InventoryItemBase):
@@ -17,6 +21,10 @@ class InventoryItemCreate(InventoryItemBase):
 class InventoryItemUpdate(BaseModel):  # <--- NUEVO ESQUEMA PARA EL PUT
     quantity: float
     unit: str
+    calories: Optional[float] = None
+    proteins: Optional[float] = None
+    fats: Optional[float] = None
+    carbs: Optional[float] = None
 
 
 class InventoryItem(InventoryItemBase):
@@ -33,6 +41,7 @@ class UserBase(BaseModel):
     email: EmailStr
     first_name: Optional[str] = None
     last_name: str | None = None
+    gender: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -46,6 +55,7 @@ class UserDataUpdate(BaseModel):
     weight: Optional[float] = None
     birthdate: Optional[datetime] = None
     goal: Optional[str] = None
+    gender: Optional[str] = None
     photo_url: Optional[str] = None
     is_premium: Optional[bool] = None
 

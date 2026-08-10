@@ -15,17 +15,31 @@ class LegalScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
       appBar: AppBar(
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryText,
+        toolbarHeight: 80,
+        leadingWidth: 80,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 16.0),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryText,
+            ),
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: AppColors.primaryText),
+        leading: Padding(
+          padding: const EdgeInsets.only(top: 16.0, left: 16.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            iconSize: 42,
+            color: AppColors.primaryText,
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.primaryText, size: 42),
       ),
       body: FutureBuilder<String>(
         future: rootBundle.loadString('assets/legal/$mdFileName'),

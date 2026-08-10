@@ -36,6 +36,12 @@ def add_inventory_item(
 
     if db_item:
         db_item.quantity += item.quantity  # Suma si existe
+        # Actualiza macros si el cliente los envía (útil si escaneó con recibo)
+        if item.calories is not None:
+            db_item.calories = item.calories
+            db_item.proteins = item.proteins
+            db_item.fats = item.fats
+            db_item.carbs = item.carbs
     else:
         # Crea nuevo con unidad
         db_item = models.InventoryItem(
@@ -43,6 +49,10 @@ def add_inventory_item(
             owner_id=current_user.id,
             quantity=item.quantity,
             unit=item.unit,
+            calories=item.calories,
+            proteins=item.proteins,
+            fats=item.fats,
+            carbs=item.carbs,
         )
         db.add(db_item)
 
@@ -74,6 +84,14 @@ def update_inventory_item(
     # Actualiza valores
     db_item.quantity = item_update.quantity
     db_item.unit = item_update.unit
+    if item_update.calories is not None:
+        db_item.calories = item_update.calories
+    if item_update.proteins is not None:
+        db_item.proteins = item_update.proteins
+    if item_update.fats is not None:
+        db_item.fats = item_update.fats
+    if item_update.carbs is not None:
+        db_item.carbs = item_update.carbs
 
     db.commit()
     db.refresh(db_item)

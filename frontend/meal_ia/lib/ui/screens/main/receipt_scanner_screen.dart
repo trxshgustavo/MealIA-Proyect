@@ -9,75 +9,16 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../theme/app_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'food_scanner_screen.dart'; // Import ScannedFood from here
 
-// Export ScannedFood for use in InventoryScreen
-class ScannedFood {
-  String name; // Changed to mutable so we can update it from OpenFoodFacts
-  final String calories;
-  final String info;
-  double quantity;
-  String unit;
-  bool isSelected;
-  
-  // Exact Macros & Barcode
-  String? barcode;
-  double? exactCalories;
-  double? exactProteins;
-  double? exactFats;
-  double? exactCarbs;
-
-  ScannedFood({
-    required this.name,
-    required this.calories,
-    required this.info,
-    this.quantity = 1.0,
-    this.unit = 'Unidades',
-    this.isSelected = false,
-    this.barcode,
-    this.exactCalories,
-    this.exactProteins,
-    this.exactFats,
-    this.exactCarbs,
-  });
-
-  factory ScannedFood.fromJson(Map<String, dynamic> json) {
-    // Helper to parse "2 kg", "500 g", etc.
-    double q = 1.0;
-    String u = 'Unidades';
-
-    if (json['cantidad_estimada'] != null) {
-      // Try to parse number
-      q = double.tryParse(json['cantidad_estimada'].toString()) ?? 1.0;
-    }
-
-    if (json['unidad_estimada'] != null) {
-      u = json['unidad_estimada'].toString();
-    }
-
-    return ScannedFood(
-      name: json['alimento'] ?? 'Desconocido',
-      calories: json['calorias']?.toString() ?? '?',
-      info: json['info'] ?? '',
-      quantity: q,
-      unit: u,
-      isSelected: true,
-      barcode: json['codigo_barras']?.toString(),
-      exactCalories: json['calorias_exactas'] != null ? (json['calorias_exactas'] as num).toDouble() : null,
-      exactProteins: json['proteinas'] != null ? (json['proteinas'] as num).toDouble() : null,
-      exactFats: json['grasas'] != null ? (json['grasas'] as num).toDouble() : null,
-      exactCarbs: json['carbohidratos'] != null ? (json['carbohidratos'] as num).toDouble() : null,
-    );
-  }
-}
-
-class FoodScannerScreen extends StatefulWidget {
-  const FoodScannerScreen({super.key});
+class ReceiptScannerScreen extends StatefulWidget {
+  const ReceiptScannerScreen({super.key});
 
   @override
-  State<FoodScannerScreen> createState() => _FoodScannerScreenState();
+  State<ReceiptScannerScreen> createState() => _ReceiptScannerScreenState();
 }
 
-class _FoodScannerScreenState extends State<FoodScannerScreen> {
+class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
   CameraController? _controller;
   bool _isCameraInitialized = false;
   bool _isAnalyzing = false;
@@ -189,14 +130,15 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
 
           final prompt = Content.multi([
             TextPart(
-              'Analiza la imagen minuciosamente y detecta todos los alimentos o productos de supermercado presentes. '
+              'Analiza esta imagen de una boleta de supermercado. '
+              'Tu ÚNICO OBJETIVO es extraer los códigos de barras numéricos impresos junto o arriba de los productos alimenticios. '
+              'NO intentes descifrar el nombre del producto, solo extrae el número del código. '
               'Devuelve un JSON ARRAY estrictamente válido. '
-              'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "info": "breve descripción"}]. '
+              'Schema: [{"codigo_barras": "1234567890123", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades"}]. '
               'REGLAS DE PRECISIÓN:\n'
-              '1. Diferencia claramente entre productos (ej: no agrupes "frutas", lista "manzana", "plátano" por separado).\n'
-              '2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo o etiquetas visibles.\n'
-              '3. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
-              '4. Si no ves alimentos, devuelve [].\n'
+              '1. Si ves un número de producto (EAN, UPC, o código interno), ponlo en "codigo_barras".\n'
+              '2. Extrae la cantidad si es posible ("2x" o "1.5 kg").\n'
+              '3. Si no encuentras ningún código numérico, devuelve [].\n'
               'NO uses markdown. Solo JSON plano.',
             ),
             DataPart('image/jpeg', bytes),
@@ -223,16 +165,22 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
 
         try {
           final List<dynamic> decoded = jsonDecode(cleanJson);
-          setState(() {
-            _detectedItems = decoded
-                .map((e) => ScannedFood.fromJson(e))
-                .toList();
-            // Validate units against allowlist
-            for (var item in _detectedItems) {
-              if (!_validUnits.contains(item.unit)) {
-                item.unit = 'Unidades'; // Fallback
-              }
+          List<ScannedFood> parsedItems = decoded
+              .map((e) => ScannedFood.fromJson(e))
+              .toList();
+
+          // Validate units against allowlist
+          for (var item in parsedItems) {
+            if (!_validUnits.contains(item.unit)) {
+              item.unit = 'Unidades'; // Fallback
             }
+          }
+
+          // Fetch exact data from OpenFoodFacts for barcodes
+          await _fetchOpenFoodFactsData(parsedItems);
+
+          setState(() {
+            _detectedItems = parsedItems;
           });
 
           if (_detectedItems.isEmpty) {
@@ -301,6 +249,50 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
     }
   }
 
+  Future<void> _fetchOpenFoodFactsData(List<ScannedFood> items) async {
+    for (var item in items) {
+      if (item.barcode != null && item.barcode!.isNotEmpty) {
+        try {
+          final url = Uri.parse('https://world.openfoodfacts.org/api/v0/product/${item.barcode}.json');
+          final response = await http.get(url).timeout(const Duration(seconds: 3));
+          
+          if (response.statusCode == 200) {
+            final json = jsonDecode(response.body);
+            if (json['status'] == 1 && json['product'] != null) {
+              final product = json['product'];
+              
+              // Extract Name
+              String? name = product['product_name_es'] ?? product['product_name'];
+              if (name != null && name.isNotEmpty) {
+                item.name = name;
+              }
+
+              // Extract Macros (per 100g)
+              final nutriments = product['nutriments'];
+              if (nutriments != null) {
+                if (nutriments['energy-kcal_100g'] != null) {
+                  item.exactCalories = (nutriments['energy-kcal_100g'] as num).toDouble();
+                }
+                if (nutriments['proteins_100g'] != null) {
+                  item.exactProteins = (nutriments['proteins_100g'] as num).toDouble();
+                }
+                if (nutriments['fat_100g'] != null) {
+                  item.exactFats = (nutriments['fat_100g'] as num).toDouble();
+                }
+                if (nutriments['carbohydrates_100g'] != null) {
+                  item.exactCarbs = (nutriments['carbohydrates_100g'] as num).toDouble();
+                }
+              }
+              debugPrint("OpenFoodFacts success for ${item.barcode}: ${item.name}");
+            }
+          }
+        } catch (e) {
+          debugPrint("Error fetching OpenFoodFacts for ${item.barcode}: $e");
+        }
+      }
+    }
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -359,7 +351,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
               left: 0,
               right: 0,
               child: Text(
-                "Apunta a la comida",
+                "Apunta a la boleta",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,
@@ -398,7 +390,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        "Analizando alimentos...",
+                        "Analizando boleta...",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18.sp,
@@ -774,13 +766,23 @@ class _FoodItemCardState extends State<_FoodItemCard> {
                             ),
                           ),
                           SizedBox(height: 4.h),
-                          Text(
-                            "${widget.item.calories} kcal • ${widget.item.info}",
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.grey[500],
+                          if (widget.item.exactCalories != null)
+                            Text(
+                              "${widget.item.exactCalories?.toStringAsFixed(0)} kcal/100g • P: ${widget.item.exactProteins?.toStringAsFixed(1)}g | G: ${widget.item.exactFats?.toStringAsFixed(1)}g | C: ${widget.item.exactCarbs?.toStringAsFixed(1)}g",
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.green[600],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          else
+                            Text(
+                              "Macros no encontrados para este código",
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                color: Colors.orange[700],
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),

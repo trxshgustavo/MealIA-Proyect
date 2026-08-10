@@ -9,7 +9,6 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'core/providers/app_state.dart';
 import 'ui/screens/theme/app_colors.dart';
 import 'ui/screens/auth/auth_check_screen.dart';
-import 'ui/screens/auth/welcome_screen.dart';
 import 'ui/screens/auth/register_screen.dart';
 import 'ui/screens/auth/login_screen.dart';
 import 'ui/screens/main/profile_screen.dart';
@@ -132,7 +131,6 @@ class MealIAApp extends StatelessWidget {
             initialRoute: '/auth_check',
             routes: {
               '/auth_check': (_) => const AuthCheckScreen(),
-              '/': (_) => const WelcomeScreen(),
               '/register': (_) => const RegisterScreen(),
               '/login': (_) => const LoginScreen(),
               '/main': (_) => const MainShell(),

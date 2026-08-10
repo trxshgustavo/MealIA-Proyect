@@ -37,6 +37,7 @@ dependencies:
   markdown: ^7.3.1
   url_launcher: ^6.3.2
   percent_indicator: ^4.2.5
+  mobile_scanner: ^7.3.0
 
 dev_dependencies:
   flutter_test:

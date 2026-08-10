@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
+import 'qr_scanner_screen.dart';
 
 Future<void> showAddExtraMealSheet(BuildContext context, AppState appState, DateTime date) async {
   return showModalBottomSheet(
@@ -27,7 +29,6 @@ class AddExtraMealBottomSheet extends StatefulWidget {
 }
 
 class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
-  final TextEditingController _textController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   
   bool _isAnalyzing = false;
@@ -190,40 +191,10 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
               ),
             ] else ...[
               // INPUT VIEW
-              Text("Describe lo que comiste:", style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              SizedBox(height: 8.h),
-              TextField(
-                controller: _textController,
-                decoration: InputDecoration(
-                  hintText: "Ej. 2 rebanadas de pizza de pepperoni",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                ),
-                maxLines: 2,
-              ),
+              Text("¿Cómo quieres añadir tu comida?", style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textDark)),
               SizedBox(height: 16.h),
-              ElevatedButton(
-                onPressed: () => _analyze(text: _textController.text),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                ),
-                child: const Text("Analizar Texto", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-              SizedBox(height: 24.h),
               Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Text("O", style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.bold)),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-              SizedBox(height: 24.h),
-              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: _buildImageOption(
@@ -232,12 +203,28 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
                       onTap: () => _pickImage(ImageSource.camera),
                     ),
                   ),
-                  SizedBox(width: 16.w),
+                  SizedBox(width: 12.w),
                   Expanded(
                     child: _buildImageOption(
                       icon: Icons.photo_library_outlined,
                       label: "Galería",
                       onTap: () => _pickImage(ImageSource.gallery),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: _buildImageOption(
+                      icon: CupertinoIcons.barcode,
+                      label: "Código de Barras",
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+                        );
+                        if (result != null && result is String) {
+                          _analyze(text: result);
+                        }
+                      },
                     ),
                   ),
                 ],

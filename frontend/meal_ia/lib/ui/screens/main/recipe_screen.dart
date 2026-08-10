@@ -380,15 +380,18 @@ class _RecipeScreenState extends State<RecipeScreen>
         children: [
           // Top Row (Nav) - Using Stack for perfect centering
           SizedBox(
-            height: 40.h, // Fixed height for the nav bar area
+            height: 70.h, // Fixed height for the nav bar area
             child: Stack(
               children: [
                 // Back Button - Aligned left
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
-                    padding: EdgeInsets.only(left: 8.w), // Minimal padding
-                    child: const BackButton(color: Colors.black87),
+                    padding: const EdgeInsets.only(top: 16.0, left: 16.0),
+                    child: const IconTheme(
+                      data: IconThemeData(size: 42),
+                      child: BackButton(color: Colors.black87),
+                    ),
                   ),
                 ),
                 // Title - Perfectly centered

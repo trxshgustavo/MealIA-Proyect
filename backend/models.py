@@ -15,6 +15,7 @@ class User(Base):
     weight = Column(Float, nullable=True)  # kg
     birthdate = Column(DateTime, nullable=True)
     goal = Column(String, default="Mantenimiento")
+    gender = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)
     is_premium = Column(Integer, default=0)  # 0: Free, 1: Premium
     is_admin = Column(Integer, default=0)  # 0: User, 1: Admin
@@ -29,6 +30,13 @@ class InventoryItem(Base):
     name = Column(String, index=True, nullable=False)
     quantity = Column(Float, default=1.0)
     unit = Column(String, default="Unidades")
+    
+    # Exact macros for branded foods
+    calories = Column(Float, nullable=True)
+    proteins = Column(Float, nullable=True)
+    fats = Column(Float, nullable=True)
+    carbs = Column(Float, nullable=True)
+
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="inventory_items")
 

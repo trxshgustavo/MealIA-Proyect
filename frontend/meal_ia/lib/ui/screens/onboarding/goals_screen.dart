@@ -29,13 +29,13 @@ class GoalsScreen extends StatelessWidget {
           color: isSelected ? Colors.white : Colors.white,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: isSelected ? AppColors.primaryColor : Colors.transparent,
+            color: isSelected ? AppColors.buttonDark : Colors.transparent,
             width: 2,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: AppColors.primaryColor.withValues(alpha: 0.2),
+                color: AppColors.buttonDark.withValues(alpha: 0.2),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               )
@@ -53,14 +53,14 @@ class GoalsScreen extends StatelessWidget {
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primaryColor.withValues(alpha: 0.1)
+                    ? AppColors.buttonDark.withValues(alpha: 0.1)
                     : AppColors.inputFill,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 24.sp,
-                color: isSelected ? AppColors.primaryColor : Colors.grey,
+                color: isSelected ? AppColors.buttonDark : Colors.grey,
               ),
             ),
             SizedBox(width: 16.w),
@@ -94,7 +94,7 @@ class GoalsScreen extends StatelessWidget {
             if (isSelected)
               Icon(
                 Icons.check_circle,
-                color: AppColors.primaryColor,
+                color: AppColors.buttonDark,
                 size: 20.sp,
               ),
           ],
@@ -164,7 +164,9 @@ class GoalsScreen extends StatelessWidget {
                 icon: const Icon(
                   Icons.arrow_back,
                   color: AppColors.primaryText,
+                  size: 42,
                 ),
+                padding: const EdgeInsets.only(top: 16.0, left: 16.0),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
