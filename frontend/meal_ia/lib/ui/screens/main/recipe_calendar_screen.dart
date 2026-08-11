@@ -273,12 +273,12 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
           _buildSectionHeader("Comidas Extras"),
           SizedBox(height: 8.h),
           if (menu['extra_meals'] != null && (menu['extra_meals'] as List).isNotEmpty)
-            ...((menu['extra_meals'] as List).map((extra) => _buildMealCard(
+            ...((menu['extra_meals'] as List).asMap().entries.map((entry) => _buildMealCard(
               context,
-              "Extra",
+              "Colación ${entry.key + 1}",
               "extra",
               Icons.fastfood_outlined,
-              extra,
+              entry.value,
               Colors.green,
               true,
               appState,
@@ -595,7 +595,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                     Icon(icon, size: 16.sp, color: accentColor), // Reducido
                     SizedBox(width: 8.w),
                     Text(
-                      timeLabel,
+                      (mealData is Map && mealData['eating_time'] != null) ? "$timeLabel • ${mealData['eating_time']}" : timeLabel,
                       style: TextStyle(
                         color: accentColor,
                         fontWeight: FontWeight.bold,

@@ -21,6 +21,12 @@ class _DataScreenState extends State<DataScreen> {
   final _dateCtl = TextEditingController();
   bool _isLoading = false;
   String? _selectedGender;
+  int _mealsPerDay = 3;
+  Map<String, String> _mealTimes = {
+    "Desayuno": "08:00",
+    "Almuerzo": "14:00",
+    "Cena": "20:00"
+  };
 
   @override
   void initState() {
@@ -38,6 +44,48 @@ class _DataScreenState extends State<DataScreen> {
     }
     if (appState.gender != null) {
       _selectedGender = appState.gender;
+    }
+    _mealsPerDay = appState.mealsPerDay;
+    if (appState.mealTimes.isNotEmpty) {
+      _mealTimes = Map<String, String>.from(appState.mealTimes);
+    }
+    _updateMealTimesMap();
+  }
+  
+  void _updateMealTimesMap() {
+    // Ensure all required keys exist based on mealsPerDay
+    if (!_mealTimes.containsKey("Desayuno")) _mealTimes["Desayuno"] = "08:00";
+    if (!_mealTimes.containsKey("Almuerzo")) _mealTimes["Almuerzo"] = "14:00";
+    if (!_mealTimes.containsKey("Cena")) _mealTimes["Cena"] = "20:00";
+    
+    if (_mealsPerDay >= 4) {
+      if (!_mealTimes.containsKey("Colación 1")) _mealTimes["Colación 1"] = "11:00";
+    } else {
+      _mealTimes.remove("Colación 1");
+    }
+    
+    if (_mealsPerDay == 5) {
+      if (!_mealTimes.containsKey("Colación 2")) _mealTimes["Colación 2"] = "17:00";
+    } else {
+      _mealTimes.remove("Colación 2");
+    }
+  }
+  
+  Future<void> _pickTime(String mealKey) async {
+    final current = _mealTimes[mealKey]!.split(":");
+    final initialTime = TimeOfDay(hour: int.parse(current[0]), minute: int.parse(current[1]));
+    
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    
+    if (picked != null) {
+      setState(() {
+        final hour = picked.hour.toString().padLeft(2, '0');
+        final min = picked.minute.toString().padLeft(2, '0');
+        _mealTimes[mealKey] = "$hour:$min";
+      });
     }
   }
 
@@ -143,6 +191,8 @@ class _DataScreenState extends State<DataScreen> {
         height: _currentHeight / 100.0,
         weight: _currentWeight,
         gender: _selectedGender,
+        newMealsPerDay: _mealsPerDay,
+        newMealTimes: _mealTimes,
       );
 
       if (!mounted) return;
@@ -172,10 +222,10 @@ class _DataScreenState extends State<DataScreen> {
     }
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(String label, [IconData? icon]) {
     return InputDecoration(
       hintText: label,
-      prefixIcon: Icon(icon, color: AppColors.secondaryText),
+      prefixIcon: icon != null ? Icon(icon, color: AppColors.secondaryText) : null,
       hintStyle: const TextStyle(color: AppColors.secondaryText),
       filled: true,
       fillColor: AppColors.inputFill, // Fondo gris claro
@@ -282,7 +332,7 @@ class _DataScreenState extends State<DataScreen> {
                         const SizedBox(height: 20),
 
                         DropdownButtonFormField<String>(
-                          value: _selectedGender,
+                          initialValue: _selectedGender,
                           // ignore: deprecated_member_use
                           decoration: _inputDecoration('Selecciona tu género', Icons.person),
                           items: const [
@@ -366,7 +416,83 @@ class _DataScreenState extends State<DataScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
+                        
+                        // --- Meal Configuration ---
+                        
+                        Text(
+                          'Configuración de Comidas',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          initialValue: _mealsPerDay,
+                          isExpanded: true,
+                          decoration: _inputDecoration('Cantidad de comidas al día'),
+                          items: const [
+                            DropdownMenuItem(value: 3, child: Align(alignment: Alignment.centerLeft, child: Text('3 comidas (Principal)'))),
+                            DropdownMenuItem(value: 4, child: Align(alignment: Alignment.centerLeft, child: Text('4 comidas (1 colación)'))),
+                            DropdownMenuItem(value: 5, child: Align(alignment: Alignment.centerLeft, child: Text('5 comidas (2 colaciones)'))),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _mealsPerDay = value;
+                                _updateMealTimesMap();
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        ...['Desayuno', if (_mealsPerDay >= 4) 'Colación 1', 'Almuerzo', if (_mealsPerDay == 5) 'Colación 2', 'Cena'].map((meal) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: InkWell(
+                              onTap: () => _pickTime(meal),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.inputFill,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      meal,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.primaryText,
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          _mealTimes[meal] ?? "00:00",
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primaryColor,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.access_time, size: 20, color: AppColors.secondaryText),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 14),
 
                         _isLoading
                             ? const Center(child: CircularProgressIndicator())

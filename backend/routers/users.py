@@ -44,6 +44,10 @@ def update_user_data(
         current_user.goal = data.goal
     if data.photo_url is not None:
         current_user.photo_url = data.photo_url
+    if data.meals_per_day is not None:
+        current_user.meals_per_day = data.meals_per_day
+    if data.meal_times is not None:
+        current_user.meal_times = data.meal_times
     db.commit()
     db.refresh(current_user)
     return current_user

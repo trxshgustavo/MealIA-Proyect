@@ -19,6 +19,8 @@ class User(Base):
     photo_url = Column(String, nullable=True)
     is_premium = Column(Integer, default=0)  # 0: Free, 1: Premium
     is_admin = Column(Integer, default=0)  # 0: User, 1: Admin
+    meals_per_day = Column(Integer, default=3)
+    meal_times = Column(JSON, nullable=True)
     inventory_items = relationship("InventoryItem", back_populates="owner")
     saved_recipes = relationship("SavedRecipe", back_populates="owner")
     meal_plans = relationship("MealPlan", back_populates="owner")

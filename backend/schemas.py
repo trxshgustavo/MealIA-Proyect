@@ -58,6 +58,8 @@ class UserDataUpdate(BaseModel):
     gender: Optional[str] = None
     photo_url: Optional[str] = None
     is_premium: Optional[bool] = None
+    meals_per_day: Optional[int] = None
+    meal_times: Optional[dict] = None
 
 
 class UserPasswordUpdate(BaseModel):
@@ -74,6 +76,8 @@ class User(UserBase):
     photo_url: str | None = None
     is_premium: bool = False
     is_admin: bool = False
+    meals_per_day: int = 3
+    meal_times: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -110,6 +114,7 @@ class MealDetail(BaseModel):
     iron: float = 0.0  # mg
     # Time
     time: str
+    eating_time: Optional[str] = None
     # Respaldo / Fuente real de la receta
     source_url: Optional[str] = None  # URL de la receta original
     source_name: Optional[str] = None  # Nombre de la fuente (TheMealDB, Edamam, USDA)
@@ -122,6 +127,7 @@ class MenuGenerationResponse(BaseModel):
     breakfast: MealDetail
     lunch: MealDetail
     dinner: MealDetail
+    extra_meals: List[MealDetail] = []
     note: str
     total_calories: int
 

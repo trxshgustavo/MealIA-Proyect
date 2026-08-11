@@ -412,9 +412,22 @@ def generate_menu_with_ia(
     target_calories = calculate_target_calories(current_user)
 
     # Distribucion calorica por comida
-    breakfast_cal_target = int(target_calories * 0.25)
-    lunch_cal_target = int(target_calories * 0.40)
-    dinner_cal_target = int(target_calories * 0.35)
+    meals_per_day = getattr(current_user, 'meals_per_day', 3) or 3
+    if meals_per_day == 4:
+        breakfast_cal_target = int(target_calories * 0.25)
+        snack1_cal_target = int(target_calories * 0.10)
+        lunch_cal_target = int(target_calories * 0.35)
+        dinner_cal_target = int(target_calories * 0.30)
+    elif meals_per_day >= 5:
+        breakfast_cal_target = int(target_calories * 0.20)
+        snack1_cal_target = int(target_calories * 0.10)
+        lunch_cal_target = int(target_calories * 0.35)
+        snack2_cal_target = int(target_calories * 0.10)
+        dinner_cal_target = int(target_calories * 0.25)
+    else:
+        breakfast_cal_target = int(target_calories * 0.25)
+        lunch_cal_target = int(target_calories * 0.40)
+        dinner_cal_target = int(target_calories * 0.35)
     cal_margin = 150  # +/- kcal aceptable
 
     # ── 2. Gustos previos ────────────────────────────────────────────────────────
@@ -500,10 +513,9 @@ Si el usuario solo tiene pollo y arroz, tu receta solo puede llevar pollo, arroz
 
 === PERFIL DEL USUARIO ===
 Nombre: {current_user.first_name}
-Objetivo de calorias: {target_calories} kcal totales al dia
-  - Desayuno: ~{breakfast_cal_target} kcal
-  - Almuerzo: ~{lunch_cal_target} kcal (comida principal)
-  - Cena: ~{dinner_cal_target} kcal
+Objetivo de calorias: {target_calories} kcal totales al dia (Distribuido en {meals_per_day} comidas)
+Horarios configurados por el usuario: {current_user.meal_times or 'Predeterminados'}
+**INSTRUCCION CRITICA**: Debes asegurar de poner la hora correspondiente en el campo "eating_time" de cada comida generada, usando el horario configurado por el usuario para esa comida.
 Objetivo de salud: {current_user.goal or "Mantenimiento"}
 Sexo biológico: {current_user.gender or "No especificado"}
 **IMPORTANTE**: Ajusta las porciones, distribución de macronutrientes y metabolismo basal considerando el sexo biológico proporcionado.
@@ -554,7 +566,7 @@ CENA (opciones reales de TheMealDB/Edamam):
 
 INSTRUCCION: Para cada comida:
 1. Revisa el inventario de {current_user.first_name} y NUNCA te salgas de él.
-2. Objetivo calorico: desayuno ~{breakfast_cal_target} kcal, almuerzo ~{lunch_cal_target} kcal, cena ~{dinner_cal_target} kcal.
+2. Objetivo calorico: Debes distribuir las calorias considerando la configuracion de {meals_per_day} comidas del usuario. (ej. Desayuno ~{breakfast_cal_target} kcal, Almuerzo ~{lunch_cal_target} kcal, Cena ~{dinner_cal_target} kcal, y el resto en extra_meals).
 3. Objetivo de salud: {current_user.goal or "Mantenimiento"}.
 4. Considera el sexo biológico ({current_user.gender or "No especificado"}) para calcular las necesidades reales de macronutrientes y calorías basales de manera más precisa.
 
@@ -667,11 +679,30 @@ FORMATO JSON OBLIGATORIO:
                 menu_data = {}
 
             # ── 8. SANITIZACION Y VALIDACION ─────────────────────────────────────
-            for meal_name, meal_cal_target, meal_candidates in [
+            if not isinstance(menu_data.get("extra_meals"), list):
+                menu_data["extra_meals"] = []
+            
+            # Prepare validation array
+            validation_list = [
                 ("breakfast", breakfast_cal_target, breakfast_candidates),
                 ("lunch", lunch_cal_target, lunch_candidates),
                 ("dinner", dinner_cal_target, dinner_candidates),
-            ]:
+            ]
+            
+            # Add extra meals to validation dynamically (so they get default values, macros calculated, etc)
+            for idx, extra_meal in enumerate(menu_data["extra_meals"]):
+                cal_target = snack1_cal_target if idx == 0 and meals_per_day >= 4 else (snack2_cal_target if idx == 1 and meals_per_day >= 5 else 200)
+                validation_list.append((f"extra_meal_{idx}", cal_target, []))
+
+            for meal_name, meal_cal_target, meal_candidates in validation_list:
+                if meal_name.startswith("extra_meal_"):
+                    idx = int(meal_name.split("_")[-1])
+                    meal = menu_data["extra_meals"][idx]
+                else:
+                    meal = menu_data.get(meal_name)
+                    if not isinstance(meal, dict):
+                        meal = {}
+                        menu_data[meal_name] = meal
                 meal = menu_data.get(meal_name)
                 if not isinstance(meal, dict):
                     meal = {}
@@ -768,6 +799,7 @@ FORMATO JSON OBLIGATORIO:
                 menu_data["breakfast"]["calories"]
                 + menu_data["lunch"]["calories"]
                 + menu_data["dinner"]["calories"]
+                + sum(m.get("calories", 0) for m in menu_data["extra_meals"])
             )
             menu_data["total_calories"] = total
 

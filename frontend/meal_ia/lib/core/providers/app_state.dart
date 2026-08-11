@@ -38,6 +38,12 @@ class AppState extends ChangeNotifier {
   String? photoUrl;
   bool isPremium = false; // Premium Status
   bool isAdmin = false; // Admin Status
+  int mealsPerDay = 3;
+  Map<String, String> mealTimes = {
+    "Desayuno": "08:00",
+    "Almuerzo": "14:00",
+    "Cena": "20:00"
+  };
 
   // Inventario y Menú
   final Map<String, Map<String, dynamic>> _inventory = {};
@@ -89,6 +95,12 @@ class AppState extends ChangeNotifier {
     weight = null;
     goal = 'Mantenimiento';
     photoUrl = null;
+    mealsPerDay = 3;
+    mealTimes = {
+      "Desayuno": "08:00",
+      "Almuerzo": "14:00",
+      "Cena": "20:00"
+    };
 
     _inventory.clear();
     _mealCalendar.clear();
@@ -125,6 +137,8 @@ class AppState extends ChangeNotifier {
             goal = data['goal'] ?? 'Mantenimiento';
             isPremium = data['is_premium'] ?? false;
             isAdmin = data['is_admin'] ?? false;
+            if (data['meals_per_day'] != null) mealsPerDay = data['meals_per_day'];
+            if (data['meal_times'] != null) mealTimes = Map<String, String>.from(data['meal_times']);
             debugPrint("Loaded Profile from Cache for ${user.uid}");
           }
         } catch (e) {
@@ -160,6 +174,8 @@ class AppState extends ChangeNotifier {
             }
             isPremium = userData['is_premium'] ?? false;
             isAdmin = userData['is_admin'] ?? false;
+            if (userData['meals_per_day'] != null) mealsPerDay = userData['meals_per_day'];
+            if (userData['meal_times'] != null) mealTimes = Map<String, String>.from(userData['meal_times']);
 
             if (user != null) {
               final cacheData = {
@@ -174,6 +190,8 @@ class AppState extends ChangeNotifier {
                 'gender': gender,
                 'is_premium': isPremium,
                 'is_admin': isAdmin,
+                'meals_per_day': mealsPerDay,
+                'meal_times': mealTimes,
               };
               await _storage.write(
                 key: 'user_profile_cache_${user.uid}',
@@ -217,6 +235,8 @@ class AppState extends ChangeNotifier {
               if (height == null && data.containsKey('height')) height = (data['height'] as num?)?.toDouble();
               if (weight == null && data.containsKey('weight')) weight = (data['weight'] as num?)?.toDouble();
               if (birthdate == null && data.containsKey('birthdate')) birthdate = DateTime.tryParse(data['birthdate']);
+              if (data.containsKey('meals_per_day')) mealsPerDay = data['meals_per_day'];
+              if (data.containsKey('meal_times')) mealTimes = Map<String, String>.from(data['meal_times']);
             }
           } catch (e) {
             debugPrint("Error leyendo backup de Firestore: $e");
@@ -1287,10 +1307,10 @@ class AppState extends ChangeNotifier {
 
       String baseUnit = _getBaseUnitFor(unit);
       if (baseUnit == 'g' || baseUnit == 'ml') {
-        backendQuantity = _convertToBase(quantity, unit).round();
+        backendQuantity = _convertToBase(quantity, unit);
         backendUnit = baseUnit;
       } else {
-        backendQuantity = quantity.round();
+        backendQuantity = quantity;
       }
 
       // Safety check: Backend often rejects 0
@@ -1444,11 +1464,11 @@ class AppState extends ChangeNotifier {
 
       String baseUnit = _getBaseUnitFor(unit);
       if (baseUnit == 'g' || baseUnit == 'ml') {
-        backendQuantity = _convertToBase(quantity, unit).round();
+        backendQuantity = _convertToBase(quantity, unit);
         backendUnit = baseUnit;
       } else {
-        // Unidades or unknown: Round to int
-        backendQuantity = quantity.round();
+        // Unidades or unknown: Remove round to int
+        backendQuantity = quantity;
       }
 
       // Safety check: Backend often rejects 0
@@ -1554,7 +1574,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<bool> saveUserPhysicalData({
+  Future<bool> saveUserPhysicalData({ 
     String? firstName,
     String? lastName,
     DateTime? birthdate,
@@ -1562,6 +1582,8 @@ class AppState extends ChangeNotifier {
     double? weight,
     String? goal,
     String? gender,
+    int? newMealsPerDay, 
+    Map<String, String>? newMealTimes 
   }) async {
     final token = await _storage.read(key: 'auth_token');
 
@@ -1584,6 +1606,14 @@ class AppState extends ChangeNotifier {
     if (token != null) {
       final url = Uri.parse('$_baseUrl/users/me/data');
       final Map<String, dynamic> body = {};
+      if (newMealsPerDay != null) {
+        body['meals_per_day'] = newMealsPerDay;
+        mealsPerDay = newMealsPerDay;
+      }
+      if (newMealTimes != null) {
+        body['meal_times'] = newMealTimes;
+        mealTimes = newMealTimes;
+      }
       if (firstName != null) body['first_name'] = firstName;
       if (lastName != null) body['last_name'] = lastName;
       if (birthdate != null) body['birthdate'] = birthdate.toIso8601String();
@@ -2132,7 +2162,7 @@ class AppState extends ChangeNotifier {
           String unitToSend = targetUnit;
 
           if (targetUnit == 'u') {
-            qtyToSend = resultBase.round(); // 'u' must be int.
+            qtyToSend = resultBase; // allow decimal units like 1.5 
             unitToSend =
                 currentData['unit']; // Keep original name if it was 'Huevos' etc, actually _getBase returns 'u' for unknown.
             if (unitToSend == 'u') {
@@ -2140,7 +2170,7 @@ class AppState extends ChangeNotifier {
             }
           } else {
             // For Mass/Vol, we use the base value (g or ml)
-            qtyToSend = resultBase.round();
+            qtyToSend = resultBase;
           }
 
           debugPrint(
