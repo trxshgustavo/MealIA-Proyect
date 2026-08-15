@@ -99,27 +99,34 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                 horizontalPadding,
                 20,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    "Plan de Comidas",
-                    style: TextStyle(
-                      fontSize: titleFontSize,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textDark,
-                      letterSpacing: -0.5,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Plan de Comidas",
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textDark,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        _getFullDateLabel(_selectedDate),
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: AppColors.textLight,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    _getFullDateLabel(_selectedDate),
-                    style: TextStyle(
-                      fontSize: 14.sp, // Reducido de 16
-                      color: AppColors.textLight,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  _buildStreakBadge(context, appState),
                 ],
               ),
             ),
@@ -273,16 +280,20 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
           _buildSectionHeader("Comidas Extras"),
           SizedBox(height: 8.h),
           if (menu['extra_meals'] != null && (menu['extra_meals'] as List).isNotEmpty)
-            ...((menu['extra_meals'] as List).asMap().entries.map((entry) => _buildMealCard(
-              context,
-              "Colación ${entry.key + 1}",
-              "extra",
-              Icons.fastfood_outlined,
-              entry.value,
-              Colors.green,
-              true,
-              appState,
-            )).toList()),
+            ...((menu['extra_meals'] as List).asMap().entries.map((entry) {
+              final isExtraEaten = (entry.value is Map && entry.value['eaten'] == true) ||
+                  (menu['extra_${entry.key}_eaten'] == true);
+              return _buildMealCard(
+                context,
+                "Colación ${entry.key + 1}",
+                "extra_${entry.key}",
+                Icons.fastfood_outlined,
+                entry.value,
+                Colors.green,
+                isExtraEaten,
+                appState,
+              );
+            }).toList()),
           SizedBox(height: 12.h),
           SizedBox(
             width: double.infinity,
@@ -804,9 +815,14 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     if (menu['lunch_eaten'] == true) addMacros(menu['lunch']);
     if (menu['dinner_eaten'] == true) addMacros(menu['dinner']);
     
-    if (menu['extra_meals'] != null) {
-      for (var extra in menu['extra_meals']) {
-        addMacros(extra);
+    if (menu['extra_meals'] != null && menu['extra_meals'] is List) {
+      final extraList = menu['extra_meals'] as List;
+      for (int i = 0; i < extraList.length; i++) {
+        final extra = extraList[i];
+        final isExtraEaten = (extra is Map && extra['eaten'] == true) || (menu['extra_${i}_eaten'] == true);
+        if (isExtraEaten) {
+          addMacros(extra);
+        }
       }
     }
 
@@ -1029,5 +1045,211 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     }
   }
 
+  Widget _buildStreakBadge(BuildContext context, AppState appState) {
+    final streak = appState.currentStreak;
+    final hasStreak = streak > 0;
 
+    final bgColor = hasStreak
+        ? const Color(0xFFFFF3E0)
+        : Colors.grey.shade100;
+
+    final borderColor = hasStreak
+        ? Colors.orange.shade300
+        : Colors.grey.shade300;
+
+    final iconColor = hasStreak
+        ? const Color(0xFFFF5722)
+        : Colors.grey.shade500;
+
+    final textColor = hasStreak
+        ? const Color(0xFFE65100)
+        : Colors.grey.shade700;
+
+    return GestureDetector(
+      onTap: () => _showStreakDetailsModal(context, appState),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: borderColor, width: 1.5),
+          boxShadow: hasStreak
+              ? [
+                  BoxShadow(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                    blurRadius: 8.r,
+                    offset: Offset(0, 2.h),
+                  )
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.local_fire_department_rounded,
+              color: iconColor,
+              size: 20.sp,
+            ),
+            SizedBox(width: 4.w),
+            Text(
+              "$streak",
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStreakDetailsModal(BuildContext context, AppState appState) {
+    final streak = appState.currentStreak;
+    final hasStreak = streak > 0;
+    final completed = appState.todayCompletedMealsCount;
+    final total = appState.todayTotalMealsCount;
+    final progress = total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 32.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Container(
+                width: 72.w,
+                height: 72.w,
+                decoration: BoxDecoration(
+                  color: hasStreak ? const Color(0xFFFFF3E0) : Colors.grey.shade100,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: hasStreak ? Colors.orange.shade300 : Colors.grey.shade300,
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  Icons.local_fire_department_rounded,
+                  size: 44.sp,
+                  color: hasStreak ? const Color(0xFFFF5722) : Colors.grey.shade500,
+                ),
+              ),
+              SizedBox(height: 14.h),
+              Text(
+                hasStreak ? "¡$streak ${streak == 1 ? 'Día' : 'Días'} de Racha!" : "¡Empieza tu Racha!",
+                style: TextStyle(
+                  fontSize: 22.sp,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textDark,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                hasStreak
+                    ? "¡Estás encendido! Completa todas tus comidas de hoy para mantener tu racha activa y seguir avanzando."
+                    : "Marca todas tus comidas del día ($total comidas) para encender tu fuego de racha saludable.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.textLight,
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Comidas de hoy",
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        Text(
+                          "$completed de $total completadas",
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.bold,
+                            color: completed == total ? Colors.green.shade700 : AppColors.secondaryText,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10.h),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8.r),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 10.h,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          completed == total ? Colors.green : const Color(0xFFFF9800),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 24.h),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.buttonDark,
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
+                  ),
+                  child: Text(
+                    "¡Entendido!",
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

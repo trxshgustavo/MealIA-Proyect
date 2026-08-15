@@ -1170,7 +1170,21 @@ class AppState extends ChangeNotifier {
     
     // Update locally first for fast UI
     if (_mealCalendar.containsKey(dateKey)) {
-      _mealCalendar[dateKey]!['${mealType}_eaten'] = eaten;
+      if (mealType.startsWith('extra')) {
+        int idx = 0;
+        if (mealType.contains('_')) {
+          idx = int.tryParse(mealType.split('_')[1]) ?? 0;
+        }
+        var extraList = _mealCalendar[dateKey]!['extra_meals'];
+        if (extraList is List && idx < extraList.length) {
+          if (extraList[idx] is Map) {
+            extraList[idx]['eaten'] = eaten;
+          }
+        }
+        _mealCalendar[dateKey]!['${mealType}_eaten'] = eaten;
+      } else {
+        _mealCalendar[dateKey]!['${mealType}_eaten'] = eaten;
+      }
       notifyListeners();
     }
 
@@ -1203,6 +1217,116 @@ class AppState extends ChangeNotifier {
       debugPrint("Error marking meal eaten: $e");
     }
     return null;
+  }
+
+  /// Verifica si un día específico fue completado al 100% según mealsPerDay (3, 4 o 5)
+  bool isDateKeyCompleted(String dateKey) {
+    final menu = _mealCalendar[dateKey];
+    if (menu == null) return false;
+
+    // Verificar las 3 comidas principales
+    final b = menu['breakfast_eaten'] == true;
+    final l = menu['lunch_eaten'] == true;
+    final d = menu['dinner_eaten'] == true;
+    if (!b || !l || !d) return false;
+
+    final reqMeals = mealsPerDay;
+    if (reqMeals <= 3) return true;
+
+    final extraList = menu['extra_meals'];
+    if (extraList is List && extraList.isNotEmpty) {
+      if (reqMeals == 4) {
+        // Requiere al menos 1 colación marcada como comida
+        bool hasExtraEaten = (extraList[0] is Map && (extraList[0]['eaten'] == true)) ||
+            menu['extra_0_eaten'] == true ||
+            menu['extra_eaten'] == true;
+        return hasExtraEaten;
+      } else if (reqMeals >= 5) {
+        // Requiere al menos 2 colaciones marcadas como comidas
+        int extraEatenCount = 0;
+        for (int i = 0; i < extraList.length; i++) {
+          final item = extraList[i];
+          if ((item is Map && item['eaten'] == true) || menu['extra_${i}_eaten'] == true) {
+            extraEatenCount++;
+          }
+        }
+        final requiredCount = extraList.length >= 2 ? 2 : extraList.length;
+        return extraEatenCount >= requiredCount;
+      }
+    }
+    return true;
+  }
+
+  /// Calcula la racha actual de días consecutivos cumplidos (estilo Duolingo)
+  int get currentStreak {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayKey = _formatDate(today);
+
+    int streak = 0;
+    bool todayDone = isDateKeyCompleted(todayKey);
+
+    if (todayDone) {
+      streak = 1;
+      DateTime checkDate = today.subtract(const Duration(days: 1));
+      while (true) {
+        String key = _formatDate(checkDate);
+        if (isDateKeyCompleted(key)) {
+          streak++;
+          checkDate = checkDate.subtract(const Duration(days: 1));
+        } else {
+          break;
+        }
+      }
+    } else {
+      DateTime yesterday = today.subtract(const Duration(days: 1));
+      String yesterdayKey = _formatDate(yesterday);
+      if (isDateKeyCompleted(yesterdayKey)) {
+        streak = 1;
+        DateTime checkDate = yesterday.subtract(const Duration(days: 1));
+        while (true) {
+          String key = _formatDate(checkDate);
+          if (isDateKeyCompleted(key)) {
+            streak++;
+            checkDate = checkDate.subtract(const Duration(days: 1));
+          } else {
+            break;
+          }
+        }
+      } else {
+        streak = 0;
+      }
+    }
+
+    return streak;
+  }
+
+  /// Cantidad de comidas completadas hoy (de las requeridas)
+  int get todayCompletedMealsCount {
+    final todayKey = _formatDate(DateTime.now());
+    final menu = _mealCalendar[todayKey];
+    if (menu == null) return 0;
+
+    int count = 0;
+    if (menu['breakfast_eaten'] == true) count++;
+    if (menu['lunch_eaten'] == true) count++;
+    if (menu['dinner_eaten'] == true) count++;
+
+    final extraList = menu['extra_meals'];
+    if (extraList is List) {
+      for (int i = 0; i < extraList.length; i++) {
+        final item = extraList[i];
+        if ((item is Map && item['eaten'] == true) || menu['extra_${i}_eaten'] == true) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  /// Cantidad total de comidas configuradas para hoy
+  int get todayTotalMealsCount {
+    return mealsPerDay;
   }
 
   Future<void> fetchInventory() async {

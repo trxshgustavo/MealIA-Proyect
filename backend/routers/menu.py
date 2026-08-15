@@ -1285,12 +1285,31 @@ def mark_meal_eaten(
         )
 
     val = 1 if request.eaten else 0
+    meal_data = {}
     if request.meal_type == "breakfast":
         plan.breakfast_eaten = val
+        meal_data = plan.breakfast
     elif request.meal_type == "lunch":
         plan.lunch_eaten = val
+        meal_data = plan.lunch
     elif request.meal_type == "dinner":
         plan.dinner_eaten = val
+        meal_data = plan.dinner
+    elif request.meal_type.startswith("extra"):
+        extra_list = list(plan.extra_meals or [])
+        idx = 0
+        if "_" in request.meal_type:
+            try:
+                idx = int(request.meal_type.split("_")[1])
+            except ValueError:
+                idx = 0
+        if 0 <= idx < len(extra_list):
+            if isinstance(extra_list[idx], dict):
+                extra_list[idx]["eaten"] = bool(request.eaten)
+                meal_data = extra_list[idx]
+        plan.extra_meals = extra_list
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(plan, "extra_meals")
     else:
         raise HTTPException(status_code=400, detail="Tipo de comida invalido")
 
@@ -1298,14 +1317,6 @@ def mark_meal_eaten(
     
     if request.eaten:
         # Deduct inventory using AI for parsing
-        meal_data = {}
-        if request.meal_type == "breakfast":
-            meal_data = plan.breakfast
-        elif request.meal_type == "lunch":
-            meal_data = plan.lunch
-        elif request.meal_type == "dinner":
-            meal_data = plan.dinner
-            
         if isinstance(meal_data, dict) and "ingredients" in meal_data:
             ingredients_list = meal_data["ingredients"]
             inventory = db.query(models.InventoryItem).filter(models.InventoryItem.owner_id == current_user.id).all()
