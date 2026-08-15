@@ -171,10 +171,8 @@ def suggest_shopping_list(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_user),
 ):
-    if client is None:
-        raise HTTPException(status_code=503, detail="Servicio de IA no configurado")
-    if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="Requiere suscripción Premium")
+    import logging
+    logger = logging.getLogger(__name__)
 
     # 1. Obtener inventario actual
     inventory = (
@@ -182,44 +180,101 @@ def suggest_shopping_list(
         .filter(models.InventoryItem.owner_id == current_user.id)
         .all()
     )
-    inv_names = [i.name for i in inventory]
-    inventory_str = ", ".join(inv_names) if inv_names else "Nada"
+    inv_names = [i.name.strip() for i in inventory if i.name and i.name.strip()]
+    inventory_str = ", ".join(inv_names) if inv_names else "Inventario vacío"
+    user_goal = current_user.goal or "Mantenimiento y Salud"
+
+    def get_fallback_suggestions():
+        goal_lower = user_goal.lower()
+        existing = {n.lower() for n in inv_names}
+        
+        candidates = []
+        if "déficit" in goal_lower or "deficit" in goal_lower or "bajar" in goal_lower:
+            candidates = [
+                {"name": "Espinacas frescas", "reason": "Bajas en calorías y altas en volumen y fibra para máxima saciedad."},
+                {"name": "Pechuga de pollo o pavo", "reason": "Proteína magra para preservar masa muscular durante el déficit calórico."},
+                {"name": "Huevos", "reason": "Fuente completa de proteína y grasas saludables que controlan el apetito."},
+                {"name": "Frutos rojos (frutillas/arándanos)", "reason": "Frutas bajas en azúcar y ricas en antioxidantes."},
+                {"name": "Yogurt griego descremado", "reason": "Excelente colación saciante alta en proteína."},
+                {"name": "Avena integral", "reason": "Carbohidratos complejos de absorción lenta que dan energía sostenida."},
+                {"name": "Zapallo italiano o calabacín", "reason": "Muy versátil y de bajísima densidad calórica para tus comidas."}
+            ]
+        elif "músculo" in goal_lower or "muscular" in goal_lower or "ganar" in goal_lower or "masa" in goal_lower:
+            candidates = [
+                {"name": "Huevos", "reason": "Proteína de alto valor biológico indispensable para la síntesis muscular."},
+                {"name": "Avena integral", "reason": "Energía limpia y carbohidratos densos para entrenamientos intensos."},
+                {"name": "Pechuga de pollo", "reason": "Proteína magra de rápida asimilación para el desarrollo muscular."},
+                {"name": "Plátanos / Bananas", "reason": "Excelente recarga de glucógeno y potasio post-entrenamiento."},
+                {"name": "Mantequilla de maní o frutos secos", "reason": "Calorías y grasas monoinsaturadas densas para apoyar el superávit."},
+                {"name": "Atún al agua o salmón", "reason": "Rico en ácidos grasos Omega-3 y proteína de calidad."},
+                {"name": "Arroz blanco o integral", "reason": "Base de carbohidratos de fácil digestión para ganar masa."}
+            ]
+        else:
+            candidates = [
+                {"name": "Aceite de oliva virgen extra", "reason": "Grasas cardiosaludables esenciales para la absorción de vitaminas."},
+                {"name": "Huevos", "reason": "Alimento completo y versátil para cualquier momento del día."},
+                {"name": "Lentejas o garbanzos", "reason": "Legumbres ricas en fibra vegetal, hierro y proteína."},
+                {"name": "Manzanas o frutas de estación", "reason": "Aporte diario de micronutrientes, fibra y frescura."},
+                {"name": "Pechuga de pollo", "reason": "Proteína limpia para mantener tus requerimientos diarios."},
+                {"name": "Verduras mixtas (brócoli/zanahoria)", "reason": "Vitaminas y minerales clave para tu sistema inmunológico."},
+                {"name": "Frutos secos variados", "reason": "Snack saludable y fuente de energía natural."}
+            ]
+
+        filtered = [c for c in candidates if not any(c["name"].lower() in e or e in c["name"].lower() for e in existing)]
+        return {"suggestions": filtered[:6] if filtered else candidates[:5]}
+
+    if client is None:
+        return get_fallback_suggestions()
 
     # 2. Prompt para OpenAI
     prompt_sys = f"""
-    Eres un asistente de compras experto. Tu trabajo es sugerir 5 a 10 ingredientes CLAVE que le faltan al usuario para poder cocinar una mayor variedad de recetas saludables y deliciosas, basándote en lo que YA TIENE.
-    NO sugieras cosas obvias si ya las tiene.
-    
-    El objetivo de salud/nutricional del usuario es: "{current_user.goal}".
-    Tus sugerencias DEBEN estar directamente alineadas con este objetivo. Por ejemplo, si busca ganar masa muscular, sugiere alimentos altos en proteína. Si busca déficit, sugiere vegetales de baja densidad calórica, etc.
-    
-    Devuelve un JSON con el formato:
-    {{
-      "suggestions": [
-        {{"name": "Ingrediente", "reason": "Razón corta relacionada al objetivo"}}
-      ]
-    }}
-    """
+Eres un Nutricionista y Chef experto. Tu trabajo es sugerir 5 a 7 ingredientes CLAVE que le faltan al usuario en su despensa para complementar lo que YA TIENE y potenciar su objetivo de salud.
+NO sugieras ingredientes que el usuario ya tenga en su inventario.
 
-    prompt_user = f"Mi inventario actual es: [{inventory_str}]. ¿Qué debería comprar para complementar esto y cocinar mejor?"
+Objetivo de salud del usuario: "{user_goal}".
+Inventario actual: [{inventory_str}].
+
+Devuelve ÚNICAMENTE un JSON estrictamente válido en este formato:
+{{
+  "suggestions": [
+    {{"name": "Nombre del alimento", "reason": "Razón corta y motivadora alineada a su objetivo"}}
+  ]
+}}
+"""
+
+    prompt_user = f"Mi objetivo es '{user_goal}'. Revisa lo que tengo [{inventory_str}] y dime qué 5 a 7 alimentos específicos debería comprar en el supermercado para mis recetas y salud."
 
     try:
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": prompt_sys},
                 {"role": "user", "content": prompt_user},
             ],
-            temperature=0.7,
+            response_format={"type": "json_object"},
+            temperature=0.6,
+            max_tokens=600,
         )
-        content = completion.choices[0].message.content
-        data = json.loads(content)
-        return data
-    except Exception as e:
-        import logging
+        content = completion.choices[0].message.content.strip()
+        cleaned = content.replace("```json", "").replace("```", "").strip()
+        data = json.loads(cleaned)
 
-        logging.getLogger(__name__).error(f"Error IA Shopping: {e}")
-        raise HTTPException(status_code=500, detail="Error generando sugerencias")
+        suggestions = []
+        if isinstance(data, dict):
+            raw_sugg = data.get("suggestions") or data.get("sugerencias") or data.get("items") or []
+            if isinstance(raw_sugg, list):
+                for s in raw_sugg:
+                    if isinstance(s, dict) and "name" in s and "reason" in s:
+                        suggestions.append({"name": str(s["name"]), "reason": str(s["reason"])})
+                    elif isinstance(s, dict) and "nombre" in s and "razon" in s:
+                        suggestions.append({"name": str(s["nombre"]), "reason": str(s["razon"])})
+
+        if suggestions:
+            return {"suggestions": suggestions}
+        return get_fallback_suggestions()
+    except Exception as e:
+        logger.error(f"Error IA Shopping: {e}")
+        return get_fallback_suggestions()
 
 
 @router.post("/inventory/scan-fridge")
