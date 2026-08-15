@@ -1039,17 +1039,24 @@ class AppState extends ChangeNotifier {
           'dinner': data['dinner'],
           'total_calories': data['total_calories'],
           'note': data['note'],
+          'extra_meals': data['extra_meals'] ?? [],
         };
 
         final targetDate = date ?? DateTime.now();
 
         if (_isSameDay(targetDate, DateTime.now())) {
           generatedMenu = menuData;
-          // FIX: Actualizar totalCalories desde la respuesta de la IA
-          totalCalories = data['total_calories'] ??
-              ((data['breakfast']?['calories'] ?? 0) as int) +
-              ((data['lunch']?['calories'] ?? 0) as int) +
-              ((data['dinner']?['calories'] ?? 0) as int);
+          int sumCals = (data['breakfast']?['calories'] ?? 0) as int;
+          sumCals += (data['lunch']?['calories'] ?? 0) as int;
+          sumCals += (data['dinner']?['calories'] ?? 0) as int;
+          if (data['extra_meals'] is List) {
+            for (var m in data['extra_meals']) {
+              if (m is Map && m['calories'] != null) {
+                sumCals += (m['calories'] as num).toInt();
+              }
+            }
+          }
+          totalCalories = (data['total_calories'] as int?) ?? sumCals;
         }
 
         await saveMealPlan(targetDate, menuData);

@@ -327,6 +327,7 @@ class _MenuScreenState extends State<MenuScreen> {
                             ),
                             SizedBox(height: 24.h), // Reducido de 30
 
+                            // 1. Desayuno
                             _buildMealCard(
                               context,
                               title: 'Desayuno',
@@ -345,6 +346,34 @@ class _MenuScreenState extends State<MenuScreen> {
                               ),
                             ),
 
+                            // 2. Colación 1 (si aplica)
+                            if (menu['extra_meals'] != null &&
+                                (menu['extra_meals'] as List).isNotEmpty)
+                              _buildMealCard(
+                                context,
+                                title: (menu['extra_meals'] as List).length == 1
+                                    ? 'Colación / Snack'
+                                    : 'Colación 1 (Media Mañana)',
+                                icon: Icons.apple_rounded,
+                                iconColor: Colors.amber.shade800,
+                                mealName:
+                                    (menu['extra_meals'] as List)[0]?['name'] ??
+                                        'Snack Saludable',
+                                items:
+                                    (menu['extra_meals'] as List)[0]?['ingredients']
+                                        as List? ??
+                                    [],
+                                calories:
+                                    (menu['extra_meals'] as List)[0]?['calories'] ??
+                                        0,
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/recipe',
+                                  arguments: (menu['extra_meals'] as List)[0],
+                                ),
+                              ),
+
+                            // 3. Almuerzo
                             _buildMealCard(
                               context,
                               title: 'Almuerzo',
@@ -361,6 +390,32 @@ class _MenuScreenState extends State<MenuScreen> {
                               ),
                             ),
 
+                            // 4. Colación 2 (si aplica)
+                            if (menu['extra_meals'] != null &&
+                                (menu['extra_meals'] as List).length >= 2)
+                              _buildMealCard(
+                                context,
+                                title: 'Colación 2 (Media Tarde)',
+                                icon: Icons.local_cafe_rounded,
+                                iconColor: Colors.teal,
+                                mealName:
+                                    (menu['extra_meals'] as List)[1]?['name'] ??
+                                        'Snack Saludable',
+                                items:
+                                    (menu['extra_meals'] as List)[1]?['ingredients']
+                                        as List? ??
+                                    [],
+                                calories:
+                                    (menu['extra_meals'] as List)[1]?['calories'] ??
+                                        0,
+                                onTap: () => Navigator.pushNamed(
+                                  context,
+                                  '/recipe',
+                                  arguments: (menu['extra_meals'] as List)[1],
+                                ),
+                              ),
+
+                            // 5. Cena
                             _buildMealCard(
                               context,
                               title: 'Cena',
@@ -376,6 +431,32 @@ class _MenuScreenState extends State<MenuScreen> {
                                 arguments: menu['dinner'],
                               ),
                             ),
+
+                            // 6. Colaciones adicionales (si hubieran más de 2)
+                            if (menu['extra_meals'] != null &&
+                                (menu['extra_meals'] as List).length > 2)
+                              ...((menu['extra_meals'] as List)
+                                  .sublist(2)
+                                  .asMap()
+                                  .entries
+                                  .map((entry) => _buildMealCard(
+                                        context,
+                                        title: 'Colación ${entry.key + 3}',
+                                        icon: Icons.fastfood_outlined,
+                                        iconColor: Colors.green,
+                                        mealName: entry.value?['name'] ??
+                                            'Snack Extra',
+                                        items: entry.value?['ingredients']
+                                                as List? ??
+                                            [],
+                                        calories:
+                                            entry.value?['calories'] ?? 0,
+                                        onTap: () => Navigator.pushNamed(
+                                          context,
+                                          '/recipe',
+                                          arguments: entry.value,
+                                        ),
+                                      ))),
 
                             SizedBox(height: 16.h),
 

@@ -348,6 +348,137 @@ def save_recipe(
     return new_recipe
 
 
+def create_goal_aligned_snack(goal: Optional[str], cal_target: int, snack_num: int):
+    goal_str = (goal or "").lower()
+    if "déficit" in goal_str or "deficit" in goal_str or "bajar" in goal_str:
+        name = f"Colación {snack_num}: Snack Saciante Ligero"
+        ingredients = ["1 porción de fruta fresca o bastones de verduras", "1 puñado pequeño de frutos secos o semillas"]
+        steps = ["Lavar y preparar los ingredientes frescos.", "Emplatar en un cuenco pequeño y disfrutar."]
+        protein = max(4, int(cal_target * 0.20 / 4))
+        fat = max(3, int(cal_target * 0.30 / 9))
+        carbs = max(10, int(cal_target * 0.50 / 4))
+    elif "músculo" in goal_str or "muscular" in goal_str or "ganar" in goal_str or "masa" in goal_str:
+        name = f"Colación {snack_num}: Snack Proteico Energético"
+        ingredients = ["1 porción de yogurt griego, queso fresco o huevo", "1 porción de fruta o avena"]
+        steps = ["Preparar la porción proteica con la fruta o cereal.", "Consumir para apoyar la recuperación y síntesis muscular."]
+        protein = max(12, int(cal_target * 0.35 / 4))
+        fat = max(4, int(cal_target * 0.25 / 9))
+        carbs = max(15, int(cal_target * 0.40 / 4))
+    else:
+        name = f"Colación {snack_num}: Snack Equilibrado"
+        ingredients = ["1 porción de fruta o snack saludable", "1 porción de frutos secos o semillas"]
+        steps = ["Preparar los ingredientes frescos.", "Emplatar y disfrutar como refrigerio nutritivo."]
+        protein = max(6, int(cal_target * 0.25 / 4))
+        fat = max(4, int(cal_target * 0.30 / 9))
+        carbs = max(12, int(cal_target * 0.45 / 4))
+
+    cal = (protein * 4) + (carbs * 4) + (fat * 9)
+    return {
+        "name": name,
+        "ingredients": ingredients,
+        "steps": steps,
+        "calories": cal,
+        "protein": protein,
+        "fat": fat,
+        "carbs": carbs,
+        "fiber": round(cal * 0.015, 1),
+        "sugar": round(cal * 0.03, 1),
+        "sodium": int(cal * 0.2),
+        "vitamin_a": 0.0,
+        "vitamin_c": 0.0,
+        "calcium": 0.0,
+        "iron": 0.0,
+        "time": "5 min",
+        "source_url": "https://www.themealdb.com",
+        "source_name": "Meal.IA Nutrición",
+    }
+
+
+def _sanitize_and_validate_meal(meal: dict, meal_cal_target: int, default_name: str = "Plato Especial del Chef", meal_candidates: list = None):
+    def safe_get_int(data, key, default=0):
+        val = data.get(key)
+        if val is None:
+            return default
+        try:
+            return int(str(val).replace("g", "").replace("mg", "").replace("kcal", "").strip())
+        except (ValueError, TypeError):
+            return default
+
+    def safe_get_float(data, key, default=0.0):
+        val = data.get(key)
+        if val is None:
+            return default
+        try:
+            return float(str(val).replace("g", "").strip())
+        except (ValueError, TypeError):
+            return default
+
+    if not isinstance(meal.get("name"), str) or not meal.get("name"):
+        meal["name"] = default_name
+
+    if not isinstance(meal.get("ingredients"), list) or not meal.get("ingredients"):
+        meal["ingredients"] = ["Ingredientes variados al gusto"]
+    if not isinstance(meal.get("steps"), list) or not meal.get("steps"):
+        meal["steps"] = ["Preparar según receta original.", "Emplatar y servir."]
+
+    cal = safe_get_int(meal, "calories", meal_cal_target)
+    if cal <= 0:
+        cal = meal_cal_target
+    meal["calories"] = cal
+
+    meal["carbs"] = safe_get_int(meal, "carbs")
+    if meal["carbs"] <= 0:
+        meal["carbs"] = int((cal * 0.50) / 4)
+    meal["protein"] = safe_get_int(meal, "protein")
+    if meal["protein"] <= 0:
+        meal["protein"] = int((cal * 0.25) / 4)
+    meal["fat"] = safe_get_int(meal, "fat")
+    if meal["fat"] <= 0:
+        meal["fat"] = int((cal * 0.25) / 9)
+
+    cal = (meal["carbs"] * 4) + (meal["protein"] * 4) + (meal["fat"] * 9)
+    meal["calories"] = cal
+
+    meal["sodium"] = safe_get_int(meal, "sodium")
+    if meal["sodium"] <= 0:
+        meal["sodium"] = int(cal * 0.4)
+    meal["sugar"] = safe_get_float(meal, "sugar")
+    if meal["sugar"] <= 0.0:
+        meal["sugar"] = round(cal * 0.02, 1)
+    meal["fiber"] = safe_get_float(meal, "fiber")
+    if meal["fiber"] <= 0.0:
+        meal["fiber"] = round(cal * 0.012, 1)
+
+    meal["vitamin_a"] = safe_get_float(meal, "vitamin_a")
+    meal["vitamin_c"] = safe_get_float(meal, "vitamin_c")
+    meal["calcium"] = safe_get_float(meal, "calcium")
+    meal["iron"] = safe_get_float(meal, "iron")
+
+    if not isinstance(meal.get("time"), str) or not meal.get("time") or meal["time"].startswith("0"):
+        step_count = len(meal.get("steps", []))
+        meal["time"] = f"{15 + (step_count * 5)} min"
+
+    current_source_url = meal.get("source_url") or ""
+    current_source_name = meal.get("source_name") or ""
+    is_url_invalid = (
+        not current_source_url
+        or "example" in current_source_url.lower()
+        or current_source_url.startswith("URL_")
+        or len(current_source_url) < 10
+    )
+    if is_url_invalid:
+        if meal_candidates:
+            best = meal_candidates[0]
+            meal["source_url"] = best.get("source_url", "https://www.themealdb.com")
+            meal["source_name"] = best.get("source_name", "TheMealDB")
+        else:
+            meal["source_url"] = "https://www.themealdb.com"
+            meal["source_name"] = "TheMealDB"
+    else:
+        meal["source_url"] = current_source_url
+        meal["source_name"] = current_source_name or "TheMealDB"
+
+
 # ════════════════════════════════════════════════════════════════════════════════
 # ENDPOINT PRINCIPAL: GENERAR MENU CON IA + RESPALDO CIENTIFICO
 # ════════════════════════════════════════════════════════════════════════════════
@@ -411,23 +542,26 @@ def generate_menu_with_ia(
 
     target_calories = calculate_target_calories(current_user)
 
-    # Distribucion calorica por comida
+    # Distribucion calorica por comida segun meals_per_day
     meals_per_day = getattr(current_user, 'meals_per_day', 3) or 3
     if meals_per_day == 4:
         breakfast_cal_target = int(target_calories * 0.25)
-        snack1_cal_target = int(target_calories * 0.10)
+        snack1_cal_target = int(target_calories * 0.15)
         lunch_cal_target = int(target_calories * 0.35)
-        dinner_cal_target = int(target_calories * 0.30)
+        dinner_cal_target = int(target_calories * 0.25)
+        snack2_cal_target = 0
     elif meals_per_day >= 5:
-        breakfast_cal_target = int(target_calories * 0.20)
+        breakfast_cal_target = int(target_calories * 0.22)
         snack1_cal_target = int(target_calories * 0.10)
         lunch_cal_target = int(target_calories * 0.35)
         snack2_cal_target = int(target_calories * 0.10)
-        dinner_cal_target = int(target_calories * 0.25)
+        dinner_cal_target = int(target_calories * 0.23)
     else:
         breakfast_cal_target = int(target_calories * 0.25)
         lunch_cal_target = int(target_calories * 0.40)
         dinner_cal_target = int(target_calories * 0.35)
+        snack1_cal_target = 0
+        snack2_cal_target = 0
     cal_margin = 150  # +/- kcal aceptable
 
     # ── 2. Gustos previos ────────────────────────────────────────────────────────
@@ -455,7 +589,7 @@ def generate_menu_with_ia(
 
     # ── 3. BUSQUEDA EXTERNA DE RECETAS REALES ───────────────────────────────────
     logger.info(
-        f"Buscando recetas externas para {current_user.first_name} (objetivo: {target_calories} kcal)"
+        f"Buscando recetas externas para {current_user.first_name} (objetivo: {target_calories} kcal, comidas: {meals_per_day})"
     )
 
     inventory_usda_context = get_inventory_usda_macros(inventory_items)
@@ -480,7 +614,7 @@ def generate_menu_with_ia(
         "dinner",
     )
 
-    # Si Edamam no retorno resultados, usar TheMealDB (siempre disponible, sin API key)
+    # Fallback a TheMealDB
     if not breakfast_candidates:
         breakfast_candidates = search_recipes_for_meal(inventory_names, "breakfast")
     if not lunch_candidates:
@@ -488,14 +622,32 @@ def generate_menu_with_ia(
     if not dinner_candidates:
         dinner_candidates = search_recipes_for_meal(inventory_names, "dinner")
 
-    logger.info(
-        f"Candidatos encontrados -> Desayuno: {len(breakfast_candidates)}, "
-        f"Almuerzo: {len(lunch_candidates)}, Cena: {len(dinner_candidates)}"
-    )
-
+    # Formatear opciones
     breakfast_text = format_recipe_candidates(breakfast_candidates, "desayuno")
     lunch_text = format_recipe_candidates(lunch_candidates, "almuerzo")
     dinner_text = format_recipe_candidates(dinner_candidates, "cena")
+
+    # Instruccion especifica de comidas y colaciones
+    if meals_per_day == 4:
+        extra_meals_instruction = f"""
+CONFIGURACION OBLIGATORIA DE 4 COMIDAS:
+El usuario come 4 veces al dia (Desayuno, 1 Colacion/Snack saludable ~{snack1_cal_target} kcal, Almuerzo, Cena).
+DEBES incluir OBLIGATORIAMENTE en la lista "extra_meals" exactamente 1 (UNA) comida snack/colacion que potencie su meta de '{current_user.goal or "Mantenimiento"}'.
+- Si su meta es Deficit Calorico: Snack saciante, rico en fibra o proteina ligera (ej: frutas frescas con semillas, yogurt, bastones de vegetales).
+- Si su meta es Aumentar Masa Muscular: Snack proteico y energetico (ej: batido proteico, frutos secos, avena, huevo).
+- Si su meta es Mantenimiento: Snack balanceado.
+"""
+    elif meals_per_day >= 5:
+        extra_meals_instruction = f"""
+CONFIGURACION OBLIGATORIA DE 5 COMIDAS:
+El usuario come 5 veces al dia (Desayuno, Colacion 1 a media manana ~{snack1_cal_target} kcal, Almuerzo, Colacion 2 a media tarde ~{snack2_cal_target} kcal, Cena).
+DEBES incluir OBLIGATORIAMENTE en la lista "extra_meals" exactamente 2 (DOS) comidas snacks/colaciones que potencien su meta de '{current_user.goal or "Mantenimiento"}'.
+"""
+    else:
+        extra_meals_instruction = """
+CONFIGURACION DE 3 COMIDAS:
+El usuario come 3 comidas principales al dia (Desayuno, Almuerzo, Cena). La clave "extra_meals" debe ser una lista vacia [].
+"""
 
     # ── 4. PROMPT DEL SISTEMA ────────────────────────────────────────────────────
     system_prompt = f"""
@@ -521,6 +673,7 @@ Sexo biológico: {current_user.gender or "No especificado"}
 **IMPORTANTE**: Ajusta las porciones, distribución de macronutrientes y metabolismo basal considerando el sexo biológico proporcionado.
 {fav_txt}
 Vibe del dia: {daily_vibe}
+{extra_meals_instruction}
 
 === INGREDIENTES DISPONIBLES EN EL INVENTARIO ===
 {inventory_numbered}
@@ -566,9 +719,10 @@ CENA (opciones reales de TheMealDB/Edamam):
 
 INSTRUCCION: Para cada comida:
 1. Revisa el inventario de {current_user.first_name} y NUNCA te salgas de él.
-2. Objetivo calorico: Debes distribuir las calorias considerando la configuracion de {meals_per_day} comidas del usuario. (ej. Desayuno ~{breakfast_cal_target} kcal, Almuerzo ~{lunch_cal_target} kcal, Cena ~{dinner_cal_target} kcal, y el resto en extra_meals).
+2. Objetivo calorico: Debes distribuir las calorías en {meals_per_day} comidas totales (Desayuno ~{breakfast_cal_target} kcal, Almuerzo ~{lunch_cal_target} kcal, Cena ~{dinner_cal_target} kcal, y {'1 snack en extra_meals ~' + str(snack1_cal_target) if meals_per_day == 4 else ('2 snacks en extra_meals ~' + str(snack1_cal_target) + ' c/u' if meals_per_day >= 5 else 'extra_meals vacio []')}).
 3. Objetivo de salud: {current_user.goal or "Mantenimiento"}.
 4. Considera el sexo biológico ({current_user.gender or "No especificado"}) para calcular las necesidades reales de macronutrientes y calorías basales de manera más precisa.
+5. Los snacks/colaciones en "extra_meals" deben ser coherentes con el objetivo del usuario ({current_user.goal or "Mantenimiento"}).
 
 FORMATO JSON OBLIGATORIO:
 {{
@@ -629,33 +783,17 @@ FORMATO JSON OBLIGATORIO:
     "source_url": "URL_EXACTA_DE_LA_OPCION_ELEGIDA",
     "source_name": "TheMealDB"
   }},
+  "extra_meals": [
+    // Si meals_per_day es 4: exactamente 1 comida snack/colacion
+    // Si meals_per_day es 5: exactamente 2 comidas snacks/colaciones (Colacion 1 y Colacion 2)
+    // Si meals_per_day es 3: lista vacia []
+  ],
   "note": "Nota motivadora del Chef para el objetivo de salud de {current_user.first_name}.",
   "total_calories": 0
 }}
 """
 
-    # ── 6. HELPERS DE PARSEO ─────────────────────────────────────────────────────
-    def safe_get_int(data, key, default=0):
-        val = data.get(key)
-        if val is None:
-            return default
-        try:
-            return int(
-                str(val).replace("g", "").replace("mg", "").replace("kcal", "").strip()
-            )
-        except (ValueError, TypeError):
-            return default
-
-    def safe_get_float(data, key, default=0.0):
-        val = data.get(key)
-        if val is None:
-            return default
-        try:
-            return float(str(val).replace("g", "").strip())
-        except (ValueError, TypeError):
-            return default
-
-    # ── 7. GENERACION CON REINTENTOS ─────────────────────────────────────────────
+    # ── 6. GENERACION CON REINTENTOS ─────────────────────────────────────────────
     max_attempts = 3
 
     for attempt in range(max_attempts):
@@ -678,123 +816,46 @@ FORMATO JSON OBLIGATORIO:
             except Exception:
                 menu_data = {}
 
-            # ── 8. SANITIZACION Y VALIDACION ─────────────────────────────────────
+            # ── 7. SANITIZACION Y VALIDACION DE COMIDAS Y SNACKS ───────────────────
             if not isinstance(menu_data.get("extra_meals"), list):
                 menu_data["extra_meals"] = []
-            
-            # Prepare validation array
-            validation_list = [
-                ("breakfast", breakfast_cal_target, breakfast_candidates),
-                ("lunch", lunch_cal_target, lunch_candidates),
-                ("dinner", dinner_cal_target, dinner_candidates),
-            ]
-            
-            # Add extra meals to validation dynamically (so they get default values, macros calculated, etc)
-            for idx, extra_meal in enumerate(menu_data["extra_meals"]):
-                cal_target = snack1_cal_target if idx == 0 and meals_per_day >= 4 else (snack2_cal_target if idx == 1 and meals_per_day >= 5 else 200)
-                validation_list.append((f"extra_meal_{idx}", cal_target, []))
 
-            for meal_name, meal_cal_target, meal_candidates in validation_list:
-                if meal_name.startswith("extra_meal_"):
-                    idx = int(meal_name.split("_")[-1])
-                    meal = menu_data["extra_meals"][idx]
-                else:
-                    meal = menu_data.get(meal_name)
-                    if not isinstance(meal, dict):
-                        meal = {}
-                        menu_data[meal_name] = meal
+            # Garantizar la cantidad exacta de colaciones requeridas segun meals_per_day
+            if meals_per_day == 4:
+                while len(menu_data["extra_meals"]) < 1:
+                    menu_data["extra_meals"].append(
+                        create_goal_aligned_snack(current_user.goal, snack1_cal_target, 1)
+                    )
+                menu_data["extra_meals"] = menu_data["extra_meals"][:1]
+            elif meals_per_day >= 5:
+                while len(menu_data["extra_meals"]) < 2:
+                    idx = len(menu_data["extra_meals"]) + 1
+                    target_snack = snack1_cal_target if idx == 1 else snack2_cal_target
+                    menu_data["extra_meals"].append(
+                        create_goal_aligned_snack(current_user.goal, target_snack, idx)
+                    )
+                menu_data["extra_meals"] = menu_data["extra_meals"][:2]
+            else:
+                menu_data["extra_meals"] = []
+
+            # Sanitizar las 3 comidas principales
+            for meal_name, meal_cal_target, meal_candidates, default_n in [
+                ("breakfast", breakfast_cal_target, breakfast_candidates, "Desayuno Nutritivo"),
+                ("lunch", lunch_cal_target, lunch_candidates, "Almuerzo Balanceado"),
+                ("dinner", dinner_cal_target, dinner_candidates, "Cena Saludable"),
+            ]:
                 meal = menu_data.get(meal_name)
                 if not isinstance(meal, dict):
                     meal = {}
                     menu_data[meal_name] = meal
+                _sanitize_and_validate_meal(meal, meal_cal_target, default_n, meal_candidates)
 
-                # Nombre
-                if not isinstance(meal.get("name"), str) or not meal.get("name"):
-                    meal["name"] = "Plato Especial del Chef"
+            # Sanitizar cada extra_meal
+            for idx, extra_meal in enumerate(menu_data["extra_meals"]):
+                target_c = snack1_cal_target if idx == 0 and meals_per_day >= 4 else (snack2_cal_target if idx == 1 and meals_per_day >= 5 else 150)
+                _sanitize_and_validate_meal(extra_meal, target_c, f"Colación {idx + 1}")
 
-                # Ingredientes y pasos
-                if not isinstance(meal.get("ingredients"), list) or not meal.get(
-                    "ingredients"
-                ):
-                    meal["ingredients"] = ["Ingredientes variados al gusto"]
-                if not isinstance(meal.get("steps"), list) or not meal.get("steps"):
-                    meal["steps"] = [
-                        "Preparar segun receta original.",
-                        "Emplatar y servir.",
-                    ]
-
-                # Calorias
-                cal = safe_get_int(meal, "calories", meal_cal_target)
-                if cal <= 0:
-                    cal = meal_cal_target
-                meal["calories"] = cal
-
-                # Macros
-                meal["carbs"] = safe_get_int(meal, "carbs")
-                if meal["carbs"] <= 0:
-                    meal["carbs"] = int((cal * 0.50) / 4)
-                meal["protein"] = safe_get_int(meal, "protein")
-                if meal["protein"] <= 0:
-                    meal["protein"] = int((cal * 0.25) / 4)
-                meal["fat"] = safe_get_int(meal, "fat")
-                if meal["fat"] <= 0:
-                    meal["fat"] = int((cal * 0.25) / 9)
-
-                # ENFORCE EXACT MATH FOR CALORIES
-                cal = (meal["carbs"] * 4) + (meal["protein"] * 4) + (meal["fat"] * 9)
-                meal["calories"] = cal
-
-                meal["sodium"] = safe_get_int(meal, "sodium")
-                if meal["sodium"] <= 0:
-                    meal["sodium"] = int(cal * 0.4)
-                meal["sugar"] = safe_get_float(meal, "sugar")
-                if meal["sugar"] <= 0.0:
-                    meal["sugar"] = round(cal * 0.02, 1)
-                meal["fiber"] = safe_get_float(meal, "fiber")
-                if meal["fiber"] <= 0.0:
-                    meal["fiber"] = round(cal * 0.012, 1)
-
-                # Vitaminas y minerales
-                meal["vitamin_a"] = safe_get_float(meal, "vitamin_a")
-                meal["vitamin_c"] = safe_get_float(meal, "vitamin_c")
-                meal["calcium"] = safe_get_float(meal, "calcium")
-                meal["iron"] = safe_get_float(meal, "iron")
-
-                # Tiempo
-                if (
-                    not isinstance(meal.get("time"), str)
-                    or not meal.get("time")
-                    or meal["time"].startswith("0")
-                ):
-                    step_count = len(meal.get("steps", []))
-                    meal["time"] = f"{15 + (step_count * 5)} min"
-
-                # ── GARANTIZAR source_url REAL ────────────────────────────────────
-                current_source_url = meal.get("source_url") or ""
-                current_source_name = meal.get("source_name") or ""
-
-                is_url_invalid = (
-                    not current_source_url
-                    or "example" in current_source_url.lower()
-                    or current_source_url.startswith("URL_")
-                    or len(current_source_url) < 10
-                )
-
-                if is_url_invalid:
-                    if meal_candidates:
-                        best = meal_candidates[0]
-                        meal["source_url"] = best.get(
-                            "source_url", "https://www.themealdb.com"
-                        )
-                        meal["source_name"] = best.get("source_name", "TheMealDB")
-                    else:
-                        meal["source_url"] = "https://www.themealdb.com"
-                        meal["source_name"] = "TheMealDB"
-                else:
-                    meal["source_url"] = current_source_url
-                    meal["source_name"] = current_source_name or "TheMealDB"
-
-            # Total de calorias
+            # Total de calorias matematicamente exacto
             total = (
                 menu_data["breakfast"]["calories"]
                 + menu_data["lunch"]["calories"]
@@ -806,15 +867,12 @@ FORMATO JSON OBLIGATORIO:
             # Nota del chef
             if not isinstance(menu_data.get("note"), str) or not menu_data.get("note"):
                 menu_data["note"] = (
-                    "Este menu fue elaborado con recetas reales verificadas, pensado especialmente para tus objetivos!"
+                    "¡Este menú fue elaborado con recetas balanceadas y porciones calculadas especialmente para tus objetivos!"
                 )
 
             logger.info(
-                f"Menu generado con respaldo (intento {attempt + 1}). "
-                f"Fuentes: "
-                f"{menu_data['breakfast'].get('source_name','?')} | "
-                f"{menu_data['lunch'].get('source_name','?')} | "
-                f"{menu_data['dinner'].get('source_name','?')}"
+                f"Menu generado ({meals_per_day} comidas, int {attempt + 1}): "
+                f"{total} kcal totales | {len(menu_data['extra_meals'])} colaciones"
             )
             return menu_data
 
@@ -871,9 +929,25 @@ def generate_weekly_menu_with_ia(
     )
 
     target_calories = calculate_target_calories(current_user)
-    breakfast_cal_target = int(target_calories * 0.25)
-    lunch_cal_target = int(target_calories * 0.40)
-    dinner_cal_target = int(target_calories * 0.35)
+    meals_per_day = getattr(current_user, 'meals_per_day', 3) or 3
+    if meals_per_day == 4:
+        breakfast_cal_target = int(target_calories * 0.25)
+        snack1_cal_target = int(target_calories * 0.15)
+        lunch_cal_target = int(target_calories * 0.35)
+        dinner_cal_target = int(target_calories * 0.25)
+        snack2_cal_target = 0
+    elif meals_per_day >= 5:
+        breakfast_cal_target = int(target_calories * 0.22)
+        snack1_cal_target = int(target_calories * 0.10)
+        lunch_cal_target = int(target_calories * 0.35)
+        snack2_cal_target = int(target_calories * 0.10)
+        dinner_cal_target = int(target_calories * 0.23)
+    else:
+        breakfast_cal_target = int(target_calories * 0.25)
+        lunch_cal_target = int(target_calories * 0.40)
+        dinner_cal_target = int(target_calories * 0.35)
+        snack1_cal_target = 0
+        snack2_cal_target = 0
 
     # ── BÚSQUEDA DE RECETAS REALES ──
     logger.info(f"Buscando recetas externas (semanal) para {current_user.first_name}")
@@ -1058,11 +1132,40 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
                         day_data.get("lunch", {}).get("calories", 0) + \
                         day_data.get("dinner", {}).get("calories", 0)
                         
+            # Asegurar y sanitizar extra_meals en cada día del plan semanal
+            day_extra = day_data.get("extra_meals", [])
+            if not isinstance(day_extra, list):
+                day_extra = []
+            if meals_per_day == 4:
+                while len(day_extra) < 1:
+                    day_extra.append(create_goal_aligned_snack(current_user.goal, snack1_cal_target, 1))
+                day_extra = day_extra[:1]
+            elif meals_per_day >= 5:
+                while len(day_extra) < 2:
+                    s_idx = len(day_extra) + 1
+                    s_cal = snack1_cal_target if s_idx == 1 else snack2_cal_target
+                    day_extra.append(create_goal_aligned_snack(current_user.goal, s_cal, s_idx))
+                day_extra = day_extra[:2]
+            else:
+                day_extra = []
+
+            for s_i, s_m in enumerate(day_extra):
+                target_s = snack1_cal_target if s_i == 0 and meals_per_day >= 4 else (snack2_cal_target if s_i == 1 and meals_per_day >= 5 else 150)
+                _sanitize_and_validate_meal(s_m, target_s, f"Colación {s_i + 1}")
+
+            total_cal = (
+                day_data.get("breakfast", {}).get("calories", 0)
+                + day_data.get("lunch", {}).get("calories", 0)
+                + day_data.get("dinner", {}).get("calories", 0)
+                + sum(m.get("calories", 0) for m in day_extra)
+            )
+
             new_plan = models.MealPlan(
                 date=plan_date,
                 breakfast=day_data.get("breakfast", {}),
                 lunch=day_data.get("lunch", {}),
                 dinner=day_data.get("dinner", {}),
+                extra_meals=day_extra,
                 total_calories=total_cal,
                 owner_id=current_user.id,
             )
