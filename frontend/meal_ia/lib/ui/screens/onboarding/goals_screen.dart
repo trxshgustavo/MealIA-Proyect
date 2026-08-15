@@ -107,7 +107,7 @@ class GoalsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageSize = ScreenUtils.getResponsiveImageSize(
       context,
-      baseSize: 180.0,
+      baseSize: 235.0,
     );
     final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
       context,
