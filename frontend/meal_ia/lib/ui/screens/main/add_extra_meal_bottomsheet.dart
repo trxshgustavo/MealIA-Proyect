@@ -56,6 +56,14 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
         _isAnalyzing = false;
         _analyzedMeal = result;
       });
+
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo identificar la comida. Intenta de nuevo o toma una foto más clara.'),
+          ),
+        );
+      }
     }
   }
 

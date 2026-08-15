@@ -1414,6 +1414,54 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
+  Future<List<dynamic>?> scanFridge(String imagePath) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
+
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-fridge'));
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(responseData);
+        return decoded['items'] as List<dynamic>?;
+      } else {
+        debugPrint("Error scanFridge: ${response.statusCode} - $responseData");
+      }
+    } catch (e) {
+      debugPrint("Error in scanFridge: $e");
+    }
+    return null;
+  }
+
+  Future<List<dynamic>?> scanReceipt(String imagePath) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
+
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-receipt'));
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(responseData);
+        return decoded['items'] as List<dynamic>?;
+      } else {
+        debugPrint("Error scanReceipt: ${response.statusCode} - $responseData");
+      }
+    } catch (e) {
+      debugPrint("Error in scanReceipt: $e");
+    }
+    return null;
+  }
+
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;

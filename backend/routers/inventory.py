@@ -220,3 +220,188 @@ def suggest_shopping_list(
 
         logging.getLogger(__name__).error(f"Error IA Shopping: {e}")
         raise HTTPException(status_code=500, detail="Error generando sugerencias")
+
+
+@router.post("/inventory/scan-fridge")
+async def scan_fridge(
+    image: UploadFile = File(...),
+    current_user: models.User = Depends(security.get_current_user),
+):
+    import logging
+    import base64
+    logger = logging.getLogger(__name__)
+
+    if not client:
+        raise HTTPException(status_code=503, detail="Servicio de IA no configurado")
+
+    try:
+        contents = await image.read()
+        base64_image = base64.b64encode(contents).decode("utf-8")
+        mime_type = image.content_type or "image/jpeg"
+
+        prompt = (
+            "Analiza la imagen minuciosamente y detecta todos los alimentos o productos presentes.\n"
+            "Devuelve ÚNICAMENTE un JSON ARRAY estrictamente válido en este formato exacto:\n"
+            "[\n"
+            "  {\n"
+            '    "alimento": "Nombre del producto en español",\n'
+            '    "cantidad_estimada": 1.0,\n'
+            '    "unidad_estimada": "Unidades/Kg/g/L/ml/paquete",\n'
+            '    "calorias": 100,\n'
+            '    "info": "Breve descripción"\n'
+            "  }\n"
+            "]\n"
+            "REGLAS:\n"
+            "1. Diferencia claramente entre productos (ej: no agrupes 'frutas', lista 'manzana', 'plátano' por separado).\n"
+            "2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo.\n"
+            "3. Usa 'Unidades' si es contable. Usa 'g' o 'Kg' si es peso. Usa 'L' o 'ml' para líquidos.\n"
+            "4. Si no ves alimentos, devuelve []."
+        )
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{mime_type};base64,{base64_image}"},
+                        },
+                    ],
+                }
+            ],
+            response_format={"type": "json_object"} if False else None,
+            max_tokens=1000,
+        )
+
+        raw_text = response.choices[0].message.content.strip()
+        cleaned = raw_text.replace("```json", "").replace("```", "").strip()
+        
+        try:
+            items = json.loads(cleaned)
+            if isinstance(items, dict) and "items" in items:
+                items = items["items"]
+            elif isinstance(items, dict) and "alimentos" in items:
+                items = items["alimentos"]
+            if not isinstance(items, list):
+                items = []
+        except Exception:
+            items = []
+
+        return {"items": items}
+    except Exception as e:
+        logger.error(f"Error escaneando refrigerador con IA: {e}")
+        raise HTTPException(status_code=500, detail="Error al escanear la imagen")
+
+
+@router.post("/inventory/scan-receipt")
+async def scan_receipt(
+    image: UploadFile = File(...),
+    current_user: models.User = Depends(security.get_current_user),
+):
+    import logging
+    import base64
+    import httpx
+    logger = logging.getLogger(__name__)
+
+    if not client:
+        raise HTTPException(status_code=503, detail="Servicio de IA no configurado")
+
+    try:
+        contents = await image.read()
+        base64_image = base64.b64encode(contents).decode("utf-8")
+        mime_type = image.content_type or "image/jpeg"
+
+        prompt = (
+            "Analiza esta imagen de una boleta de supermercado.\n"
+            "Tu objetivo es extraer los nombres de los productos alimenticios y cualquier código numérico o de barras impreso.\n"
+            "Devuelve ÚNICAMENTE un JSON ARRAY estrictamente válido en este formato exacto:\n"
+            "[\n"
+            "  {\n"
+            '    "codigo_barras": "1234567890123 o vacío si no hay",\n'
+            '    "alimento": "Nombre del producto en español",\n'
+            '    "cantidad_estimada": 1.0,\n'
+            '    "unidad_estimada": "Unidades"\n'
+            "  }\n"
+            "]\n"
+            "Si no encuentras productos, devuelve []."
+        )
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{mime_type};base64,{base64_image}"},
+                        },
+                    ],
+                }
+            ],
+            max_tokens=1000,
+        )
+
+        raw_text = response.choices[0].message.content.strip()
+        cleaned = raw_text.replace("```json", "").replace("```", "").strip()
+        
+        try:
+            detected = json.loads(cleaned)
+            if isinstance(detected, dict) and "items" in detected:
+                detected = detected["items"]
+            if not isinstance(detected, list):
+                detected = []
+        except Exception:
+            detected = []
+
+        # Enriquecer con OpenFoodFacts si hay códigos de barra
+        final_items = []
+        async with httpx.AsyncClient(timeout=8) as http_c:
+            for it in detected:
+                barcode = str(it.get("codigo_barras", "")).strip()
+                name = it.get("alimento", "")
+                qty = float(it.get("cantidad_estimada", 1.0))
+                unit = it.get("unidad_estimada", "Unidades")
+                cals = 100
+                carbs = 10
+                prot = 5
+                fat = 2
+
+                if barcode and barcode.isdigit() and len(barcode) >= 6:
+                    try:
+                        off_url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
+                        off_resp = await http_c.get(off_url)
+                        if off_resp.status_code == 200:
+                            off_data = off_resp.json()
+                            if off_data.get("status") == 1 and "product" in off_data:
+                                p = off_data["product"]
+                                p_name = p.get("product_name_es") or p.get("product_name") or name
+                                brand = p.get("brands", "")
+                                name = f"{brand} - {p_name}".strip(" -")
+                                nut = p.get("nutriments", {})
+                                cals = int(float(nut.get("energy-kcal_100g") or nut.get("energy-kcal") or 100))
+                                carbs = int(float(nut.get("carbohydrates_100g") or 10))
+                                prot = int(float(nut.get("proteins_100g") or 5))
+                                fat = int(float(nut.get("fat_100g") or 2))
+                    except Exception:
+                        pass
+
+                final_items.append({
+                    "alimento": name,
+                    "codigo_barras": barcode,
+                    "cantidad_estimada": qty,
+                    "unidad_estimada": unit,
+                    "calorias": cals,
+                    "carbs": carbs,
+                    "proteinas": prot,
+                    "grasas": fat,
+                })
+
+        return {"items": final_items}
+    except Exception as e:
+        logger.error(f"Error escaneando boleta con IA: {e}")
+        raise HTTPException(status_code=500, detail="Error al escanear la boleta")

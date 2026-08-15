@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -149,18 +150,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
       return;
     }
 
-    final apiKey = dotenv.env['GEMINI_API_KEY'];
-    if (apiKey == null || apiKey.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Falta GEMINI_API_KEY'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
+    final appState = Provider.of<AppState>(context, listen: false);
 
     setState(() {
       _isAnalyzing = true;
@@ -169,135 +159,102 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
 
     try {
       final image = await _controller!.takePicture();
-      final bytes = await image.readAsBytes();
 
-      // Updated model list based on user's successful access
-      final modelsToTry = [
-        'gemini-2.5-flash',
-        'gemini-flash-latest',
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-exp',
-      ];
+      // 1. Intentar análisis con backend (OpenAI GPT-4o Vision)
+      final backendItems = await appState.scanFridge(image.path);
 
-      String? resultText;
-      Object? firstError;
-
-      for (final modelName in modelsToTry) {
-        try {
-          debugPrint("Attempting model: $modelName");
-          final model = GenerativeModel(model: modelName, apiKey: apiKey);
-
-          final prompt = Content.multi([
-            TextPart(
-              'Analiza la imagen minuciosamente y detecta todos los alimentos o productos de supermercado presentes. '
-              'Devuelve un JSON ARRAY estrictamente válido. '
-              'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "info": "breve descripción"}]. '
-              'REGLAS DE PRECISIÓN:\n'
-              '1. Diferencia claramente entre productos (ej: no agrupes "frutas", lista "manzana", "plátano" por separado).\n'
-              '2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo o etiquetas visibles.\n'
-              '3. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
-              '4. Si no ves alimentos, devuelve [].\n'
-              'NO uses markdown. Solo JSON plano.',
-            ),
-            DataPart('image/jpeg', bytes),
-          ]);
-
-          final response = await model.generateContent([prompt]);
-          resultText = response.text;
-
-          if (resultText != null) {
-            debugPrint("Success with model: $modelName");
-            break;
-          }
-        } catch (e) {
-          debugPrint("Failed with model $modelName: $e");
-          firstError ??= e;
-        }
-      }
-
-      if (resultText != null) {
-        String cleanJson = resultText
-            .replaceAll('```json', '')
-            .replaceAll('```', '')
-            .trim();
-
-        try {
-          final List<dynamic> decoded = jsonDecode(cleanJson);
+      if (backendItems != null && backendItems.isNotEmpty) {
+        if (mounted) {
           setState(() {
-            _detectedItems = decoded
+            _detectedItems = backendItems
                 .map((e) => ScannedFood.fromJson(e))
                 .toList();
-            // Validate units against allowlist
             for (var item in _detectedItems) {
               if (!_validUnits.contains(item.unit)) {
-                item.unit = 'Unidades'; // Fallback
+                item.unit = 'Unidades';
               }
             }
           });
+        }
+        return;
+      }
 
-          if (_detectedItems.isEmpty) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('No detecté comida clara.')),
-              );
-            }
-          }
-        } catch (e) {
-          debugPrint("Error parsing JSON: $resultText");
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Error al interpretar la IA. Intenta otra vez.'),
+      // 2. Fallback con Gemini si está configurado en el cliente
+      final apiKey = dotenv.env['GEMINI_API_KEY'];
+      if (apiKey != null && apiKey.isNotEmpty) {
+        final bytes = await image.readAsBytes();
+        final modelsToTry = [
+          'gemini-2.5-flash',
+          'gemini-flash-latest',
+          'gemini-2.0-flash',
+          'gemini-2.0-flash-exp',
+        ];
+
+        String? resultText;
+        for (final modelName in modelsToTry) {
+          try {
+            final model = GenerativeModel(model: modelName, apiKey: apiKey);
+            final prompt = Content.multi([
+              TextPart(
+                'Analiza la imagen minuciosamente y detecta todos los alimentos o productos de supermercado presentes. '
+                'Devuelve un JSON ARRAY estrictamente válido. '
+                'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "info": "breve descripción"}]. '
+                'REGLAS DE PRECISIÓN:\n'
+                '1. Diferencia claramente entre productos (ej: no agrupes "frutas", lista "manzana", "plátano" por separado).\n'
+                '2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo o etiquetas visibles.\n'
+                '3. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
+                '4. Si no ves alimentos, devuelve [].\n'
+                'NO uses markdown. Solo JSON plano.',
               ),
-            );
-          }
+              DataPart('image/jpeg', bytes),
+            ]);
+
+            final response = await model.generateContent([prompt]);
+            resultText = response.text;
+            if (resultText != null) break;
+          } catch (_) {}
         }
-      } else {
-        // Debug fallback
-        String debugInfo = "No info";
-        try {
-          final url = Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey',
-          );
-          final debugResponse = await http.get(url);
-          if (debugResponse.statusCode == 200) {
-            final json = jsonDecode(debugResponse.body);
-            final models = (json['models'] as List)
-                .map((m) => m['name'])
-                .where((n) => n.toString().toLowerCase().contains('gemini'))
-                .join('\n');
-            debugInfo = "Modelos DISPONIBLES:\n$models";
-          } else {
-            debugInfo = "Error listando: ${debugResponse.statusCode}";
+
+        if (resultText != null) {
+          String cleanJson = resultText
+              .replaceAll('```json', '')
+              .replaceAll('```', '')
+              .trim();
+          final List<dynamic> decoded = jsonDecode(cleanJson);
+          if (mounted) {
+            setState(() {
+              _detectedItems = decoded
+                  .map((e) => ScannedFood.fromJson(e))
+                  .toList();
+              for (var item in _detectedItems) {
+                if (!_validUnits.contains(item.unit)) {
+                  item.unit = 'Unidades';
+                }
+              }
+            });
           }
-        } catch (e) {
-          debugInfo = "Falló debug: $e";
+          return;
         }
-        throw Exception(
-          "Fallo total. Primer error: $firstError. \n\n$debugInfo",
+      }
+
+      if (_detectedItems.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se detectaron alimentos claros. Intenta acercar la cámara o con mejor iluminación.'),
+          ),
         );
       }
     } catch (e) {
       debugPrint("Analysis Error: $e");
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Error"),
-            content: SingleChildScrollView(
-              child: Text(e.toString().replaceAll('Exception:', '')),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("OK"),
-              ),
-            ],
-          ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al analizar imagen: $e')),
         );
       }
     } finally {
-      setState(() => _isAnalyzing = false);
+      if (mounted) {
+        setState(() => _isAnalyzing = false);
+      }
     }
   }
 
