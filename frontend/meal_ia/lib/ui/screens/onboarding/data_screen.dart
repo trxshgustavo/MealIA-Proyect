@@ -247,16 +247,15 @@ class _DataScreenState extends State<DataScreen> {
   Widget build(BuildContext context) {
     final imageSize = ScreenUtils.getResponsiveImageSize(
       context,
-      baseSize: 280.0,
+      baseSize: 180.0,
     );
     final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
       context,
     );
     final verticalSpacing = ScreenUtils.getVerticalSpacing(
       context,
-      defaultSpacing: 20.0,
+      defaultSpacing: 16.0,
     );
-    final formPadding = ScreenUtils.getFormPadding(context);
 
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
@@ -275,18 +274,17 @@ class _DataScreenState extends State<DataScreen> {
               )
             : null,
       ),
-      extendBodyBehindAppBar: true,
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: ScreenUtils.getMaxContainerWidth(context),
           ),
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(horizontalPadding),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12.h),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Only show image if enough space or in onboarding (optional tweak, leaving standard)
                 Image.asset(
                   'assets/carrot.png',
                   height: imageSize,
@@ -300,16 +298,16 @@ class _DataScreenState extends State<DataScreen> {
                 SizedBox(height: verticalSpacing),
 
                 Container(
-                  padding: formPadding,
+                  padding: EdgeInsets.all(20.0.w),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.black.withValues(alpha: 0.05),
                         spreadRadius: 0,
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        blurRadius: 10.r,
+                        offset: Offset(0, 4.h),
                       ),
                     ],
                   ),
@@ -319,16 +317,16 @@ class _DataScreenState extends State<DataScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
+                        Text(
                           'Cuéntanos sobre ti',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 20.sp,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primaryText,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20.h),
 
                         DropdownButtonFormField<String>(
                           initialValue: _selectedGender,
