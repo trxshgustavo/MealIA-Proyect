@@ -245,20 +245,13 @@ class _DataScreenState extends State<DataScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final imageSize = ScreenUtils.getResponsiveImageSize(
-      context,
-      baseSize: 235.0,
-    );
     final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(
       context,
-    );
-    final verticalSpacing = ScreenUtils.getVerticalSpacing(
-      context,
-      defaultSpacing: 16.0,
     );
 
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -280,22 +273,27 @@ class _DataScreenState extends State<DataScreen> {
             maxWidth: ScreenUtils.getMaxContainerWidth(context),
           ),
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12.h),
+            padding: EdgeInsets.only(
+              left: horizontalPadding,
+              right: horizontalPadding,
+              top: MediaQuery.of(context).padding.top + 8.h,
+              bottom: 24.h,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Image.asset(
                   'assets/carrot.png',
-                  height: imageSize,
-                  width: imageSize,
+                  height: 190.h,
+                  width: 190.h,
                   errorBuilder: (context, error, stackTrace) => const Icon(
                     Icons.analytics,
                     size: 100,
                     color: AppColors.primaryText,
                   ),
                 ),
-                SizedBox(height: verticalSpacing),
+                SizedBox(height: 16.h),
 
                 Container(
                   padding: EdgeInsets.all(20.0.w),
