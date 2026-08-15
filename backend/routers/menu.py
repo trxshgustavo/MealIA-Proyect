@@ -348,26 +348,56 @@ def save_recipe(
     return new_recipe
 
 
-def create_goal_aligned_snack(goal: Optional[str], cal_target: int, snack_num: int):
+def create_goal_aligned_snack(goal: Optional[str], cal_target: int, snack_num: int, available_ingredients: Optional[list] = None):
+    available = [str(i).strip() for i in (available_ingredients or []) if str(i).strip()]
     goal_str = (goal or "").lower()
+    
+    selected_ingredients = []
+    if available:
+        fruits_and_veg = [x for x in available if any(k in x.lower() for k in ["manzana", "platano", "banana", "naranja", "frutilla", "pera", "zanahoria", "pepino", "tomate", "fruta", "palta", "aguacate", "berries", "frutos"])]
+        proteins = [x for x in available if any(k in x.lower() for k in ["huevo", "yogurt", "queso", "leche", "atun", "pollo", "pavo", "proteina", "tofu"])]
+        nuts_and_seeds = [x for x in available if any(k in x.lower() for k in ["nuez", "almendra", "mani", "semilla", "chia", "avena", "fruto", "cereal"])]
+        
+        if "déficit" in goal_str or "deficit" in goal_str or "bajar" in goal_str:
+            if fruits_and_veg:
+                selected_ingredients.append(f"1 porción de {fruits_and_veg[0]}")
+            if nuts_and_seeds:
+                selected_ingredients.append(f"1 porción de {nuts_and_seeds[0]}")
+            elif proteins:
+                selected_ingredients.append(f"1 porción de {proteins[0]}")
+        elif "músculo" in goal_str or "muscular" in goal_str or "ganar" in goal_str or "masa" in goal_str:
+            if proteins:
+                selected_ingredients.append(f"1 porción de {proteins[0]}")
+            if nuts_and_seeds or fruits_and_veg:
+                other = nuts_and_seeds[0] if nuts_and_seeds else fruits_and_veg[0]
+                selected_ingredients.append(f"1 porción de {other}")
+        else:
+            if available:
+                selected_ingredients.append(f"1 porción de {available[0]}")
+            if len(available) > 1:
+                selected_ingredients.append(f"1 porción de {available[1]}")
+                
+    if not selected_ingredients:
+        if available:
+            selected_ingredients = [f"1 porción de {item}" for item in available[:2]]
+        else:
+            selected_ingredients = ["1 porción de fruta fresca o vegetal del inventario"]
+
     if "déficit" in goal_str or "deficit" in goal_str or "bajar" in goal_str:
         name = f"Colación {snack_num}: Snack Saciante Ligero"
-        ingredients = ["1 porción de fruta fresca o bastones de verduras", "1 puñado pequeño de frutos secos o semillas"]
-        steps = ["Lavar y preparar los ingredientes frescos.", "Emplatar en un cuenco pequeño y disfrutar."]
+        steps = ["Preparar los ingredientes seleccionados del inventario.", "Servir fresco para mantener la saciedad."]
         protein = max(4, int(cal_target * 0.20 / 4))
         fat = max(3, int(cal_target * 0.30 / 9))
         carbs = max(10, int(cal_target * 0.50 / 4))
     elif "músculo" in goal_str or "muscular" in goal_str or "ganar" in goal_str or "masa" in goal_str:
         name = f"Colación {snack_num}: Snack Proteico Energético"
-        ingredients = ["1 porción de yogurt griego, queso fresco o huevo", "1 porción de fruta o avena"]
-        steps = ["Preparar la porción proteica con la fruta o cereal.", "Consumir para apoyar la recuperación y síntesis muscular."]
+        steps = ["Preparar la porción proteica del inventario.", "Consumir para apoyar la recuperación y síntesis muscular."]
         protein = max(12, int(cal_target * 0.35 / 4))
         fat = max(4, int(cal_target * 0.25 / 9))
         carbs = max(15, int(cal_target * 0.40 / 4))
     else:
-        name = f"Colación {snack_num}: Snack Equilibrado"
-        ingredients = ["1 porción de fruta o snack saludable", "1 porción de frutos secos o semillas"]
-        steps = ["Preparar los ingredientes frescos.", "Emplatar y disfrutar como refrigerio nutritivo."]
+        name = f"Colación {snack_num}: Snack Nutritivo Equilibrado"
+        steps = ["Preparar los ingredientes disponibles del inventario.", "Servir como refrigerio nutritivo."]
         protein = max(6, int(cal_target * 0.25 / 4))
         fat = max(4, int(cal_target * 0.30 / 9))
         carbs = max(12, int(cal_target * 0.45 / 4))
@@ -375,7 +405,7 @@ def create_goal_aligned_snack(goal: Optional[str], cal_target: int, snack_num: i
     cal = (protein * 4) + (carbs * 4) + (fat * 9)
     return {
         "name": name,
-        "ingredients": ingredients,
+        "ingredients": selected_ingredients,
         "steps": steps,
         "calories": cal,
         "protein": protein,
@@ -824,7 +854,7 @@ FORMATO JSON OBLIGATORIO:
             if meals_per_day == 4:
                 while len(menu_data["extra_meals"]) < 1:
                     menu_data["extra_meals"].append(
-                        create_goal_aligned_snack(current_user.goal, snack1_cal_target, 1)
+                        create_goal_aligned_snack(current_user.goal, snack1_cal_target, 1, inventory_names)
                     )
                 menu_data["extra_meals"] = menu_data["extra_meals"][:1]
             elif meals_per_day >= 5:
@@ -832,7 +862,7 @@ FORMATO JSON OBLIGATORIO:
                     idx = len(menu_data["extra_meals"]) + 1
                     target_snack = snack1_cal_target if idx == 1 else snack2_cal_target
                     menu_data["extra_meals"].append(
-                        create_goal_aligned_snack(current_user.goal, target_snack, idx)
+                        create_goal_aligned_snack(current_user.goal, target_snack, idx, inventory_names)
                     )
                 menu_data["extra_meals"] = menu_data["extra_meals"][:2]
             else:
@@ -1030,6 +1060,11 @@ FORMATO JSON OBLIGATORIO:
       }},
       "lunch": {{ ... }},
       "dinner": {{ ... }},
+      "extra_meals": [
+        // Si meals_per_day es 4: exactamente 1 comida snack usando SOLO ingredientes del inventario
+        // Si meals_per_day es 5: exactamente 2 comidas snacks usando SOLO ingredientes del inventario
+        // Si meals_per_day es 3: lista vacia []
+      ],
       "note": "Breve nota del dia",
       "total_calories": 0
     }}
@@ -1138,13 +1173,13 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
                 day_extra = []
             if meals_per_day == 4:
                 while len(day_extra) < 1:
-                    day_extra.append(create_goal_aligned_snack(current_user.goal, snack1_cal_target, 1))
+                    day_extra.append(create_goal_aligned_snack(current_user.goal, snack1_cal_target, 1, inventory_names))
                 day_extra = day_extra[:1]
             elif meals_per_day >= 5:
                 while len(day_extra) < 2:
                     s_idx = len(day_extra) + 1
                     s_cal = snack1_cal_target if s_idx == 1 else snack2_cal_target
-                    day_extra.append(create_goal_aligned_snack(current_user.goal, s_cal, s_idx))
+                    day_extra.append(create_goal_aligned_snack(current_user.goal, s_cal, s_idx, inventory_names))
                 day_extra = day_extra[:2]
             else:
                 day_extra = []
