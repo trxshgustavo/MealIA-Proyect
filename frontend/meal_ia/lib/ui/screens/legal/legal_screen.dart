@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import '../theme/app_colors.dart';
@@ -15,31 +16,26 @@ class LegalScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
       appBar: AppBar(
-        toolbarHeight: 80,
-        leadingWidth: 80,
-        title: Padding(
-          padding: const EdgeInsets.only(top: 16.0),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryText,
-            ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryText,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.only(top: 16.0, left: 16.0),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            iconSize: 42,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 20,
             color: AppColors.primaryText,
-            onPressed: () => Navigator.pop(context),
           ),
+          onPressed: () => Navigator.pop(context),
         ),
-        iconTheme: const IconThemeData(color: AppColors.primaryText, size: 42),
       ),
       body: FutureBuilder<String>(
         future: rootBundle.loadString('assets/legal/$mdFileName'),
@@ -54,11 +50,11 @@ class LegalScreen extends StatelessWidget {
           if (snapshot.hasData) {
             final htmlData = md.markdownToHtml(snapshot.data!);
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
               child: HtmlWidget(
-                '<div style="text-align: justify;">$htmlData</div>',
-                textStyle: const TextStyle(
-                  fontSize: 16,
+                '<div style="text-align: left; line-height: 1.6;">$htmlData</div>',
+                textStyle: TextStyle(
+                  fontSize: 15.sp,
                   height: 1.6,
                   color: AppColors.secondaryText,
                 ),

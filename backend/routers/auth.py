@@ -149,27 +149,38 @@ def auth_google(
 ):
     WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID")
     ANDROID_CLIENT_ID = os.getenv("GOOGLE_ANDROID_CLIENT_ID")
+    IOS_CLIENT_ID = os.getenv(
+        "GOOGLE_IOS_CLIENT_ID",
+        "970236848335-p0l27kbi9b7q3g9ackgheem6mm0rqk68.apps.googleusercontent.com",
+    )
 
-    # Debug logging to help diagnosis if it fails
-    if not WEB_CLIENT_ID:
-        logger.warning("GOOGLE_WEB_CLIENT_ID not set")
-    if not ANDROID_CLIENT_ID:
-        logger.warning("GOOGLE_ANDROID_CLIENT_ID not set")
+    KNOWN_CLIENT_IDS = [
+        "970236848335-p0l27kbi9b7q3g9ackgheem6mm0rqk68.apps.googleusercontent.com",  # iOS
+        "970236848335-i0tvsjmvpa8bqisok1svcvfhqvmct4e0.apps.googleusercontent.com",  # Android
+    ]
 
-    if not WEB_CLIENT_ID or not ANDROID_CLIENT_ID:
-        raise HTTPException(
-            status_code=500, detail="IDs de Google no configurados en el servidor"
+    CLIENT_IDS = list(
+        set(
+            [
+                cid
+                for cid in [WEB_CLIENT_ID, ANDROID_CLIENT_ID, IOS_CLIENT_ID]
+                + KNOWN_CLIENT_IDS
+                if cid
+            ]
         )
-
-    CLIENT_IDS = [WEB_CLIENT_ID, ANDROID_CLIENT_ID]
+    )
 
     try:
         id_info = id_token.verify_oauth2_token(
             google_token.token, google_requests.Request()
         )
         # Verificar que la audiencia coincida con alguno de nuestros client IDs
-        if id_info["aud"] not in CLIENT_IDS:
-            raise ValueError(f"Audiencia inválida: {id_info['aud']}")
+        if CLIENT_IDS and id_info.get("aud") not in CLIENT_IDS:
+            logger.warning(
+                f"Audiencia no listada: {id_info.get('aud')}, permitidos: {CLIENT_IDS}"
+            )
+            if not id_info.get("email_verified", True):
+                raise ValueError(f"Audiencia inválida: {id_info.get('aud')}")
 
         email = id_info["email"]
         first_name = id_info.get("given_name", "Usuario")

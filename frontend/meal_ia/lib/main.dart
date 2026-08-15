@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -94,7 +95,7 @@ class MealIAApp extends StatelessWidget {
               visualDensity: VisualDensity.adaptivePlatformDensity,
               scaffoldBackgroundColor: const Color(0xFFFFFFFF),
               // GLOBAL TRANSITION: Instagram/iOS style Slide transition
-              pageTransitionsTheme: const PageTransitionsTheme(
+              pageTransitionsTheme: PageTransitionsTheme(
                 builders: {
                   TargetPlatform.android: CupertinoPageTransitionsBuilder(),
                   TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),

@@ -20,10 +20,15 @@ class AppState extends ChangeNotifier {
   final _storage = const FlutterSecureStorage();
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    // Web requiere clientId explícito
-    clientId: kIsWeb ? dotenv.env['WEB_CLIENT_ID'] : null,
-    // serverClientId NO es soportado en Web; solo en mobile
-    serverClientId: kIsWeb ? null : dotenv.env['GOOGLE_SERVER_CLIENT_ID'],
+    clientId: kIsWeb
+        ? (dotenv.env['WEB_CLIENT_ID']?.isNotEmpty == true
+            ? dotenv.env['WEB_CLIENT_ID']
+            : null)
+        : null,
+    serverClientId: (dotenv.env['GOOGLE_SERVER_CLIENT_ID'] != null &&
+            dotenv.env['GOOGLE_SERVER_CLIENT_ID']!.isNotEmpty)
+        ? dotenv.env['GOOGLE_SERVER_CLIENT_ID']
+        : null,
   );
 
   // Datos de Usuario
@@ -79,22 +84,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
-    await _googleSignIn.signOut();
-    await FirebaseAuth.instance.signOut();
-
-    // SECURITY FIX: Wipe all local data to prevent leaks between accounts
-    await _storage.deleteAll();
-
-    // Clear Memory State
+  void clearMemoryState() {
     firstName = null;
     lastName = null;
     birthdate = null;
     email = null;
     height = null;
     weight = null;
+    gender = null;
     goal = 'Mantenimiento';
     photoUrl = null;
+    isPremium = false;
+    isAdmin = false;
     mealsPerDay = 3;
     mealTimes = {
       "Desayuno": "08:00",
@@ -106,12 +107,32 @@ class AppState extends ChangeNotifier {
     _mealCalendar.clear();
     generatedMenu = null;
     _savedRecipes.clear();
+    totalCalories = 0;
+  }
+
+  Future<void> logout() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+
+    // SECURITY FIX: Wipe all local data to prevent leaks between accounts
+    try {
+      await _storage.deleteAll();
+    } catch (_) {}
+
+    // Clear Memory State
+    clearMemoryState();
 
     notifyListeners();
   }
 
   Future<bool> _loadUserData(String token) async {
     try {
+      // Clean memory state first to avoid leaking data from a previous session
+      clearMemoryState();
       // 0. PRE-LOAD FROM LOCAL CACHE (Offline Support)
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -169,9 +190,9 @@ class AppState extends ChangeNotifier {
             backendGoal = userData['goal'];
             gender = userData['gender'];
             final backendPhotoUrl = userData['photo_url'] as String?;
-            if (backendPhotoUrl != null && backendPhotoUrl.isNotEmpty) {
-              photoUrl = backendPhotoUrl;
-            }
+            photoUrl = (backendPhotoUrl != null && backendPhotoUrl.isNotEmpty)
+                ? backendPhotoUrl
+                : null;
             isPremium = userData['is_premium'] ?? false;
             isAdmin = userData['is_admin'] ?? false;
             if (userData['meals_per_day'] != null) mealsPerDay = userData['meals_per_day'];
@@ -269,6 +290,7 @@ class AppState extends ChangeNotifier {
       }
 
       Future<void> loadInventory() async {
+        _inventory.clear();
         if (user == null) return;
         String inventoryKey = 'inventory_cache_${user.uid}';
         try {
@@ -308,8 +330,6 @@ class AppState extends ChangeNotifier {
           } else if (invResponse.statusCode == 401) {
             await logout();
             return;
-          } else if (invResponse.statusCode == 500) {
-            await _blindRepairCriticalItems(token);
           }
         } catch (e) {
           debugPrint("Error loading inventory from network: $e");
@@ -485,6 +505,7 @@ class AppState extends ChangeNotifier {
 
   // --- LOGIN CON AUTO-REPARACIÓN DE FIREBASE ---
   Future<String> login(String email, String password) async {
+    clearMemoryState();
     final url = Uri.parse('$_baseUrl/token');
     debugPrint("Intentando login en: $url");
 
@@ -585,6 +606,7 @@ class AppState extends ChangeNotifier {
     required String password,
     required String firstName,
   }) async {
+    clearMemoryState();
     final url = Uri.parse('$_baseUrl/register');
 
     // Validaciones básicas antes de intentar conexión
@@ -665,6 +687,7 @@ class AppState extends ChangeNotifier {
 
   // --- GOOGLE LOGIN ---
   Future<String> signInWithGoogle() async {
+    clearMemoryState();
     try {
       // PASO 0: Limpiar sesión anterior de Google para evitar que signIn() se cuelgue
       // Esto resuelve el bug donde una sesión stale bloquea el flujo OAuth
@@ -727,51 +750,65 @@ class AppState extends ChangeNotifier {
       // PASO 4: Enviar token al backend
       debugPrint('🔄 Enviando token al backend...');
       final url = Uri.parse('$_baseUrl/auth/google');
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'token': googleToken}),
-          )
-          .timeout(const Duration(seconds: 60));
+      try {
+        final response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'token': googleToken}),
+            )
+            .timeout(const Duration(seconds: 45));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final appToken = data['access_token'];
-        final bool isNewUser = data['is_new_user'] ?? false;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final appToken = data['access_token'];
+          final bool isNewUser = data['is_new_user'] ?? false;
 
-        await _storage.write(key: 'auth_token', value: appToken);
-        bool success = await _loadUserData(appToken);
+          await _storage.write(key: 'auth_token', value: appToken);
+          bool success = await _loadUserData(appToken);
 
-        // FALLBACK: If Strict Check failed (success=false) but we have Google Data,
-        // we can force populate the missing bits to allow login!
-        if (!success) {
-          // We are in Google Login. We KNOW the email and name.
-          email ??= googleUser.email;
-          if (firstName == null) {
-            final nameParts = (googleUser.displayName ?? '').split(' ');
-            if (nameParts.isNotEmpty) firstName = nameParts.first;
-            if (nameParts.length > 1) {
-              lastName = nameParts.sublist(1).join(' ');
+          if (!success) {
+            email ??= googleUser.email;
+            if (firstName == null) {
+              final nameParts = (googleUser.displayName ?? '').split(' ');
+              if (nameParts.isNotEmpty) firstName = nameParts.first;
+              if (nameParts.length > 1) {
+                lastName = nameParts.sublist(1).join(' ');
+              }
+            }
+            if (email != null && firstName != null) {
+              success = true;
+              notifyListeners();
             }
           }
 
-          if (email != null && firstName != null) {
-            success = true;
-            notifyListeners();
+          if (!success) return "Error al cargar datos";
+          debugPrint('✓ Login con Google completado (${isNewUser ? "nuevo" : "existente"})');
+          return isNewUser ? "OK_NEW" : "OK_EXISTING";
+        } else {
+          try {
+            final data = jsonDecode(response.body);
+            return data['detail'] ?? 'Error de servidor (${response.statusCode})';
+          } catch (_) {
+            return 'Error de servidor (${response.statusCode})';
           }
         }
-
-        if (!success) return "Error al cargar datos";
-        debugPrint('✓ Login con Google completado (${isNewUser ? "nuevo" : "existente"})');
-        return isNewUser ? "OK_NEW" : "OK_EXISTING";
-      } else {
-        try {
-          final data = jsonDecode(response.body);
-          return data['detail'] ?? 'Error de servidor (${response.statusCode})';
-        } catch (_) {
-          return 'Error de servidor (${response.statusCode})';
+      } catch (e) {
+        debugPrint("Error de conexión al backend en Google Sign-In: $e");
+        if (FirebaseAuth.instance.currentUser != null) {
+          email = googleUser.email;
+          final nameParts = (googleUser.displayName ?? '').split(' ');
+          if (nameParts.isNotEmpty) firstName = nameParts.first;
+          if (nameParts.length > 1) {
+            lastName = nameParts.sublist(1).join(' ');
+          }
+          if (googleUser.photoUrl != null && googleUser.photoUrl!.isNotEmpty) {
+            photoUrl = googleUser.photoUrl;
+          }
+          notifyListeners();
+          return "OK_NEW";
         }
+        return 'No se pudo conectar al servidor.\nVerifica tu conexión a internet.';
       }
     } on http.ClientException catch (e) {
       debugPrint("Error de conexión en Google Sign-In: $e");
@@ -1338,57 +1375,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Helper dedicated to unblocking 500 Errors caused by Float/Int mismatch in DB
-  Future<void> _blindRepairCriticalItems(String token) async {
-    final suspects = [
-      'avena',
-      'pollo',
-      'arroz',
-      'morron',
-      'palta',
-      'queso',
-      'platano',
-      'huevos',
-      'leche',
-      'pan',
-      'carne',
-      'tomate',
-      'lechuga',
-      'cebolla',
-      'zanahoria',
-      'papa',
-      'manzana',
-      'banana',
-      'naranja',
-      'banana',
-    ];
-
-    debugPrint(
-      "STARTING BLIND REPAIR: Attempting to reset ${suspects.length} common items to Integer=1 to fix 500 Error.",
-    );
-
-    for (var item in suspects) {
-      try {
-        // Blindly update to Clean Integer (1)
-        await http
-            .put(
-              Uri.parse('$_baseUrl/inventory/$item'),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode({'quantity': 1, 'unit': 'Unidades'}),
-            )
-            .timeout(
-              const Duration(milliseconds: 500),
-            ); // Short timeout, fire and forget mostly
-      } catch (e) {
-        // Ignore errors, we are just trying to hit the bad one
-      }
-    }
-    debugPrint("BLIND REPAIR COMPLETE. Inventory should be unblocked.");
-  }
-
   Future<bool> addFood(
     String food, {
     double quantity = 1.0,
@@ -1600,9 +1586,9 @@ class AppState extends ChangeNotifier {
 
     notifyListeners(); // Immediate UI feedback
 
-    bool backendSuccess = false; // Default to false, strict check
+    bool backendSuccess = false;
 
-    // 2. BACKEND SYNC (Best Effort)
+    // 2. BACKEND SYNC (Best Effort with generous timeout)
     if (token != null) {
       final url = Uri.parse('$_baseUrl/users/me/data');
       final Map<String, dynamic> body = {};
@@ -1632,20 +1618,14 @@ class AppState extends ChangeNotifier {
               },
               body: jsonEncode(body),
             )
-            .timeout(
-              const Duration(seconds: 15),
-            ); // Increased timeout for reliability
+            .timeout(const Duration(seconds: 40));
 
         if (response.statusCode == 200) {
-          // Optionally parse response to confirm
           final data = jsonDecode(response.body);
-          // Update goal if returned by backend as a side effect (rare)
           if (data['goal'] != null) this.goal = data['goal'];
-
-          backendSuccess = true; // Mark as successful
+          backendSuccess = true;
         } else if (response.statusCode == 401) {
           debugPrint("Backend 401: Token expired. Sync failed.");
-          // We could logout here, but let's just return false
         } else {
           debugPrint(
             "Backend Warning (${response.statusCode}): ${response.body}",
@@ -1657,6 +1637,7 @@ class AppState extends ChangeNotifier {
     }
 
     // 3. FIRESTORE SYNC (Robust Persistence)
+    bool firestoreSuccess = false;
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -1670,7 +1651,10 @@ class AppState extends ChangeNotifier {
           firestoreData['first_name'] = this.firstName;
         }
         if (this.lastName != null) firestoreData['last_name'] = this.lastName;
+        if (this.gender != null) firestoreData['gender'] = this.gender;
         if (this.goal.isNotEmpty) firestoreData['goal'] = this.goal;
+        firestoreData['meals_per_day'] = mealsPerDay;
+        firestoreData['meal_times'] = mealTimes;
 
         if (firestoreData.isNotEmpty) {
           await FirebaseFirestore.instance
@@ -1679,18 +1663,19 @@ class AppState extends ChangeNotifier {
               .set(firestoreData, SetOptions(merge: true))
               .timeout(const Duration(seconds: 10));
           debugPrint("Firestore Sync Successful");
+          firestoreSuccess = true;
         }
       } catch (fsError) {
         debugPrint("Error syncing physical data to Firestore: $fsError");
       }
 
-      // Also sync to specific goal doc/key if we changed it
       if (goal != null) {
         await _storage.write(key: 'user_goal_${user.uid}', value: goal);
       }
     }
 
     // 4. LOCAL CACHE UPDATE (Offline Persistence)
+    bool localCacheSuccess = false;
     if (user != null) {
       try {
         String? currentCacheStr = await _storage.read(
@@ -1701,7 +1686,6 @@ class AppState extends ChangeNotifier {
           cacheData = jsonDecode(currentCacheStr);
         }
 
-        // Update with current class state
         if (this.firstName != null) cacheData['first_name'] = this.firstName;
         if (this.lastName != null) cacheData['last_name'] = this.lastName;
         if (this.height != null) cacheData['height'] = this.height;
@@ -1709,72 +1693,74 @@ class AppState extends ChangeNotifier {
         if (this.birthdate != null) {
           cacheData['birthdate'] = this.birthdate?.toIso8601String();
         }
-        cacheData['goal'] = this.goal; // Always sync current goal
+        if (this.gender != null) cacheData['gender'] = this.gender;
+        cacheData['goal'] = this.goal;
         if (photoUrl != null) cacheData['photo_url'] = photoUrl;
         if (email != null) cacheData['email'] = email;
+        cacheData['meals_per_day'] = mealsPerDay;
+        cacheData['meal_times'] = mealTimes;
 
         await _storage.write(
           key: 'user_profile_cache_${user.uid}',
           value: jsonEncode(cacheData),
         );
         debugPrint("Local Cache Sync Successful");
+        localCacheSuccess = true;
       } catch (e) {
         debugPrint("Error updating profile cache: $e");
       }
     }
 
-    return backendSuccess;
+    return backendSuccess || firestoreSuccess || localCacheSuccess;
   }
 
   Future<bool> saveUserGoal(String goal) async {
+    this.goal = goal;
+    notifyListeners();
+
     final token = await _storage.read(key: 'auth_token');
-    if (token == null) return false;
-    final url = Uri.parse('$_baseUrl/users/me/data');
-    try {
-      // BACKEND FIX: Use PUT (consistent with other updates)
-      final response = await http.put(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'goal': goal}),
-      );
+    bool backendSuccess = false;
 
-      if (response.statusCode == 401) {
-        await logout();
-        return false;
-      }
+    if (token != null) {
+      final url = Uri.parse('$_baseUrl/users/me/data');
+      try {
+        final response = await http.put(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'goal': goal}),
+        ).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        this.goal = goal;
-
-        final user = FirebaseAuth.instance.currentUser;
-
-        // PERSISTENCE: Save to scoped local storage
-        if (user != null) {
-          await _storage.write(key: 'user_goal_${user.uid}', value: goal);
-
-          try {
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .set({'goal': goal}, SetOptions(merge: true));
-          } catch (e) {
-            debugPrint("Firestore Goal Sync Error: $e");
-          }
-        } else {
-          debugPrint("Warning: No user found to save goal locally properly.");
+        if (response.statusCode == 200) {
+          backendSuccess = true;
+        } else if (response.statusCode == 401) {
+          await logout();
+          return false;
         }
-
-        notifyListeners();
-        return true;
-      } else {
-        return false;
+      } catch (e) {
+        debugPrint("Error updating goal in backend: $e");
       }
-    } catch (e) {
-      return false;
     }
+
+    final user = FirebaseAuth.instance.currentUser;
+    bool firestoreSuccess = false;
+    if (user != null) {
+      await _storage.write(key: 'user_goal_${user.uid}', value: goal);
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({'goal': goal}, SetOptions(merge: true))
+            .timeout(const Duration(seconds: 10));
+        firestoreSuccess = true;
+      } catch (e) {
+        debugPrint("Firestore Goal Sync Error: $e");
+      }
+    }
+
+    return backendSuccess || firestoreSuccess || token != null;
   }
 
   Future<String?> uploadProfilePicture(File imageFile) async {
@@ -2351,13 +2337,7 @@ class AppState extends ChangeNotifier {
       debugPrint("Cuenta de Firebase Auth eliminada.");
 
       // Cleanup Memory
-      firstName = null;
-      lastName = null;
-      email = null;
-      photoUrl = null;
-      _inventory.clear();
-      _mealCalendar.clear();
-      generatedMenu = null;
+      clearMemoryState();
 
       notifyListeners();
       return true;

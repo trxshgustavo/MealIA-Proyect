@@ -16,6 +16,8 @@ services:
         sync: false
       - key: GOOGLE_ANDROID_CLIENT_ID
         sync: false
+      - key: GOOGLE_IOS_CLIENT_ID
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: SQLALCHEMY_DATABASE_URL

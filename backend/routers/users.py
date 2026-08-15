@@ -42,6 +42,8 @@ def update_user_data(
         current_user.birthdate = data.birthdate
     if data.goal is not None:
         current_user.goal = data.goal
+    if data.gender is not None:
+        current_user.gender = data.gender
     if data.photo_url is not None:
         current_user.photo_url = data.photo_url
     if data.meals_per_day is not None:

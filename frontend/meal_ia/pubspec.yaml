@@ -17,21 +17,20 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   intl: ^0.20.2
   numberpicker: ^2.1.2
-  firebase_core: ^2.32.0
-  # Mantenemos la versión segura aquí
+  firebase_core: ^4.13.0
   google_sign_in: ^6.3.0
   flutter_dotenv: ^5.1.0
   cupertino_icons: ^1.0.8
   image_picker: ^1.2.2
   video_player: ^2.8.1
-  firebase_auth: ^4.20.0
-  firebase_storage: ^11.7.7
-  cloud_firestore: ^4.17.5
+  firebase_auth: ^6.5.7
+  firebase_storage: ^13.4.6
+  cloud_firestore: ^6.8.0
   camera: ^0.10.6
   permission_handler: ^12.0.1
   path_provider: ^2.1.5
   google_generative_ai: ^0.4.7
-  firebase_app_check: ^0.2.2+7
+  firebase_app_check: ^0.4.6
   in_app_purchase: ^3.1.13
   flutter_widget_from_html: ^0.16.1
   markdown: ^7.3.1
@@ -46,6 +45,9 @@ dev_dependencies:
   flutter_launcher_icons: "^0.13.1"
 
 flutter:
+  config:
+    enable-swift-package-manager: false
+
   uses-material-design: true
 
   assets:

@@ -72,6 +72,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
     Provider.of<AppState>(context, listen: false).removeFood(foodKey);
   }
 
+  String _formatQuantity(double qty) {
+    if ((qty - qty.round()).abs() < 0.0001) {
+      return qty.round().toString();
+    }
+    String formatted = qty.toStringAsFixed(2);
+    if (formatted.contains('.')) {
+      formatted = formatted
+          .replaceAll(RegExp(r'0+$'), '')
+          .replaceAll(RegExp(r'\.$'), '');
+    }
+    return formatted;
+  }
+
   // --- Diálogo para editar cantidad y unidad ---
   Future<void> _showEditQuantityDialog(
     String foodKey,
@@ -79,11 +92,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     String currentUnit,
   ) async {
     final TextEditingController amountController = TextEditingController(
-      text: currentQuantity > 0
-          ? currentQuantity.toStringAsFixed(
-              currentQuantity.truncateToDouble() == currentQuantity ? 0 : 2,
-            )
-          : '',
+      text: currentQuantity > 0 ? _formatQuantity(currentQuantity) : '',
     );
 
     // Validación: Si la unidad que viene de la BD no está en nuestra lista, usamos la primera por defecto.
@@ -985,7 +994,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                           ),
                                         ),
                                         child: Text(
-                                          "${quantity.truncateToDouble() == quantity ? quantity.toInt() : quantity} $unit",
+                                          "${_formatQuantity(quantity)} $unit",
                                           style: TextStyle(
                                             fontSize: 12.sp,
                                             fontWeight: FontWeight.bold,

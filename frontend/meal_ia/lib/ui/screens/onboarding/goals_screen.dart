@@ -159,14 +159,14 @@ class GoalsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
                 icon: const Icon(
-                  Icons.arrow_back,
+                  Icons.arrow_back_ios_new_rounded,
                   color: AppColors.primaryText,
-                  size: 42,
+                  size: 22,
                 ),
-                padding: const EdgeInsets.only(top: 16.0, left: 16.0),
                 onPressed: () => Navigator.pop(context),
               )
             : null,

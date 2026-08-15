@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
-import '../../../utils/screen_utils.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -180,9 +179,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final horizontalPadding = ScreenUtils.getResponsiveHorizontalPadding(context);
-    final verticalPadding = ScreenUtils.getResponsiveVerticalPadding(context);
-
     // Obtener información del producto de la tienda, o mostrar un fallback
     final ProductDetails? product = _getSelectedProduct();
     final String price = product?.price ?? (_isAnnual ? "\$25.000" : "\$2.500");
@@ -191,24 +187,24 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        top: false,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                // --- 1. SECCIÓN SUPERIOR (CARRUSEL) ---
-                Expanded(
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              // --- 1. SECCIÓN SUPERIOR (CARRUSEL) ---
+              Expanded(
+                child: SafeArea(
+                  bottom: false,
                   child: Stack(
                     children: [
                       Positioned(
-                        top: -60.h,
-                        right: -80.w,
+                        top: -30.h,
+                        right: -50.w,
                         child: Container(
-                          width: 200.w,
-                          height: 200.w,
+                          width: 180.w,
+                          height: 180.w,
                           decoration: BoxDecoration(
-                            color: activeColor.withValues(alpha: 0.05),
+                            color: activeColor.withValues(alpha: 0.04),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -224,7 +220,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             ),
                           ),
                           Padding(
-                            padding: EdgeInsets.only(bottom: 20.0.h),
+                            padding: EdgeInsets.only(bottom: 12.h),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: List.generate(
@@ -244,164 +240,182 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-
-                // --- 2. SECCIÓN INFERIOR (PAGO) ---
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.fromLTRB(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 30.r,
-                        offset: Offset(0, -10.h),
+                      // Botón de cerrar superior
+                      Positioned(
+                        top: 8.h,
+                        right: 16.w,
+                        child: IconButton(
+                          icon: Icon(Icons.close_rounded, color: Colors.grey[400], size: 24.sp),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildPricingToggle(),
-                      SizedBox(height: 20.h),
-                      
-                      if (_isLoading)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: CircularProgressIndicator(),
-                        )
-                      else
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: Column(
-                            key: ValueKey<bool>(_isAnnual),
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.baseline,
-                                textBaseline: TextBaseline.alphabetic,
-                                children: [
-                                  Text(
-                                    price,
-                                    style: TextStyle(
-                                      fontSize: 24.sp,
-                                      fontWeight: FontWeight.w900,
-                                      color: darkText,
-                                      letterSpacing: -1,
-                                    ),
-                                  ),
-                                  SizedBox(width: 4.w),
-                                  Text(
-                                    period,
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: Colors.grey[500],
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 5.h),
-                              Text(
-                                savings,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  color: _isAnnual ? Colors.green[600] : Colors.grey[400],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                      SizedBox(height: 20.h),
-
-                      // Botón de Acción
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50.h,
-                        child: ElevatedButton(
-                          onPressed: (_isLoading || _isPurchasing) ? null : _startPurchase,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: activeColor,
-                            elevation: 8,
-                            shadowColor: activeColor.withValues(alpha: 0.3),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.r),
-                            ),
-                          ),
-                          child: _isPurchasing
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                )
-                              : Text(
-                                  "Comenzar Ahora",
-                                  style: TextStyle(
-                                    fontSize: 15.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
-                      ),
-
-                      SizedBox(height: 10.h),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey[500],
-                        ),
-                        child: Text(
-                          "Seguir con el plan actual",
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey,
-                            decorationColor: Colors.grey,
-                          ),
-                        ),
-                      ),
-                      
-                      // Restore Purchases button (Apple requirement)
-                      if (Platform.isIOS) ...[
-                        SizedBox(height: 5.h),
-                        TextButton(
-                          onPressed: _isLoading || _isPurchasing ? null : () => _inAppPurchase.restorePurchases(),
-                          child: Text(
-                            "Restaurar compras",
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.grey[600],
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ]
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            
-            // Loading Overlay si está procesando la compra
-            if (_isPurchasing)
-              Container(
-                color: Colors.black.withValues(alpha: 0.3),
-                child: const Center(
-                  child: CircularProgressIndicator(),
                 ),
               ),
-          ],
-        ),
+
+              // --- 2. SECCIÓN INFERIOR (PAGO) ---
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.07),
+                      blurRadius: 20.r,
+                      offset: Offset(0, -8.h),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(24.w, 18.h, 24.w, 8.h),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildPricingToggle(),
+                        SizedBox(height: 14.h),
+                        
+                        if (_isLoading)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: CircularProgressIndicator(),
+                          )
+                        else
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: Column(
+                              key: ValueKey<bool>(_isAnnual),
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      price,
+                                      style: TextStyle(
+                                        fontSize: 24.sp,
+                                        fontWeight: FontWeight.w900,
+                                        color: darkText,
+                                        letterSpacing: -1,
+                                      ),
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    Text(
+                                      period,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        color: Colors.grey[500],
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  savings,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: _isAnnual ? Colors.green[600] : Colors.grey[400],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        SizedBox(height: 16.h),
+
+                        // Botón de Acción
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48.h,
+                          child: ElevatedButton(
+                            onPressed: (_isLoading || _isPurchasing) ? null : _startPurchase,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: activeColor,
+                              elevation: 4,
+                              shadowColor: activeColor.withValues(alpha: 0.3),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14.r),
+                              ),
+                            ),
+                            child: _isPurchasing
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : Text(
+                                    "Comenzar Ahora",
+                                    style: TextStyle(
+                                      fontSize: 15.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+
+                        SizedBox(height: 6.h),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[500],
+                            minimumSize: Size(double.infinity, 36.h),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Text(
+                            "Seguir con el plan actual",
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        
+                        // Restore Purchases button (Apple requirement)
+                        if (Platform.isIOS) ...[
+                          TextButton(
+                            onPressed: _isLoading || _isPurchasing ? null : () => _inAppPurchase.restorePurchases(),
+                            style: TextButton.styleFrom(
+                              minimumSize: Size(double.infinity, 32.h),
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: Text(
+                              "Restaurar compras",
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.grey[500],
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Loading Overlay si está procesando la compra
+          if (_isPurchasing)
+            Container(
+              color: Colors.black.withValues(alpha: 0.3),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }

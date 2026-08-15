@@ -694,11 +694,24 @@ class _FoodItemCard extends StatefulWidget {
 class _FoodItemCardState extends State<_FoodItemCard> {
   late TextEditingController _qtyController;
 
+  String _formatQuantity(double qty) {
+    if ((qty - qty.round()).abs() < 0.0001) {
+      return qty.round().toString();
+    }
+    String formatted = qty.toStringAsFixed(2);
+    if (formatted.contains('.')) {
+      formatted = formatted
+          .replaceAll(RegExp(r'0+$'), '')
+          .replaceAll(RegExp(r'\.$'), '');
+    }
+    return formatted;
+  }
+
   @override
   void initState() {
     super.initState();
     _qtyController = TextEditingController(
-      text: widget.item.quantity.toString(),
+      text: _formatQuantity(widget.item.quantity),
     );
   }
 
@@ -706,10 +719,7 @@ class _FoodItemCardState extends State<_FoodItemCard> {
     if (newVal < 0) return;
     setState(() {
       widget.item.quantity = newVal;
-      // Handle floating point nicely for display
-      _qtyController.text = (newVal % 1 == 0)
-          ? newVal.toInt().toString()
-          : newVal.toString();
+      _qtyController.text = _formatQuantity(newVal);
     });
     widget.onChanged();
   }
