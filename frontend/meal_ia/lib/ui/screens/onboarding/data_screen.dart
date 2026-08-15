@@ -330,7 +330,6 @@ class _DataScreenState extends State<DataScreen> {
 
                         DropdownButtonFormField<String>(
                           initialValue: _selectedGender,
-                          // ignore: deprecated_member_use
                           decoration: _inputDecoration('Selecciona tu género', Icons.person),
                           items: const [
                             DropdownMenuItem(value: 'Hombre', child: Text('Hombre')),

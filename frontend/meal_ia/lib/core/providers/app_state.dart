@@ -155,6 +155,7 @@ class AppState extends ChangeNotifier {
             if (cachedPhotoUrl != null && cachedPhotoUrl.isNotEmpty) {
               photoUrl = cachedPhotoUrl;
             }
+            gender = data['gender'];
             goal = data['goal'] ?? 'Mantenimiento';
             isPremium = data['is_premium'] ?? false;
             isAdmin = data['is_admin'] ?? false;
@@ -256,6 +257,7 @@ class AppState extends ChangeNotifier {
               if (height == null && data.containsKey('height')) height = (data['height'] as num?)?.toDouble();
               if (weight == null && data.containsKey('weight')) weight = (data['weight'] as num?)?.toDouble();
               if (birthdate == null && data.containsKey('birthdate')) birthdate = DateTime.tryParse(data['birthdate']);
+              if (gender == null && data.containsKey('gender')) gender = data['gender'];
               if (data.containsKey('meals_per_day')) mealsPerDay = data['meals_per_day'];
               if (data.containsKey('meal_times')) mealTimes = Map<String, String>.from(data['meal_times']);
             }
