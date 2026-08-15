@@ -273,43 +273,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
     // Mostrar diálogo de carga (fullscreen)
     showDialog(
       context: context,
+      useSafeArea: false,
+      barrierColor: Colors.white,
       barrierDismissible: false, // El usuario no puede cerrarlo tocando fuera
       builder: (context) {
         return PopScope(
           canPop: false, // Bloquear el botón de atrás
-          child: Dialog(
-            backgroundColor: Colors.white, // Volvemos a blanco puro
-            surfaceTintColor: Colors.transparent,
-            insetPadding: EdgeInsets.zero, // Ocupar toda la pantalla
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.zero,
-            ),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.white, // Blanco puro
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            body: SizedBox.expand(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
                     'assets/animation1_transparent.gif',
-                    height: 400.h,
-                    width: 400.w,
+                    height: 380.h,
+                    width: 380.w,
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.hourglass_bottom,
                       size: 80.sp,
                       color: AppColors.textDark,
                     ),
                   ),
-                  const SizedBox(height: 0),
-                  Text(
-                    "¡Generando menú para que cumplas tus objetivos!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                      decoration: TextDecoration.none,
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w),
+                    child: Text(
+                      "¡Generando menú para que cumplas tus objetivos!",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                   ),
                 ],
@@ -370,40 +367,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     showDialog(
       context: context,
+      useSafeArea: false,
+      barrierColor: Colors.white,
       barrierDismissible: false,
       builder: (context) {
         return PopScope(
           canPop: false,
-          child: Dialog(
+          child: Scaffold(
             backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            insetPadding: EdgeInsets.zero,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.white,
+            body: SizedBox.expand(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
                     'assets/animation1_transparent.gif',
-                    height: 400.h,
-                    width: 400.w,
+                    height: 380.h,
+                    width: 380.w,
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.calendar_month,
                       size: 80.sp,
                       color: AppColors.textDark,
                     ),
                   ),
-                  const SizedBox(height: 0),
-                  Text(
-                    "Generando menú semanal...",
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                      decoration: TextDecoration.none,
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w),
+                    child: Text(
+                      "Generando menú semanal...",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                   ),
                 ],

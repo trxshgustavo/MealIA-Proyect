@@ -20,42 +20,40 @@ class _MenuScreenState extends State<MenuScreen> {
     // Mostrar diálogo de carga (fullscreen)
     showDialog(
       context: context,
+      useSafeArea: false,
+      barrierColor: Colors.white,
       barrierDismissible: false,
       builder: (context) {
         return PopScope(
           canPop: false,
-          child: Dialog(
+          child: Scaffold(
             backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            insetPadding: EdgeInsets.zero,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.zero,
-            ),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.white,
+            body: SizedBox.expand(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
                     'assets/animation1_transparent.gif',
-                    height: 430.h,
-                    width: 430.w,
+                    height: 380.h,
+                    width: 380.w,
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.hourglass_bottom,
                       size: 80.sp,
                       color: AppColors.textDark,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    "Regenerando menú...",
-                    style: TextStyle(
-                      fontSize: 25.sp,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                      decoration: TextDecoration.none,
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w),
+                    child: Text(
+                      "Regenerando menú...",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                   ),
                 ],
