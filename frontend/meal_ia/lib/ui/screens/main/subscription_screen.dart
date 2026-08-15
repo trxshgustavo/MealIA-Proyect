@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -240,15 +239,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           ),
                         ],
                       ),
-                      // Botón de cerrar superior
-                      Positioned(
-                        top: 8.h,
-                        right: 16.w,
-                        child: IconButton(
-                          icon: Icon(Icons.close_rounded, color: Colors.grey[400], size: 24.sp),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -380,25 +370,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             ),
                           ),
                         ),
-                        
-                        // Restore Purchases button (Apple requirement)
-                        if (Platform.isIOS) ...[
-                          TextButton(
-                            onPressed: _isLoading || _isPurchasing ? null : () => _inAppPurchase.restorePurchases(),
-                            style: TextButton.styleFrom(
-                              minimumSize: Size(double.infinity, 32.h),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: Text(
-                              "Restaurar compras",
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Colors.grey[500],
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ]
                       ],
                     ),
                   ),
