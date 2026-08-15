@@ -215,7 +215,7 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
                   Expanded(
                     child: _buildImageOption(
                       icon: CupertinoIcons.barcode,
-                      label: "Código de Barras",
+                      label: "Código",
                       onTap: () async {
                         final result = await Navigator.push(
                           context,
