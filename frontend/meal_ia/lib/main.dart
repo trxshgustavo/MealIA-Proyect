@@ -35,10 +35,17 @@ Future<void> main() async {
     debugPrint('⚠️ No se pudo cargar .env (no crítico): $e');
   }
 
-  // Pantalla completa: oculta barra de navegación y barra de estado
-  // immersiveSticky: las barras reaparecen brevemente al deslizar desde el borde
+  // Mostrar barra de estado superior (hora, batería, señal)
   // ignore: unawaited_futures
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+    ),
+  );
 
   // Inicializar Firebase (crítico, pero manejamos errores)
   try {
