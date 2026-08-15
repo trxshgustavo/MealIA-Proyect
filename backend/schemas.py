@@ -161,6 +161,10 @@ class MealPlanCreate(BaseModel):
     breakfast: MealDetail
     lunch: MealDetail
     dinner: MealDetail
+    extra_meals: Optional[List[MealDetail]] = []
+    breakfast_eaten: Optional[bool] = False
+    lunch_eaten: Optional[bool] = False
+    dinner_eaten: Optional[bool] = False
     total_calories: int
 
 

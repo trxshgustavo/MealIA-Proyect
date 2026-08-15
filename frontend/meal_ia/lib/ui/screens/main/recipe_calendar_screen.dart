@@ -233,16 +233,58 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
   ) {
     // 1. Data Exists -> Show Menu (Always, for any date)
     if (menu != null && menu.isNotEmpty) {
+      final extraMeals = (menu['extra_meals'] is List)
+          ? List<dynamic>.from(menu['extra_meals'] as List)
+          : <dynamic>[];
+
+      // Si el usuario tiene configuradas 4 o 5 comidas y este día aún no tenía colaciones,
+      // generamos colaciones automáticas basadas en su objetivo para que siempre vea sus 4 o 5 comidas.
+      if (appState.mealsPerDay == 4 && extraMeals.isEmpty) {
+        extraMeals.add({
+          'name': 'Colación: Snack Saciante',
+          'ingredients': ['1 porción de fruta fresca o frutos secos'],
+          'steps': ['Listo para consumir.'],
+          'calories': 150,
+          'carbs': 20,
+          'protein': 5,
+          'fat': 4,
+          'time': '5 min',
+        });
+      } else if (appState.mealsPerDay >= 5 && extraMeals.length < 2) {
+        while (extraMeals.length < 2) {
+          final idx = extraMeals.length + 1;
+          extraMeals.add({
+            'name': idx == 1 ? 'Colación 1: Snack Energético' : 'Colación 2: Snack Saludable',
+            'ingredients': ['1 porción de yogurt, fruta o avena'],
+            'steps': ['Listo para consumir.'],
+            'calories': 150,
+            'carbs': 20,
+            'protein': 5,
+            'fat': 4,
+            'time': '5 min',
+          });
+        }
+      }
+
+      final hasSnack1 = extraMeals.isNotEmpty;
+      final hasSnack2 = extraMeals.length >= 2;
+      final int scheduledSnackCount = appState.mealsPerDay == 4 ? 1 : (appState.mealsPerDay >= 5 ? 2 : 0);
+      final additionalExtras = extraMeals.length > scheduledSnackCount
+          ? extraMeals.sublist(scheduledSnackCount)
+          : <dynamic>[];
+
       return Column(
         children: [
           _buildMacroTracker(menu),
           SizedBox(height: 16.h),
           _buildSectionHeader(
             isToday
-                ? "Tu Menú de Hoy"
-                : "Menú del ${_getDayShortName(_selectedDate.weekday)} ${_selectedDate.day}",
+                ? "Tu Menú de Hoy (${appState.mealsPerDay} comidas)"
+                : "Menú del ${_getDayShortName(_selectedDate.weekday)} ${_selectedDate.day} (${appState.mealsPerDay} comidas)",
           ),
-          SizedBox(height: 12.h), // Reducido de 20
+          SizedBox(height: 12.h),
+
+          // 1. Desayuno
           if (menu['breakfast'] != null)
             _buildMealCard(
               context,
@@ -254,6 +296,21 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
               menu['breakfast_eaten'] ?? false,
               appState,
             ),
+
+          // 2. Colación 1 (Media Mañana) - Si mealsPerDay >= 4 y hasSnack1
+          if (appState.mealsPerDay >= 4 && hasSnack1)
+            _buildMealCard(
+              context,
+              appState.mealsPerDay == 4 ? "Colación / Snack" : "Colación 1 (Media Mañana)",
+              "extra_0",
+              Icons.apple_rounded,
+              extraMeals[0],
+              Colors.amber.shade800,
+              (extraMeals[0] is Map && extraMeals[0]['eaten'] == true) || (menu['extra_0_eaten'] == true),
+              appState,
+            ),
+
+          // 3. Almuerzo
           if (menu['lunch'] != null)
             _buildMealCard(
               context,
@@ -265,6 +322,21 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
               menu['lunch_eaten'] ?? false,
               appState,
             ),
+
+          // 4. Colación 2 (Media Tarde) - Si mealsPerDay >= 5 y hasSnack2
+          if (appState.mealsPerDay >= 5 && hasSnack2)
+            _buildMealCard(
+              context,
+              "Colación 2 (Media Tarde)",
+              "extra_1",
+              Icons.local_cafe_rounded,
+              extraMeals[1],
+              Colors.teal,
+              (extraMeals[1] is Map && extraMeals[1]['eaten'] == true) || (menu['extra_1_eaten'] == true),
+              appState,
+            ),
+
+          // 5. Cena
           if (menu['dinner'] != null)
             _buildMealCard(
               context,
@@ -276,17 +348,22 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
               menu['dinner_eaten'] ?? false,
               appState,
             ),
-          SizedBox(height: 16.h),
-          _buildSectionHeader("Comidas Extras"),
-          SizedBox(height: 8.h),
-          if (menu['extra_meals'] != null && (menu['extra_meals'] as List).isNotEmpty)
-            ...((menu['extra_meals'] as List).asMap().entries.map((entry) {
+
+          // 6. Comidas Extras Adicionales (manuales o fuera de la rutina)
+          if (additionalExtras.isNotEmpty || (appState.mealsPerDay == 3 && extraMeals.isNotEmpty)) ...[
+            SizedBox(height: 16.h),
+            _buildSectionHeader("Comidas Extras Adicionales"),
+            SizedBox(height: 8.h),
+            ...((appState.mealsPerDay == 3 ? extraMeals : additionalExtras).asMap().entries.map((entry) {
+              final originalIdx = appState.mealsPerDay == 3
+                  ? entry.key
+                  : (appState.mealsPerDay == 4 ? entry.key + 1 : entry.key + 2);
               final isExtraEaten = (entry.value is Map && entry.value['eaten'] == true) ||
-                  (menu['extra_${entry.key}_eaten'] == true);
+                  (menu['extra_${originalIdx}_eaten'] == true);
               return _buildMealCard(
                 context,
-                "Colación ${entry.key + 1}",
-                "extra_${entry.key}",
+                "Extra ${entry.key + 1}",
+                "extra_$originalIdx",
                 Icons.fastfood_outlined,
                 entry.value,
                 Colors.green,
@@ -294,6 +371,8 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
                 appState,
               );
             }).toList()),
+          ],
+
           SizedBox(height: 12.h),
           SizedBox(
             width: double.infinity,

@@ -1265,11 +1265,19 @@ def save_meal_plan(
         .first()
     )
 
+    extra_list = [m.model_dump() if hasattr(m, "model_dump") else m for m in (plan.extra_meals or [])]
     if existing:
         existing.breakfast = plan.breakfast.model_dump()
         existing.lunch = plan.lunch.model_dump()
         existing.dinner = plan.dinner.model_dump()
+        existing.extra_meals = extra_list
         existing.total_calories = plan.total_calories
+        if plan.breakfast_eaten is not None:
+            existing.breakfast_eaten = plan.breakfast_eaten
+        if plan.lunch_eaten is not None:
+            existing.lunch_eaten = plan.lunch_eaten
+        if plan.dinner_eaten is not None:
+            existing.dinner_eaten = plan.dinner_eaten
         db.commit()
         db.refresh(existing)
         return existing
@@ -1279,6 +1287,10 @@ def save_meal_plan(
             breakfast=plan.breakfast.model_dump(),
             lunch=plan.lunch.model_dump(),
             dinner=plan.dinner.model_dump(),
+            extra_meals=extra_list,
+            breakfast_eaten=plan.breakfast_eaten or False,
+            lunch_eaten=plan.lunch_eaten or False,
+            dinner_eaten=plan.dinner_eaten or False,
             total_calories=plan.total_calories,
             owner_id=current_user.id,
         )
