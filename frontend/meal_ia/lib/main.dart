@@ -35,6 +35,12 @@ Future<void> main() async {
     debugPrint('⚠️ No se pudo cargar .env (no crítico): $e');
   }
 
+  // Bloquear orientación exclusivamente en vertical
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   // Mostrar barra de estado superior (hora, batería, señal)
   // ignore: unawaited_futures
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
