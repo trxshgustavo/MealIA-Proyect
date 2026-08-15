@@ -49,10 +49,10 @@ class _AuthCheckScreenState extends State<AuthCheckScreen>
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final isLoggedIn = await appState.checkLoginStatus().timeout(
-        const Duration(seconds: 60), // Aumentado a 60s para Render cold start
+        const Duration(seconds: 30),
         onTimeout: () {
-          debugPrint("Timeout verificando estado de autenticación");
-          return false;
+          debugPrint("Timeout de red en arranque, manteniendo sesión local...");
+          return true;
         },
       );
       if (!mounted) return;
@@ -66,7 +66,6 @@ class _AuthCheckScreenState extends State<AuthCheckScreen>
     } catch (e) {
       debugPrint("Error verificando autenticación: $e");
       if (!mounted) return;
-      // En caso de error, redirigir al login para que el usuario pueda intentar iniciar sesión
       // ignore: unawaited_futures
       Navigator.pushReplacementNamed(context, '/login');
     }

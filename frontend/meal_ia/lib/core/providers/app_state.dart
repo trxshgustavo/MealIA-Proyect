@@ -69,18 +69,18 @@ class AppState extends ChangeNotifier {
     try {
       final token = await _storage.read(key: 'auth_token');
 
-      if (token == null) {
+      if (token == null || token.isEmpty) {
         return false;
       }
 
       // Attempt to load user data.
-      // If validation fails inside (e.g. 401), it will return false and clean up.
+      // If validation fails inside due to explicit 401, it will return false.
       return await _loadUserData(token);
     } catch (e) {
       debugPrint("Error en checkLoginStatus: $e");
-      // Si hay un error, asumimos que no hay sesión válida
-      // Esto previene que la app se quede bloqueada
-      return false;
+      // Si hay un token guardado, no cerramos sesión por un error temporal de red
+      final token = await _storage.read(key: 'auth_token');
+      return token != null && token.isNotEmpty;
     }
   }
 
@@ -133,38 +133,38 @@ class AppState extends ChangeNotifier {
     try {
       // Clean memory state first to avoid leaking data from a previous session
       clearMemoryState();
-      // 0. PRE-LOAD FROM LOCAL CACHE (Offline Support)
+      // 0. PRE-LOAD FROM LOCAL CACHE (Offline Support & Fast Boot)
+      String? cachedProfile = await _storage.read(key: 'user_profile_cache_current');
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
+      if (cachedProfile == null && user != null) {
+        cachedProfile = await _storage.read(
+          key: 'user_profile_cache_${user.uid}',
+        );
+      }
+      if (cachedProfile != null) {
         try {
-          String? cachedProfile = await _storage.read(
-            key: 'user_profile_cache_${user.uid}',
-          );
-          if (cachedProfile != null) {
-            final data = jsonDecode(cachedProfile);
-            email = data['email'];
-            firstName = data['first_name'];
-            lastName = data['last_name'];
-            height = (data['height'] as num?)?.toDouble();
-            weight = (data['weight'] as num?)?.toDouble();
-            birthdate = data['birthdate'] != null
-                ? DateTime.tryParse(data['birthdate'])
-                : null;
-            // Only set photoUrl if it's a non-empty string
-            final cachedPhotoUrl = data['photo_url'] as String?;
-            if (cachedPhotoUrl != null && cachedPhotoUrl.isNotEmpty) {
-              photoUrl = cachedPhotoUrl;
-            }
-            gender = data['gender'];
-            goal = data['goal'] ?? 'Mantenimiento';
-            isPremium = data['is_premium'] ?? false;
-            isAdmin = data['is_admin'] ?? false;
-            if (data['meals_per_day'] != null) mealsPerDay = data['meals_per_day'];
-            if (data['meal_times'] != null) mealTimes = Map<String, String>.from(data['meal_times']);
-            debugPrint("Loaded Profile from Cache for ${user.uid}");
+          final data = jsonDecode(cachedProfile);
+          email = data['email'];
+          firstName = data['first_name'];
+          lastName = data['last_name'];
+          height = (data['height'] as num?)?.toDouble();
+          weight = (data['weight'] as num?)?.toDouble();
+          birthdate = data['birthdate'] != null
+              ? DateTime.tryParse(data['birthdate'])
+              : null;
+          final cachedPhotoUrl = data['photo_url'] as String?;
+          if (cachedPhotoUrl != null && cachedPhotoUrl.isNotEmpty) {
+            photoUrl = cachedPhotoUrl;
           }
+          gender = data['gender'];
+          goal = data['goal'] ?? 'Mantenimiento';
+          isPremium = data['is_premium'] ?? false;
+          isAdmin = data['is_admin'] ?? false;
+          if (data['meals_per_day'] != null) mealsPerDay = data['meals_per_day'];
+          if (data['meal_times'] != null) mealTimes = Map<String, String>.from(data['meal_times']);
+          debugPrint("Loaded Profile from Local Cache: $firstName ($email)");
         } catch (e) {
-          debugPrint("Error loading profile cache: $e");
+          debugPrint("Error decoding profile cache: $e");
         }
       }
 
@@ -176,7 +176,7 @@ class AppState extends ChangeNotifier {
                 Uri.parse('$_baseUrl/users/me'),
                 headers: {'Authorization': 'Bearer $token'},
               )
-              .timeout(const Duration(seconds: 60));
+              .timeout(const Duration(seconds: 45));
 
           if (userResponse.statusCode == 200) {
             final userData = jsonDecode(utf8.decode(userResponse.bodyBytes));
@@ -199,22 +199,26 @@ class AppState extends ChangeNotifier {
             if (userData['meals_per_day'] != null) mealsPerDay = userData['meals_per_day'];
             if (userData['meal_times'] != null) mealTimes = Map<String, String>.from(userData['meal_times']);
 
+            final cacheData = {
+              'email': email,
+              'first_name': firstName,
+              'last_name': lastName,
+              'height': height,
+              'weight': weight,
+              'birthdate': birthdate?.toIso8601String(),
+              'photo_url': photoUrl,
+              'goal': backendGoal,
+              'gender': gender,
+              'is_premium': isPremium,
+              'is_admin': isAdmin,
+              'meals_per_day': mealsPerDay,
+              'meal_times': mealTimes,
+            };
+            await _storage.write(
+              key: 'user_profile_cache_current',
+              value: jsonEncode(cacheData),
+            );
             if (user != null) {
-              final cacheData = {
-                'email': email,
-                'first_name': firstName,
-                'last_name': lastName,
-                'height': height,
-                'weight': weight,
-                'birthdate': birthdate?.toIso8601String(),
-                'photo_url': photoUrl,
-                'goal': backendGoal,
-                'gender': gender,
-                'is_premium': isPremium,
-                'is_admin': isAdmin,
-                'meals_per_day': mealsPerDay,
-                'meal_times': mealTimes,
-              };
               await _storage.write(
                 key: 'user_profile_cache_${user.uid}',
                 value: jsonEncode(cacheData),
@@ -443,28 +447,24 @@ class AppState extends ChangeNotifier {
 
       notifyListeners();
 
-      // STRICT VALIDATION:
-      if (email == null || firstName == null) {
-        debugPrint(
-          "Critical Data Missing: Email or Name is null. Failing Login.",
-        );
-        return false;
+      // Resilient Fallbacks if offline on first cold boot
+      if (firstName == null || firstName!.trim().isEmpty) {
+        firstName = "Usuario";
+      }
+      if (email == null || email!.trim().isEmpty) {
+        email = user?.email ?? "usuario@mealia.com";
       }
 
       // Sincronizar inventario local hacia el backend (Para mitigar reinicios de DB en Render)
       _syncInventoryToBackend(token);
 
-      // NO STRICT CHECK FOR FIREBASE USER. We trust the backend.
-      if (user == null) {
-        debugPrint("Warning: No Firebase User found. Offline features or sync might be degraded, but login proceeds.");
-      }
-
       return true;
     } catch (e) {
-      debugPrint("Critical Error in _loadUserData: $e");
-      // Don't fail silently on generic errors, try to return true if we have minimal data
-      if (email != null && firstName != null) return true;
-      return false;
+      debugPrint("Warning in _loadUserData: $e");
+      // As long as we have a valid token, we keep the user logged in
+      firstName ??= "Usuario";
+      email ??= "usuario@mealia.com";
+      return true;
     }
   }
 
