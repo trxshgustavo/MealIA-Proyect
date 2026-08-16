@@ -97,27 +97,28 @@ class TokenData(BaseModel):
 # Define la estructura JSON que esperamos de OpenAI
 class MealDetail(BaseModel):
     name: str
-    ingredients: List[str]
-    steps: List[str]
-    calories: int
+    ingredients: Optional[List[str]] = []
+    steps: Optional[List[str]] = []
+    calories: int = 0
     # Macros
-    carbs: int
-    protein: int
-    fat: int
+    carbs: int = 0
+    protein: int = 0
+    fat: int = 0
     # Micros
-    fiber: float
-    sugar: float
-    sodium: int
-    vitamin_a: float = 0.0  # mcg RAE
-    vitamin_c: float = 0.0  # mg
-    calcium: float = 0.0  # mg
-    iron: float = 0.0  # mg
+    fiber: Optional[float] = 0.0
+    sugar: Optional[float] = 0.0
+    sodium: Optional[int] = 0
+    vitamin_a: Optional[float] = 0.0  # mcg RAE
+    vitamin_c: Optional[float] = 0.0  # mg
+    calcium: Optional[float] = 0.0  # mg
+    iron: Optional[float] = 0.0  # mg
     # Time
-    time: str
+    time: Optional[str] = "5 min"
     eating_time: Optional[str] = None
     # Respaldo / Fuente real de la receta
     source_url: Optional[str] = None  # URL de la receta original
     source_name: Optional[str] = None  # Nombre de la fuente (TheMealDB, Edamam, USDA)
+    eaten: Optional[bool] = True
 
 
 class GenerateMenuRequest(BaseModel):

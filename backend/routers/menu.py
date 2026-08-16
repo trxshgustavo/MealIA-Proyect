@@ -1462,9 +1462,13 @@ def add_extra_meal(
         db.refresh(plan)
 
     current_extras = list(plan.extra_meals) if plan.extra_meals else []
-    current_extras.append(extra_meal.model_dump())
+    extra_dict = extra_meal.model_dump()
+    extra_dict["eaten"] = True
+    current_extras.append(extra_dict)
 
     plan.extra_meals = current_extras
+    if extra_dict.get("calories"):
+        plan.total_calories = (plan.total_calories or 0) + int(extra_dict.get("calories", 0))
     db.commit()
     db.refresh(plan)
     return plan

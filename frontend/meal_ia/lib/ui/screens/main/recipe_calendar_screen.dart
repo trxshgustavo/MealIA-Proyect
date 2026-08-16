@@ -632,11 +632,12 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     if (mealData is Map) {
       title = mealData['name'] ?? title;
       if (mealData.containsKey('calories')) {
-        calories = "${mealData['calories']} kcal";
+        final cals = (mealData['calories'] is num) ? (mealData['calories'] as num).round() : 0;
+        calories = "$cals kcal";
       }
-      carbs = (mealData['carbs'] ?? 0) as int;
-      protein = (mealData['protein'] ?? 0) as int;
-      fat = (mealData['fat'] ?? 0) as int;
+      carbs = (mealData['carbs'] is num) ? (mealData['carbs'] as num).round() : 0;
+      protein = (mealData['protein'] is num) ? (mealData['protein'] as num).round() : 0;
+      fat = (mealData['fat'] is num) ? (mealData['fat'] as num).round() : 0;
     } else if (mealData is String) {
       title = mealData;
     }
@@ -871,8 +872,9 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
   }
 
   Widget _buildMacroTracker(Map<String, dynamic> menu) {
-    // Collect daily goals (simplified logic: target total is stored, macros are roughly calculated)
-    int targetCalories = menu['total_calories'] ?? 2000;
+    // Collect daily goals
+    int targetCalories = (menu['total_calories'] is num) ? (menu['total_calories'] as num).round() : 2000;
+    if (targetCalories <= 0) targetCalories = 2000;
     int targetCarbs = (targetCalories * 0.50 / 4).round();
     int targetProtein = (targetCalories * 0.25 / 4).round();
     int targetFat = (targetCalories * 0.25 / 9).round();
@@ -883,11 +885,11 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
     int consumedFat = 0;
 
     void addMacros(dynamic meal) {
-      if (meal == null) return;
-      consumedCalories += (meal['calories'] ?? 0) as int;
-      consumedCarbs += (meal['carbs'] ?? 0) as int;
-      consumedProtein += (meal['protein'] ?? 0) as int;
-      consumedFat += (meal['fat'] ?? 0) as int;
+      if (meal == null || meal is! Map) return;
+      consumedCalories += (meal['calories'] is num) ? (meal['calories'] as num).round() : 0;
+      consumedCarbs += (meal['carbs'] is num) ? (meal['carbs'] as num).round() : 0;
+      consumedProtein += (meal['protein'] is num) ? (meal['protein'] as num).round() : 0;
+      consumedFat += (meal['fat'] is num) ? (meal['fat'] as num).round() : 0;
     }
 
     if (menu['breakfast_eaten'] == true) addMacros(menu['breakfast']);
@@ -898,16 +900,21 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
       final extraList = menu['extra_meals'] as List;
       for (int i = 0; i < extraList.length; i++) {
         final extra = extraList[i];
-        final isExtraEaten = (extra is Map && extra['eaten'] == true) || (menu['extra_${i}_eaten'] == true);
-        if (isExtraEaten) {
-          addMacros(extra);
+        if (extra is Map) {
+          final isExtraEaten = extra['eaten'] == true ||
+              menu['extra_${i}_eaten'] == true ||
+              extra['source_name'] == 'OpenFoodFacts' ||
+              extra['source_name'] == 'AI Scanner';
+          if (isExtraEaten) {
+            addMacros(extra);
+          }
         }
       }
     }
 
-    double proteinPercent = (consumedProtein / targetProtein).clamp(0.0, 1.0);
-    double carbsPercent = (consumedCarbs / targetCarbs).clamp(0.0, 1.0);
-    double fatPercent = (consumedFat / targetFat).clamp(0.0, 1.0);
+    double proteinPercent = (targetProtein > 0 ? consumedProtein / targetProtein : 0.0).clamp(0.0, 1.0);
+    double carbsPercent = (targetCarbs > 0 ? consumedCarbs / targetCarbs : 0.0).clamp(0.0, 1.0);
+    double fatPercent = (targetFat > 0 ? consumedFat / targetFat : 0.0).clamp(0.0, 1.0);
 
     return Container(
       padding: EdgeInsets.all(16.w),

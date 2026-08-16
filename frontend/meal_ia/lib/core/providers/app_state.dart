@@ -1358,11 +1358,50 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> addExtraMeal(DateTime date, Map<String, dynamic> extraMeal) async {
-    final token = await _storage.read(key: 'auth_token');
-    if (token == null) return false;
-
     final dateKey = _formatDate(date);
     
+    // Asegurar que la comida extra escaneada tenga estado de consumida
+    extraMeal['eaten'] = true;
+
+    // 1. OPTIMISTIC UPDATE LOCAL: Se refleja de inmediato en pantalla y en los macros
+    Map<String, dynamic> currentMenu = _mealCalendar[dateKey] != null
+        ? Map<String, dynamic>.from(_mealCalendar[dateKey]!)
+        : {
+            'breakfast': null,
+            'lunch': null,
+            'dinner': null,
+            'extra_meals': <dynamic>[],
+            'total_calories': 0,
+          };
+
+    List<dynamic> currentExtras = (currentMenu['extra_meals'] is List)
+        ? List<dynamic>.from(currentMenu['extra_meals'] as List)
+        : <dynamic>[];
+
+    currentExtras.add(extraMeal);
+    currentMenu['extra_meals'] = currentExtras;
+
+    _mealCalendar[dateKey] = currentMenu;
+    if (_isSameDay(date, DateTime.now())) {
+      generatedMenu = currentMenu;
+    }
+    notifyListeners();
+
+    // Guardar en almacenamiento local para persistencia offline
+    try {
+      String calendarKey = 'meal_calendar_local';
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) calendarKey = 'meal_calendar_local_${user.uid}';
+      await _storage.write(
+        key: calendarKey,
+        value: jsonEncode(_mealCalendar),
+      );
+    } catch (_) {}
+
+    // 2. SINCRONIZACIÓN CON BACKEND
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return true;
+
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/meal-plans/$dateKey/extra-meal'),
@@ -1374,14 +1413,15 @@ class AppState extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        // Fetch to sync correctly
         await fetchMealPlans(date, date);
         return true;
+      } else {
+        debugPrint("Backend returned ${response.statusCode} on extra-meal: ${response.body}");
       }
     } catch (e) {
-      debugPrint("Error adding extra meal: $e");
+      debugPrint("Error adding extra meal to backend: $e");
     }
-    return false;
+    return true; // Retorna true porque ya quedó registrado localmente
   }
 
   Future<Map<String, dynamic>?> analyzeFood({String? text, String? imagePath}) async {
