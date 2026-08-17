@@ -196,14 +196,14 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
             final model = GenerativeModel(model: modelName, apiKey: apiKey);
             final prompt = Content.multi([
               TextPart(
-                'Analiza la imagen minuciosamente y detecta todos los alimentos o productos de supermercado presentes. '
+                'Analiza la imagen minuciosamente y detecta el alimento o producto principal. Si ves una etiqueta nutricional, léela detalladamente. '
                 'Devuelve un JSON ARRAY estrictamente válido. '
-                'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "info": "breve descripción"}]. '
+                'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "calorias_exactas": 100.0, "proteinas": 5.0, "grasas": 2.0, "carbohidratos": 15.0, "info": "breve descripción"}]. '
                 'REGLAS DE PRECISIÓN:\n'
-                '1. Diferencia claramente entre productos (ej: no agrupes "frutas", lista "manzana", "plátano" por separado).\n'
+                '1. Enfócate en el alimento principal o empaque. Extrae u estima los macros exactos por la porción detectada.\n'
                 '2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo o etiquetas visibles.\n'
                 '3. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
-                '4. Si no ves alimentos, devuelve [].\n'
+                '4. Si es imposible calcular macros, usa null para ellos. Si no ves alimentos, devuelve [].\n'
                 'NO uses markdown. Solo JSON plano.',
               ),
               DataPart('image/jpeg', bytes),

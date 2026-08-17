@@ -295,22 +295,28 @@ async def scan_fridge(
         mime_type = image.content_type or "image/jpeg"
 
         prompt = (
-            "Analiza la imagen minuciosamente y detecta todos los alimentos o productos presentes.\n"
+            "Analiza la imagen minuciosamente y detecta el alimento o producto principal que se está escaneando.\n"
+            "Si es una etiqueta nutricional, extrae los valores exactos por porción.\n"
             "Devuelve ÚNICAMENTE un JSON ARRAY estrictamente válido en este formato exacto:\n"
             "[\n"
             "  {\n"
-            '    "alimento": "Nombre del producto en español",\n'
+            '    "alimento": "Nombre descriptivo del producto en español",\n'
             '    "cantidad_estimada": 1.0,\n'
             '    "unidad_estimada": "Unidades/Kg/g/L/ml/paquete",\n'
             '    "calorias": 100,\n'
+            '    "calorias_exactas": 100.0,\n'
+            '    "proteinas": 5.0,\n'
+            '    "grasas": 2.0,\n'
+            '    "carbohidratos": 15.0,\n'
             '    "info": "Breve descripción"\n'
             "  }\n"
             "]\n"
             "REGLAS:\n"
-            "1. Diferencia claramente entre productos (ej: no agrupes 'frutas', lista 'manzana', 'plátano' por separado).\n"
-            "2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo.\n"
+            "1. Enfócate en el alimento principal o empaque. Si hay varios claros, lístalos por separado.\n"
+            "2. Estima la cantidad real. Extrae u estima macros (calorias_exactas, proteinas, grasas, carbohidratos) en base a la porción estimada.\n"
             "3. Usa 'Unidades' si es contable. Usa 'g' o 'Kg' si es peso. Usa 'L' o 'ml' para líquidos.\n"
-            "4. Si no ves alimentos, devuelve []."
+            "4. Si es imposible calcular macros, usa null.\n"
+            "5. Si no ves alimentos, devuelve []."
         )
 
         response = client.chat.completions.create(
