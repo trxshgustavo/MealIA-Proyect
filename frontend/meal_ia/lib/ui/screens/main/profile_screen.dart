@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,7 +18,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  File? _imageFile; // Para la vista previa local
+  File? _imageFile; // Para la vista previa local (Móvil)
+  Uint8List? _imageBytes; // Para la vista previa local (Web)
   final ImagePicker _picker = ImagePicker();
 
   // --- ESTADO LOCAL (Migrado de Settings) ---
@@ -56,19 +59,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final XFile? pickedFile = await _picker.pickImage(source: source);
 
       if (pickedFile != null) {
-        final File imageFile = File(pickedFile.path);
+        final Uint8List bytes = await pickedFile.readAsBytes();
 
         setState(() {
-          _imageFile = imageFile;
+          if (kIsWeb) {
+            _imageBytes = bytes;
+          } else {
+            _imageFile = File(pickedFile.path);
+          }
         });
 
-        final errorMsg = await appState.uploadProfilePicture(imageFile);
+        final errorMsg = await appState.uploadProfilePicture(bytes);
 
         if (!mounted) return;
 
         if (errorMsg == null) {
           setState(() {
             _imageFile = null;
+            _imageBytes = null;
           });
           scaffoldMessenger.showSnackBar(
             const SnackBar(
@@ -79,6 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } else {
           setState(() {
             _imageFile = null;
+            _imageBytes = null;
           });
           scaffoldMessenger.showSnackBar(
             SnackBar(
@@ -97,6 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _deleteImage() async {
     setState(() {
       _imageFile = null;
+      _imageBytes = null;
     });
 
     final appState = Provider.of<AppState>(context, listen: false);
@@ -558,46 +568,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: Border.all(color: Colors.white, width: 2),
                   ),
                   child: ClipOval(
-                    child: _imageFile != null
-                        ? Image.file(
-                            _imageFile!,
+                    child: _imageBytes != null
+                        ? Image.memory(
+                            _imageBytes!,
                             fit: BoxFit.cover,
                             width: 100.r,
                             height: 100.r,
                           )
-                        : (appState.photoUrl != null &&
-                              appState.photoUrl!.isNotEmpty)
-                        ? Image.network(
-                            appState.photoUrl!,
-                            fit: BoxFit.cover,
-                            width: 100.r,
-                            height: 100.r,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: AppColors.cardDark,
-                                child: Icon(
-                                  Icons.person_off, // Distinct icon for error
-                                  size: 40.r,
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                ),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              );
-                            },
-                          )
-                        : Icon(Icons.person, size: 50.r, color: Colors.white),
+                        : _imageFile != null
+                            ? Image.file(
+                                _imageFile!,
+                                fit: BoxFit.cover,
+                                width: 100.r,
+                                height: 100.r,
+                              )
+                            : (appState.photoUrl != null &&
+                                  appState.photoUrl!.isNotEmpty)
+                            ? Image.network(
+                                appState.photoUrl!,
+                                fit: BoxFit.cover,
+                                width: 100.r,
+                                height: 100.r,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: AppColors.cardDark,
+                                    child: Icon(
+                                      Icons.person_off, // Distinct icon for error
+                                      size: 40.r,
+                                      color: Colors.white.withValues(alpha: 0.5),
+                                    ),
+                                  );
+                                },
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                          : null,
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Icon(Icons.person, size: 50.r, color: Colors.white),
                   ),
                 ),
                 Positioned(

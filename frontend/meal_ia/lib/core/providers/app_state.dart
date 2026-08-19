@@ -69,6 +69,9 @@ class AppState extends ChangeNotifier {
   // --- VERIFICACIÓN DE SESIÓN ---
   Future<bool> checkLoginStatus() async {
     try {
+      // WAIT FOR FIREBASE TO INITIALIZE (Crucial for Web persistence)
+      await FirebaseAuth.instance.authStateChanges().first;
+
       final token = await _storage.read(key: 'auth_token');
 
       if (token == null || token.isEmpty) {
@@ -2018,7 +2021,7 @@ class AppState extends ChangeNotifier {
     return backendSuccess || firestoreSuccess || token != null;
   }
 
-  Future<String?> uploadProfilePicture(File imageFile) async {
+  Future<String?> uploadProfilePicture(Uint8List fileBytes) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return "No estás autenticado";
 
@@ -2036,15 +2039,6 @@ class AppState extends ChangeNotifier {
       contentType: 'image/jpeg',
       customMetadata: {'uploaded_by': user.uid},
     );
-
-    // Read bytes
-    Uint8List fileBytes;
-    try {
-      fileBytes = await imageFile.readAsBytes();
-    } catch (e) {
-      debugPrint("Error reading file bytes: $e");
-      return "Error leyendo el archivo local: $e";
-    }
 
     try {
       final storage = FirebaseStorage.instanceFor(bucket: targetBucket);
