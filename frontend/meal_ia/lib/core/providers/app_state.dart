@@ -25,10 +25,12 @@ class AppState extends ChangeNotifier {
             ? dotenv.env['WEB_CLIENT_ID']
             : null)
         : null,
-    serverClientId: (dotenv.env['GOOGLE_SERVER_CLIENT_ID'] != null &&
+    serverClientId: kIsWeb 
+        ? null 
+        : ((dotenv.env['GOOGLE_SERVER_CLIENT_ID'] != null &&
             dotenv.env['GOOGLE_SERVER_CLIENT_ID']!.isNotEmpty)
-        ? dotenv.env['GOOGLE_SERVER_CLIENT_ID']
-        : null,
+            ? dotenv.env['GOOGLE_SERVER_CLIENT_ID']
+            : null),
   );
 
   // Datos de Usuario
