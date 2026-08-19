@@ -132798,29 +132798,29 @@ return A.r($async$x4,r)},
 zU(a,b,c){return this.b_p(a,b,c)},
 b_p(a0,a1,a2){var s=0,r=A.t(t.Xb),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b,a
 var $async$zU=A.o(function(a3,a4){if(a3===1){o.push(a4)
-s=p}for(;;)switch(s){case 0:s=3
+s=p}for(;;)switch(s){case 0:c=n.m1(a0)
+b=n.db
+if(b.a_(0,c)){if(B.c.b0(a1,"extra")){if(B.c.t(a1,"_")){h=A.lY(a1.split("_")[1],null)
+if(h==null)h=0}else h=0
+g=b.h(0,c)
+g.toString
+f=J.D(g,"extra_meals")
+if(t._.b(f)&&h<J.bv(f)){g=J.R(f)
+if(t.f.b(g.h(f,h)))J.cp(g.h(f,h),"eaten",a2)}b=b.h(0,c)
+b.toString
+J.cp(b,a1+"_eaten",a2)}else{b=b.h(0,c)
+b.toString
+J.cp(b,a1+"_eaten",a2)}n.au()}s=3
 return A.j(B.Z.el(0,"auth_token"),$async$zU)
-case 3:b=a4
-if(b==null){q=null
+case 3:m=a4
+if(m==null){q=null
 s=1
-break}m=n.m1(a0)
-h=n.db
-if(h.a_(0,m)){if(B.c.b0(a1,"extra")){if(B.c.t(a1,"_")){g=A.lY(a1.split("_")[1],null)
-if(g==null)g=0}else g=0
-f=h.h(0,m)
-f.toString
-e=J.D(f,"extra_meals")
-if(t._.b(e)&&g<J.bv(e)){f=J.R(e)
-if(t.f.b(f.h(e,g)))J.cp(f.h(e,g),"eaten",a2)}h=h.h(0,m)
-h.toString
-J.cp(h,a1+"_eaten",a2)}else{h=h.h(0,m)
-h.toString
-J.cp(h,a1+"_eaten",a2)}n.au()}p=5
-h=A.cD(n.a+"/meal-plans/"+A.l(m)+"/mark-eaten",0,null)
-f=t.N
-d=A.J(["Authorization","Bearer "+b,"Content-Type","application/json"],f,f)
+break}p=5
+b=A.cD(n.a+"/meal-plans/"+A.l(c)+"/mark-eaten",0,null)
+g=t.N
+e=A.J(["Authorization","Bearer "+m,"Content-Type","application/json"],g,g)
 s=8
-return A.j(A.c_n(h,B.O.fF(A.J(["meal_type",a1,"eaten",a2],f,t.K),null),d),$async$zU)
+return A.j(A.c_n(b,B.O.fF(A.J(["meal_type",a1,"eaten",a2],g,t.K),null),e),$async$zU)
 case 8:l=a4
 s=l.b===200?9:10
 break
@@ -132830,12 +132830,12 @@ break
 case 11:s=13
 return A.j(n.Ed(),$async$zU)
 case 13:case 12:if(J.ef(k,"depleted_items")){j=J.D(k,"depleted_items")
-h=J.dG(j,new A.arY(),f)
-h=A.a0(h,h.$ti.i("af.E"))
-q=h
+b=J.dG(j,new A.arY(),g)
+b=A.a0(b,b.$ti.i("af.E"))
+q=b
 s=1
-break}h=A.c([],t.s)
-q=h
+break}b=A.c([],t.s)
+q=b
 s=1
 break
 case 10:p=2

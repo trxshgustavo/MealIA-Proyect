@@ -1200,12 +1200,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<List<String>?> markMealEaten(DateTime date, String mealType, bool eaten) async {
-    final token = await _storage.read(key: 'auth_token');
-    if (token == null) return null;
-
     final dateKey = _formatDate(date);
     
-    // Update locally first for fast UI
+    // Update locally first for fast UI (synchronous, no await)
     if (_mealCalendar.containsKey(dateKey)) {
       if (mealType.startsWith('extra')) {
         int idx = 0;
@@ -1224,6 +1221,9 @@ class AppState extends ChangeNotifier {
       }
       notifyListeners();
     }
+
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return null;
 
     try {
       final response = await http.patch(
