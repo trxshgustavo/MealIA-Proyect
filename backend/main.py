@@ -68,7 +68,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # --- ENDPOINT DE SALUD PARA DIAGNÓSTICO ---
-@app.get("/health", tags=["Health"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Health"])
 def health_check():
     """Endpoint simple para verificar que el servidor está corriendo"""
     return {"status": "ok", "message": "Backend is running", "version": "1.0.0"}
