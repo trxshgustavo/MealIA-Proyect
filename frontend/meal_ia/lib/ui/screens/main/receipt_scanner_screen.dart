@@ -101,9 +101,10 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
 
     try {
       final image = await _controller!.takePicture();
+      final bytes = await image.readAsBytes();
 
       // 1. Intentar análisis con backend (OpenAI GPT-4o Vision + OpenFoodFacts)
-      final backendItems = await appState.scanReceipt(image.path);
+      final backendItems = await appState.scanReceipt(bytes, image.name);
 
       if (backendItems != null && backendItems.isNotEmpty) {
         final List<ScannedFood> parsedItems = backendItems.map((e) {
@@ -141,7 +142,6 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
       // 2. Fallback con Gemini si está configurado en el cliente
       final apiKey = dotenv.env['GEMINI_API_KEY'];
       if (apiKey != null && apiKey.isNotEmpty) {
-        final bytes = await image.readAsBytes();
         final modelsToTry = [
           'gemini-2.5-flash',
           'gemini-flash-latest',

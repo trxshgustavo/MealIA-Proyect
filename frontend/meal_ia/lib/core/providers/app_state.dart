@@ -1491,14 +1491,14 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  Future<List<dynamic>?> scanFridge(String imagePath) async {
+  Future<List<dynamic>?> scanFridge(Uint8List bytes, String filename) async {
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return null;
 
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-fridge'));
       request.headers.addAll({'Authorization': 'Bearer $token'});
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
 
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
@@ -1515,14 +1515,14 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  Future<List<dynamic>?> scanReceipt(String imagePath) async {
+  Future<List<dynamic>?> scanReceipt(Uint8List bytes, String filename) async {
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return null;
 
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-receipt'));
       request.headers.addAll({'Authorization': 'Bearer $token'});
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
 
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
