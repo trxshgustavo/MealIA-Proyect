@@ -2022,96 +2022,51 @@ class AppState extends ChangeNotifier {
   }
 
   Future<String?> uploadProfilePicture(Uint8List fileBytes) async {
+    final token = await _storage.read(key: 'auth_token');
+    if (token == null) return "No estás autenticado";
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return "No estás autenticado";
 
-    debugPrint("Starting profile photo upload for ${user.uid}...");
-
-    // DIRECT FIX: User confirmed bucket is gs://mealiav2.firebasestorage.app
-    // We bypass the list and dynamic loading to eliminate env vars issues.
-    final targetBucket = 'gs://mealiav2.firebasestorage.app';
-
-    debugPrint("FORCE UPLOAD to: $targetBucket");
-
-    String? uploadedPhotoUrl;
-
-    final metadata = SettableMetadata(
-      contentType: 'image/jpeg',
-      customMetadata: {'uploaded_by': user.uid},
-    );
-
     try {
-      final storage = FirebaseStorage.instanceFor(bucket: targetBucket);
-      debugPrint("Storage Instance created for $targetBucket");
-      debugPrint("Storage App: ${storage.app.name}");
+      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/users/me/upload-photo'));
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+      request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: 'profile_photo.jpg'));
 
-      final ref = storage.ref().child('users/${user.uid}/profile_photo.jpg');
-      debugPrint("Storage Ref: ${ref.fullPath}");
-      debugPrint("Storage Ref Bucket: ${ref.bucket}");
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
 
-      // Upload
-      await ref.putData(fileBytes, metadata);
-      debugPrint("putData SUCCESS");
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(responseData);
+        photoUrl = decoded['photo_url'];
 
-      // Get URL
-      uploadedPhotoUrl = await ref.getDownloadURL();
-      debugPrint("getDownloadURL SUCCESS: $uploadedPhotoUrl");
-    } catch (e) {
-      debugPrint("CRITICAL UPLOAD ERROR: $e");
-      if (e is FirebaseException) {
-        debugPrint("Code: ${e.code}");
-        debugPrint("Message: ${e.message}");
-      }
-      return "Error de subida (404/403 Check Console): $e";
-    }
+        // Persist locally
+        await _storage.write(
+          key: 'profile_photo_url_${user.uid}',
+          value: photoUrl,
+        );
 
-    photoUrl = uploadedPhotoUrl;
-
-    try {
-      // 2. Persist URL locally
-      await _storage.write(
-        key: 'profile_photo_url_${user.uid}',
-        value: photoUrl,
-      );
-
-      // 3. Sync to Firestore (Robustness)
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'photo_url': photoUrl,
-          'updated_at': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      } catch (e) {
-        debugPrint("Firestore Sync Warning: $e");
-        return "Foto subida, pero hubo error guardando en base de datos (Firestore): $e";
-      }
-
-      // 4. Sync to Backend (Best Effort)
-      final token = await _storage.read(key: 'auth_token');
-      if (token != null) {
-        try {
-          // We use the same endpoint as physical data updates
-          await http
-              .put(
-                Uri.parse('$_baseUrl/users/me/data'),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer $token',
-                },
-                body: jsonEncode({'photo_url': photoUrl}),
-              )
-              .timeout(const Duration(seconds: 5));
-        } catch (e) {
-          debugPrint("Backend sync warning (non-critical): $e");
+        // Update cache
+        String? cached = await _storage.read(key: 'user_profile_cache_current');
+        if (cached != null) {
+          final data = jsonDecode(cached);
+          data['photo_url'] = photoUrl;
+          await _storage.write(
+            key: 'user_profile_cache_current',
+            value: jsonEncode(data),
+          );
         }
+        notifyListeners();
+        return null; // Success
+      } else {
+        return "Error del servidor: ${response.statusCode} - $responseData";
       }
-
-      notifyListeners();
-      return null; // Success (null error)
     } catch (e) {
-      debugPrint("CRITICAL ERROR uploading profile picture: $e");
-      return "Error inesperado al finalizar subida: $e";
+      debugPrint("Error uploadProfilePicture: $e");
+      return "Error de conexión: $e";
     }
   }
+
 
   Future<bool> saveRecipeToFavorites(Map<String, dynamic> recipeData) async {
     final token = await _storage.read(key: 'auth_token');

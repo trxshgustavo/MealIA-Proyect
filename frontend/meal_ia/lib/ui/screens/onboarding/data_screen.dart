@@ -15,6 +15,8 @@ class DataScreen extends StatefulWidget {
 
 class _DataScreenState extends State<DataScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _firstNameCtl = TextEditingController();
+  final _lastNameCtl = TextEditingController();
   DateTime? _birthdate;
   int _currentHeight = 170;
   double _currentWeight = 70.5;
@@ -31,25 +33,31 @@ class _DataScreenState extends State<DataScreen> {
   @override
   void initState() {
     super.initState();
-    final appState = Provider.of<AppState>(context, listen: false);
-    if (appState.height != null) {
-      _currentHeight = (appState.height! * 100).round();
-    }
-    if (appState.weight != null) {
-      _currentWeight = appState.weight!;
-    }
-    if (appState.birthdate != null) {
-      _birthdate = appState.birthdate;
-      _dateCtl.text = DateFormat('dd/MM/yyyy').format(_birthdate!);
-    }
-    if (appState.gender != null) {
-      _selectedGender = appState.gender;
-    }
-    _mealsPerDay = appState.mealsPerDay;
-    if (appState.mealTimes.isNotEmpty) {
-      _mealTimes = Map<String, String>.from(appState.mealTimes);
-    }
-    _updateMealTimesMap();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appState = Provider.of<AppState>(context, listen: false);
+      setState(() {
+        _firstNameCtl.text = appState.firstName ?? '';
+        _lastNameCtl.text = appState.lastName ?? '';
+        if (appState.height != null) {
+          _currentHeight = (appState.height! * 100).round();
+        }
+        if (appState.weight != null) {
+          _currentWeight = appState.weight!;
+        }
+        if (appState.birthdate != null) {
+          _birthdate = appState.birthdate;
+          _dateCtl.text = DateFormat('dd/MM/yyyy').format(_birthdate!);
+        }
+        if (appState.gender != null) {
+          _selectedGender = appState.gender;
+        }
+        _mealsPerDay = appState.mealsPerDay;
+        if (appState.mealTimes.isNotEmpty) {
+          _mealTimes = Map<String, String>.from(appState.mealTimes);
+        }
+        _updateMealTimesMap();
+      });
+    });
   }
   
   void _updateMealTimesMap() {
@@ -182,11 +190,10 @@ class _DataScreenState extends State<DataScreen> {
 
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      final lastName = Provider.of<AppState>(context, listen: false).lastName;
 
       final success = await appState.saveUserPhysicalData(
-        firstName: appState.firstName,
-        lastName: lastName,
+        firstName: _firstNameCtl.text.trim().isEmpty ? null : _firstNameCtl.text.trim(),
+        lastName: _lastNameCtl.text.trim().isEmpty ? null : _lastNameCtl.text.trim(),
         birthdate: _birthdate,
         height: _currentHeight / 100.0,
         weight: _currentWeight,
@@ -326,6 +333,17 @@ class _DataScreenState extends State<DataScreen> {
                         ),
                         SizedBox(height: 20.h),
 
+                        TextField(
+                          controller: _firstNameCtl,
+                          decoration: _inputDecoration('Tu nombre', Icons.person),
+                        ),
+                        SizedBox(height: 16.h),
+
+                        TextField(
+                          controller: _lastNameCtl,
+                          decoration: _inputDecoration('Tu apellido', Icons.person_outline),
+                        ),
+                        SizedBox(height: 16.h),
                         DropdownButtonFormField<String>(
                           initialValue: _selectedGender,
                           decoration: _inputDecoration('Selecciona tu género', Icons.person),

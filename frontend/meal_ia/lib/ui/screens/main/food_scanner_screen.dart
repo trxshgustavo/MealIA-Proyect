@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'dart:convert';
 import 'dart:ui'; // For BackdropFilter
 import 'package:camera/camera.dart';
@@ -105,15 +106,17 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
   }
 
   Future<void> _initializeCamera() async {
-    var status = await Permission.camera.request();
-    if (status.isDenied) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Se necesita permiso de cámara.')),
-        );
-        Navigator.pop(context);
+    if (!kIsWeb) {
+      var status = await Permission.camera.request();
+      if (status.isDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Se necesita permiso de cámara.')),
+          );
+          Navigator.pop(context);
+        }
+        return;
       }
-      return;
     }
 
     try {
@@ -129,7 +132,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
         camera,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup: Platform.isAndroid
+        imageFormatGroup: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
             ? ImageFormatGroup.jpeg
             : ImageFormatGroup.bgra8888,
       );
