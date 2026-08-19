@@ -693,62 +693,94 @@ class AppState extends ChangeNotifier {
   Future<String> signInWithGoogle() async {
     clearMemoryState();
     try {
-      // PASO 0: Limpiar sesión anterior de Google para evitar que signIn() se cuelgue
-      // Esto resuelve el bug donde una sesión stale bloquea el flujo OAuth
-      try {
-        await _googleSignIn.signOut();
-        debugPrint('✓ Sesión anterior de Google limpiada');
-      } catch (e) {
-        debugPrint('⚠️ Error limpiando sesión Google (no crítico): $e');
-      }
+      String? googleToken;
+      String? userEmail;
+      String? userDisplayName;
+      String? userPhotoUrl;
 
-      // PASO 1: Iniciar flujo de Google Sign-In con timeout explícito
-      debugPrint('🔄 Iniciando Google Sign-In...');
-      final GoogleSignInAccount? googleUser = await _googleSignIn
-          .signIn()
-          .timeout(
-            const Duration(seconds: 30),
-            onTimeout: () {
-              debugPrint('❌ Google Sign-In tardó más de 30s - cancelando');
-              return null;
-            },
-          );
+      if (kIsWeb) {
+        debugPrint('🔄 Iniciando Google Sign-In (vía Firebase Popup para Web)...');
+        final googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        
+        final UserCredential userCredential = await FirebaseAuth.instance
+            .signInWithPopup(googleProvider)
+            .timeout(const Duration(seconds: 45));
+            
+        final OAuthCredential? credential = userCredential.credential as OAuthCredential?;
+        if (credential == null || credential.idToken == null) {
+          debugPrint('❌ No se obtuvo idToken del credential de Google');
+          return "Error al obtener token de Google";
+        }
+        
+        googleToken = credential.idToken;
+        userEmail = userCredential.user?.email;
+        userDisplayName = userCredential.user?.displayName;
+        userPhotoUrl = userCredential.user?.photoURL;
+        
+        debugPrint('✓ Google Sign-In (Web) exitoso: $userEmail');
+      } else {
+        // PASO 0: Limpiar sesión anterior de Google para evitar que signIn() se cuelgue
+        try {
+          await _googleSignIn.signOut();
+          debugPrint('✓ Sesión anterior de Google limpiada');
+        } catch (e) {
+          debugPrint('⚠️ Error limpiando sesión Google (no crítico): $e');
+        }
 
-      if (googleUser == null) {
-        debugPrint('ℹ️ Google Sign-In: usuario canceló o timeout');
-        return "Inicio de sesión cancelado";
-      }
-      debugPrint('✓ Google Sign-In exitoso: ${googleUser.email}');
+        // PASO 1: Iniciar flujo de Google Sign-In con timeout explícito
+        debugPrint('🔄 Iniciando Google Sign-In...');
+        final GoogleSignInAccount? googleUser = await _googleSignIn
+            .signIn()
+            .timeout(
+              const Duration(seconds: 30),
+              onTimeout: () {
+                debugPrint('❌ Google Sign-In tardó más de 30s - cancelando');
+                return null;
+              },
+            );
 
-      // PASO 2: Obtener tokens de autenticación
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication.timeout(
-        const Duration(seconds: 15),
-      );
-      final String? googleToken = googleAuth.idToken;
+        if (googleUser == null) {
+          debugPrint('ℹ️ Google Sign-In: usuario canceló o timeout');
+          return "Inicio de sesión cancelado";
+        }
+        debugPrint('✓ Google Sign-In exitoso: ${googleUser.email}');
 
-      if (googleToken == null) {
-        debugPrint('❌ No se obtuvo idToken de Google');
-        return "Error al obtener token de Google";
-      }
-      debugPrint('✓ Token de Google obtenido');
+        // PASO 2: Obtener tokens de autenticación
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication.timeout(
+          const Duration(seconds: 15),
+        );
+        googleToken = googleAuth.idToken;
 
-      // PASO 3: Sincronizar Firebase con Google Credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+        if (googleToken == null) {
+          debugPrint('❌ No se obtuvo idToken de Google');
+          return "Error al obtener token de Google";
+        }
+        debugPrint('✓ Token de Google obtenido');
 
-      try {
-        await FirebaseAuth.instance
-            .signInWithCredential(credential)
-            .timeout(const Duration(seconds: 15));
-        debugPrint('✓ Firebase Auth sincronizado con Google');
-      } on FirebaseAuthException catch (e) {
-        debugPrint('❌ Firebase Auth error: ${e.code}');
-        return _handleFirebaseError(e);
-      } on TimeoutException {
-        debugPrint('⚠️ Firebase Auth timeout (continuando con backend...)');
+        userEmail = googleUser.email;
+        userDisplayName = googleUser.displayName;
+        userPhotoUrl = googleUser.photoUrl;
+
+        // PASO 3: Sincronizar Firebase con Google Credential
+        final fbCredential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        try {
+          await FirebaseAuth.instance
+              .signInWithCredential(fbCredential)
+              .timeout(const Duration(seconds: 15));
+          debugPrint('✓ Firebase Auth sincronizado con Google');
+        } on FirebaseAuthException catch (e) {
+          debugPrint('❌ Firebase Auth error: ${e.code}');
+          return _handleFirebaseError(e);
+        } on TimeoutException {
+          debugPrint('⚠️ Firebase Auth timeout (continuando con backend...)');
+        }
       }
 
       // PASO 4: Enviar token al backend
@@ -772,9 +804,9 @@ class AppState extends ChangeNotifier {
           bool success = await _loadUserData(appToken);
 
           if (!success) {
-            email ??= googleUser.email;
+            email ??= userEmail;
             if (firstName == null) {
-              final nameParts = (googleUser.displayName ?? '').split(' ');
+              final nameParts = (userDisplayName ?? '').split(' ');
               if (nameParts.isNotEmpty) firstName = nameParts.first;
               if (nameParts.length > 1) {
                 lastName = nameParts.sublist(1).join(' ');
@@ -800,14 +832,14 @@ class AppState extends ChangeNotifier {
       } catch (e) {
         debugPrint("Error de conexión al backend en Google Sign-In: $e");
         if (FirebaseAuth.instance.currentUser != null) {
-          email = googleUser.email;
-          final nameParts = (googleUser.displayName ?? '').split(' ');
+          email = userEmail;
+          final nameParts = (userDisplayName ?? '').split(' ');
           if (nameParts.isNotEmpty) firstName = nameParts.first;
           if (nameParts.length > 1) {
             lastName = nameParts.sublist(1).join(' ');
           }
-          if (googleUser.photoUrl != null && googleUser.photoUrl!.isNotEmpty) {
-            photoUrl = googleUser.photoUrl;
+          if (userPhotoUrl != null && userPhotoUrl.isNotEmpty) {
+            photoUrl = userPhotoUrl;
           }
           notifyListeners();
           return "OK_NEW";
