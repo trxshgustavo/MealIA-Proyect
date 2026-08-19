@@ -1249,6 +1249,33 @@ class AppState extends ChangeNotifier {
            return depleted.map((e) => e.toString()).toList();
         }
         return [];
+      } else if (response.statusCode == 404 && _mealCalendar.containsKey(dateKey)) {
+        // Backend DB might have been wiped or is out of sync.
+        // Let's re-upload the local meal plan and retry the patch.
+        debugPrint("Meal plan not found on backend. Syncing local to backend...");
+        bool saved = await saveMealPlan(date, Map<String, dynamic>.from(_mealCalendar[dateKey]!));
+        if (saved) {
+          final retryResponse = await http.patch(
+            Uri.parse('$_baseUrl/meal-plans/$dateKey/mark-eaten'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'meal_type': mealType,
+              'eaten': eaten,
+            }),
+          );
+          if (retryResponse.statusCode == 200) {
+            final responseData = jsonDecode(utf8.decode(retryResponse.bodyBytes));
+            if (eaten) await fetchInventory();
+            if (responseData.containsKey('depleted_items')) {
+               final List<dynamic> depleted = responseData['depleted_items'];
+               return depleted.map((e) => e.toString()).toList();
+            }
+            return [];
+          }
+        }
       }
     } catch (e) {
       debugPrint("Error marking meal eaten: $e");
