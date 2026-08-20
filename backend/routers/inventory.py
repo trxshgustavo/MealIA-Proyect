@@ -42,6 +42,9 @@ def add_inventory_item(
             db_item.proteins = item.proteins
             db_item.fats = item.fats
             db_item.carbs = item.carbs
+        # Update category if provided
+        if hasattr(item, 'category') and item.category:
+            db_item.category = item.category
     else:
         # Crea nuevo con unidad
         db_item = models.InventoryItem(
@@ -49,6 +52,7 @@ def add_inventory_item(
             owner_id=current_user.id,
             quantity=item.quantity,
             unit=item.unit,
+            category=item.category if hasattr(item, 'category') else "Otros",
             calories=item.calories,
             proteins=item.proteins,
             fats=item.fats,
@@ -84,6 +88,8 @@ def update_inventory_item(
     # Actualiza valores
     db_item.quantity = item_update.quantity
     db_item.unit = item_update.unit
+    if hasattr(item_update, 'category') and item_update.category:
+        db_item.category = item_update.category
     if item_update.calories is not None:
         db_item.calories = item_update.calories
     if item_update.proteins is not None:

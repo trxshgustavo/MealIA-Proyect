@@ -33,6 +33,15 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
   
   bool _isAnalyzing = false;
   Map<String, dynamic>? _analyzedMeal;
+  Map<String, dynamic>? _baseAnalyzedMeal;
+  double _quantity = 1.0;
+  final TextEditingController _qtyController = TextEditingController(text: "1");
+
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
@@ -47,6 +56,9 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
     setState(() {
       _isAnalyzing = true;
       _analyzedMeal = null;
+      _baseAnalyzedMeal = null;
+      _quantity = 1.0;
+      _qtyController.text = "1";
     });
 
     final result = await widget.appState.analyzeFood(text: text, imagePath: imagePath);
@@ -54,7 +66,12 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
     if (mounted) {
       setState(() {
         _isAnalyzing = false;
-        _analyzedMeal = result;
+        if (result != null) {
+          _baseAnalyzedMeal = Map.from(result);
+          _analyzedMeal = Map.from(result);
+        } else {
+          _analyzedMeal = null;
+        }
       });
 
       if (result == null) {
@@ -65,6 +82,30 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
         );
       }
     }
+  }
+
+  void _updateQuantity(double newQty) {
+    if (newQty < 0.1) return;
+    if (_baseAnalyzedMeal == null) return;
+    
+    setState(() {
+      _quantity = newQty;
+      _qtyController.text = _quantity.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+      
+      // Multiplicar base
+      _analyzedMeal!['calories'] = ((_baseAnalyzedMeal!['calories'] as num) * _quantity).round();
+      _analyzedMeal!['protein'] = ((_baseAnalyzedMeal!['protein'] as num) * _quantity).round();
+      _analyzedMeal!['carbs'] = ((_baseAnalyzedMeal!['carbs'] as num) * _quantity).round();
+      _analyzedMeal!['fat'] = ((_baseAnalyzedMeal!['fat'] as num) * _quantity).round();
+      
+      if (_baseAnalyzedMeal!['vitamin_a'] != null) _analyzedMeal!['vitamin_a'] = double.parse(((_baseAnalyzedMeal!['vitamin_a'] as num) * _quantity).toStringAsFixed(1));
+      if (_baseAnalyzedMeal!['vitamin_c'] != null) _analyzedMeal!['vitamin_c'] = double.parse(((_baseAnalyzedMeal!['vitamin_c'] as num) * _quantity).toStringAsFixed(1));
+      if (_baseAnalyzedMeal!['calcium'] != null) _analyzedMeal!['calcium'] = double.parse(((_baseAnalyzedMeal!['calcium'] as num) * _quantity).toStringAsFixed(1));
+      if (_baseAnalyzedMeal!['iron'] != null) _analyzedMeal!['iron'] = double.parse(((_baseAnalyzedMeal!['iron'] as num) * _quantity).toStringAsFixed(1));
+      if (_baseAnalyzedMeal!['fiber'] != null) _analyzedMeal!['fiber'] = double.parse(((_baseAnalyzedMeal!['fiber'] as num) * _quantity).toStringAsFixed(1));
+      if (_baseAnalyzedMeal!['sugar'] != null) _analyzedMeal!['sugar'] = double.parse(((_baseAnalyzedMeal!['sugar'] as num) * _quantity).toStringAsFixed(1));
+      if (_baseAnalyzedMeal!['sodium'] != null) _analyzedMeal!['sodium'] = ((_baseAnalyzedMeal!['sodium'] as num) * _quantity).round();
+    });
   }
 
   Future<void> _saveMeal() async {
@@ -143,9 +184,52 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _analyzedMeal!['name'] ?? "Desconocido",
-                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _analyzedMeal!['name'] ?? "Desconocido",
+                            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 20),
+                                onPressed: () => _updateQuantity(_quantity - 0.25),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              SizedBox(
+                                width: 45.w,
+                                child: TextField(
+                                  controller: _qtyController,
+                                  textAlign: TextAlign.center,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp, color: AppColors.textDark),
+                                  onSubmitted: (val) {
+                                    final n = double.tryParse(val);
+                                    if (n != null) _updateQuantity(n);
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 20),
+                                onPressed: () => _updateQuantity(_quantity + 0.25),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 12.h),
                     Row(

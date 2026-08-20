@@ -8,6 +8,7 @@ class InventoryItemBase(BaseModel):
     name: str
     quantity: float = 1.0
     unit: str = "Unidades"
+    category: str = "Otros"
     calories: Optional[float] = None
     proteins: Optional[float] = None
     fats: Optional[float] = None
@@ -21,6 +22,7 @@ class InventoryItemCreate(InventoryItemBase):
 class InventoryItemUpdate(BaseModel):  # <--- NUEVO ESQUEMA PARA EL PUT
     quantity: float
     unit: str
+    category: str = "Otros"
     calories: Optional[float] = None
     proteins: Optional[float] = None
     fats: Optional[float] = None

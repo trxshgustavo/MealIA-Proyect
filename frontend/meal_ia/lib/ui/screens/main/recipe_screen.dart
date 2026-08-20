@@ -5,9 +5,11 @@ import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/providers/app_state.dart';
-
-
 class RecipeScreen extends StatefulWidget {
   const RecipeScreen({super.key});
 
@@ -23,6 +25,9 @@ class _RecipeScreenState extends State<RecipeScreen>
   int _selectedTabIndex = 0;
   bool _isRegenerating = false;
   bool _isSaving = false;
+  final _storage = const FlutterSecureStorage();
+  String? _recipeName;
+  bool _stepsLoaded = false;
 
   @override
   void initState() {
@@ -46,6 +51,79 @@ class _RecipeScreenState extends State<RecipeScreen>
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_stepsLoaded) {
+      final Map<String, dynamic>? recipeData =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (recipeData != null && recipeData['name'] != null) {
+        _recipeName = recipeData['name'];
+        _loadCompletedSteps();
+      }
+      _stepsLoaded = true;
+    }
+  }
+
+  Future<void> _loadCompletedSteps() async {
+    if (_recipeName == null) return;
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('recipe_progress')
+            .doc(_recipeName)
+            .get();
+        if (doc.exists) {
+          final data = doc.data();
+          if (data != null && data['completed_steps'] != null) {
+            final List<dynamic> list = data['completed_steps'];
+            if (mounted) {
+              setState(() {
+                _completedSteps.addAll(list.map((e) => e as int));
+              });
+            }
+            return;
+          }
+        }
+      }
+
+      final String? data = await _storage.read(key: 'recipe_steps_$_recipeName');
+      if (data != null) {
+        final List<dynamic> list = jsonDecode(data);
+        if (mounted) {
+          setState(() {
+            _completedSteps.addAll(list.map((e) => e as int));
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading steps: $e');
+    }
+  }
+
+  void _saveCompletedSteps() async {
+    if (_recipeName == null) return;
+    try {
+      final list = _completedSteps.toList();
+      await _storage.write(key: 'recipe_steps_$_recipeName', value: jsonEncode(list));
+
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('recipe_progress')
+            .doc(_recipeName)
+            .set({'completed_steps': list}, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('Error saving steps: $e');
+    }
+  }
+
   Animation<double> get safeAnimation =>
       _animation ?? const AlwaysStoppedAnimation(1.0);
 
@@ -58,6 +136,7 @@ class _RecipeScreenState extends State<RecipeScreen>
         _completedSteps.add(index);
       }
     });
+    _saveCompletedSteps();
   }
 
   @override

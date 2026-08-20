@@ -25,6 +25,14 @@ def migrate():
         default_times = json.dumps({"Desayuno": "08:00", "Almuerzo": "14:00", "Cena": "20:00"})
         cursor.execute("UPDATE users SET meal_times = ?", (default_times,))
 
+    # Add category to inventory_items
+    cursor.execute("PRAGMA table_info(inventory_items);")
+    inv_columns = [info[1] for info in cursor.fetchall()]
+    if "category" not in inv_columns:
+        print("Adding category to inventory_items...")
+        cursor.execute("ALTER TABLE inventory_items ADD COLUMN category VARCHAR DEFAULT 'Otros';")
+        cursor.execute("UPDATE inventory_items SET category = 'Otros' WHERE category IS NULL;")
+
     conn.commit()
     conn.close()
     print("Migration complete.")

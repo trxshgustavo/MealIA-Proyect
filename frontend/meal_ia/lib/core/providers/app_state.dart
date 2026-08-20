@@ -489,6 +489,7 @@ class AppState extends ChangeNotifier {
             'name': entry.key,
             'quantity': entry.value['quantity'],
             'unit': entry.value['unit'],
+            'category': entry.value['category'] ?? 'Otros',
           }),
         ).timeout(const Duration(seconds: 60));
       } catch (e) {
@@ -899,6 +900,7 @@ class AppState extends ChangeNotifier {
     String name,
     double quantity,
     String unit,
+    String category,
   ) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -908,7 +910,7 @@ class AppState extends ChangeNotifier {
           .doc(user.uid)
           .collection('inventory')
           .doc(name)
-          .set({'quantity': quantity, 'unit': unit}, SetOptions(merge: true));
+          .set({'quantity': quantity, 'unit': unit, 'category': category}, SetOptions(merge: true));
     } catch (e) {
       debugPrint("Error syncing item '$name' to Firestore: $e");
     }
@@ -1220,6 +1222,20 @@ class AppState extends ChangeNotifier {
         _mealCalendar[dateKey]!['${mealType}_eaten'] = eaten;
       }
       notifyListeners();
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('daily_menus')
+              .doc(dateKey)
+              .set(_mealCalendar[dateKey]!, SetOptions(merge: true));
+        } catch (e) {
+          debugPrint("Error saving meal eaten state to firestore: $e");
+        }
+      }
     }
 
     final token = await _storage.read(key: 'auth_token');
@@ -1600,9 +1616,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateFood(String foodKey, double quantity, String unit) async {
+  Future<void> updateFood(String foodKey, double quantity, String unit, {String category = 'Otros'}) async {
     // 1. OPTIMISTIC UPDATE
-    _inventory[foodKey] = {'quantity': quantity, 'unit': unit};
+    _inventory[foodKey] = {'quantity': quantity, 'unit': unit, 'category': category};
 
     // CACHE UPDATE
     final user = FirebaseAuth.instance.currentUser;
@@ -1614,7 +1630,7 @@ class AppState extends ChangeNotifier {
       );
       // FIRESTORE SYNC
       // ignore: unawaited_futures
-      _syncInventoryItemToFirestore(foodKey, quantity, unit);
+      _syncInventoryItemToFirestore(foodKey, quantity, unit, category);
     }
 
     notifyListeners();
@@ -1648,6 +1664,7 @@ class AppState extends ChangeNotifier {
             body: jsonEncode({
               'quantity': backendQuantity,
               'unit': backendUnit,
+              'category': category,
             }),
           )
           .timeout(const Duration(seconds: 10));
@@ -1664,6 +1681,7 @@ class AppState extends ChangeNotifier {
     String food, {
     double quantity = 1.0,
     String unit = 'Unidades',
+    String category = 'Otros',
     double? exactCalories,
     double? exactProteins,
     double? exactFats,
@@ -1694,7 +1712,7 @@ class AppState extends ChangeNotifier {
         );
 
         // Use updateFood (which handles optimistic + normalization)
-        await updateFood(normalizedKey, totalBase, targetUnit);
+        await updateFood(normalizedKey, totalBase, targetUnit, category: category);
         return true;
       } catch (e) {
         debugPrint("Error accumulating food: $e. Fallback to overwrite.");
@@ -1703,7 +1721,7 @@ class AppState extends ChangeNotifier {
     }
 
     // 1. OPTIMISTIC UPDATE (New Item)
-    _inventory[normalizedKey] = {'quantity': quantity, 'unit': unit};
+    _inventory[normalizedKey] = {'quantity': quantity, 'unit': unit, 'category': category};
 
     // CACHE UPDATE
     final user = FirebaseAuth.instance.currentUser;
@@ -1715,7 +1733,7 @@ class AppState extends ChangeNotifier {
       );
       // FIRESTORE SYNC
       // ignore: unawaited_futures
-      _syncInventoryItemToFirestore(normalizedKey, quantity, unit);
+      _syncInventoryItemToFirestore(normalizedKey, quantity, unit, category);
     }
 
     notifyListeners();
@@ -1758,10 +1776,11 @@ class AppState extends ChangeNotifier {
               'name': normalizedKey,
               'quantity': backendQuantity,
               'unit': backendUnit,
-              'calories': ?exactCalories,
-              'proteins': ?exactProteins,
-              'fats': ?exactFats,
-              'carbs': ?exactCarbs,
+              'category': category,
+              'calories': exactCalories,
+              'proteins': exactProteins,
+              'fats': exactFats,
+              'carbs': exactCarbs,
             }),
           )
           .timeout(const Duration(seconds: 10));

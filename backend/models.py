@@ -32,6 +32,7 @@ class InventoryItem(Base):
     name = Column(String, index=True, nullable=False)
     quantity = Column(Float, default=1.0)
     unit = Column(String, default="Unidades")
+    category = Column(String, default="Otros")
     
     # Exact macros for branded foods
     calories = Column(Float, nullable=True)

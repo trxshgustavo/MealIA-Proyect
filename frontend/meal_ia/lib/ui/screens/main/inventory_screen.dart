@@ -31,6 +31,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
     'paquete',
   ];
 
+  final List<String> _categories = [
+    'Otros',
+    'Desayuno',
+    'Almuerzo',
+    'Cena',
+    'Snack',
+  ];
+
   // We need to capture the autocomplete controller to clear it after selection
   TextEditingController? _autocompleteController;
 
@@ -90,6 +98,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     String foodKey,
     double currentQuantity,
     String currentUnit,
+    String currentCategory,
   ) async {
     final TextEditingController amountController = TextEditingController(
       text: currentQuantity > 0 ? _formatQuantity(currentQuantity) : '',
@@ -99,6 +108,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
     String selectedUnit = _units.contains(currentUnit)
         ? currentUnit
         : _units[0];
+        
+    String selectedCategory = _categories.contains(currentCategory)
+        ? currentCategory
+        : _categories[0];
 
     await showDialog(
       context: context,
@@ -121,12 +134,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     "Define la cantidad exacta:",
                     style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 10.h),
                   Row(
                     children: [
                       // Input de número
@@ -194,6 +208,47 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                     ],
                   ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    "Categoría:",
+                    style: TextStyle(color: Colors.grey, fontSize: 14.sp),
+                  ),
+                  SizedBox(height: 10.h),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBackground,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedCategory,
+                        isExpanded: true,
+                        dropdownColor: Colors.white,
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.textDark,
+                        ),
+                        items: _categories.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: const TextStyle(
+                                color: AppColors.textDark,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          if (newValue != null) {
+                            setDialogState(() => selectedCategory = newValue);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
                 ],
               ),
               actions: [
@@ -225,7 +280,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         Provider.of<AppState>(
                           context,
                           listen: false,
-                        ).updateFood(foodKey, amount, selectedUnit);
+                        ).updateFood(foodKey, amount, selectedUnit, category: selectedCategory);
                       } catch (e) {
                         // ignore: avoid_print
                         // print("Error llamando a updateFood: $e");
@@ -653,6 +708,29 @@ class _InventoryScreenState extends State<InventoryScreen> {
       defaultSize: 28.0,
     );
 
+    // Group items by category
+    final Map<String, List<String>> groupedItems = {
+      for (var cat in _categories) cat: []
+    };
+    
+    for (var key in inventoryMap.keys) {
+      final item = inventoryMap[key];
+      final cat = item?['category'] ?? 'Otros';
+      if (groupedItems.containsKey(cat)) {
+        groupedItems[cat]!.add(key);
+      } else {
+        groupedItems['Otros']!.add(key);
+      }
+    }
+    
+    final List<dynamic> flattenedList = [];
+    for (var cat in _categories) {
+      if (groupedItems[cat]!.isNotEmpty) {
+        flattenedList.add(cat); // Add category header
+        flattenedList.addAll(groupedItems[cat]!); // Add item keys
+      }
+    }
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -897,128 +975,152 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ],
                         ),
                       )
-                    : ListView.separated(
+                    : ListView.builder(
                         padding: EdgeInsets.fromLTRB(
-                          10.w, // Reducido
+                          10.w,
                           10.h,
                           10.w,
                           160.h, // Increased padding for navbar and FAB
                         ),
-                        itemCount: itemKeys.length,
-                        separatorBuilder: (context, index) =>
-                            SizedBox(height: 8.h),
+                        itemCount: flattenedList.length,
                         itemBuilder: (context, index) {
-                          // --- Normal Inventory Item ---
-                          final itemKey = itemKeys[index];
-                          final itemData = inventoryMap[itemKey];
-                          final double quantity = (itemData?['quantity'] ?? 0)
-                              .toDouble();
-                          final String unit = itemData?['unit'] ?? 'Unidades';
+                          final item = flattenedList[index];
 
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14.r),
-                              border: Border.all(
-                                color: Colors.grey.shade200,
-                                width: 1.0,
+                          if (item is String && _categories.contains(item)) {
+                            // --- Category Header ---
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                top: index == 0 ? 0 : 16.h,
+                                bottom: 8.h,
+                                left: 4.w,
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(
-                                    alpha: 0.08,
-                                  ), // Sombra más marcada
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(14.r),
-                                onTap: () {
-                                  _showEditQuantityDialog(
-                                    itemKey,
-                                    quantity,
-                                    unit,
-                                  );
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 14.w,
-                                    vertical: 6.h, // Padding reducido
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      // Icon Placeholder
-                                      Container(
-                                        padding: EdgeInsets.all(8.w),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.accentColor
-                                              .withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            10.r,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Icons.check_circle_outline,
-                                          color: AppColors.accentColor,
-                                          size: 18.sp,
-                                        ),
-                                      ),
-                                      SizedBox(width: 12.w),
-                                      Expanded(
-                                        child: Text(
-                                          _capitalize(itemKey),
-                                          style: TextStyle(
-                                            fontSize: 15.sp, // Tono abajo
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.primaryText,
-                                          ),
-                                        ),
-                                      ),
-                                      // Quantity Badge
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 10.w,
-                                          vertical: 5.h,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.cardBackground,
-                                          borderRadius: BorderRadius.circular(
-                                            12.r,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          "${_formatQuantity(quantity)} $unit",
-                                          style: TextStyle(
-                                            fontSize: 12.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.textDark,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 4.w),
-                                      // Delete Action
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.close_rounded,
-                                          size: 16.sp,
-                                          color: Colors.grey.shade400,
-                                        ),
-                                        onPressed: () =>
-                                            _removeFoodItem(itemKey),
-                                        splashRadius: 18,
-                                        constraints: const BoxConstraints(),
-                                        padding: EdgeInsets.all(6.w),
-                                      ),
-                                    ],
-                                  ),
+                              child: Text(
+                                item,
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryText,
                                 ),
                               ),
-                            ),
-                          );
+                            );
+                          } else {
+                            // --- Normal Inventory Item ---
+                            final itemKey = item as String;
+                            final itemData = inventoryMap[itemKey];
+                            final double quantity = (itemData?['quantity'] ?? 0)
+                                .toDouble();
+                            final String unit = itemData?['unit'] ?? 'Unidades';
+                            final String category = itemData?['category'] ?? 'Otros';
+
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: 8.h),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                    width: 1.0,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(14.r),
+                                    onTap: () {
+                                      _showEditQuantityDialog(
+                                        itemKey,
+                                        quantity,
+                                        unit,
+                                        category,
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 14.w,
+                                        vertical: 6.h,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Icon Placeholder
+                                          Container(
+                                            padding: EdgeInsets.all(8.w),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.accentColor
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(
+                                                10.r,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.check_circle_outline,
+                                              color: AppColors.accentColor,
+                                              size: 18.sp,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Expanded(
+                                            child: Text(
+                                              _capitalize(itemKey),
+                                              style: TextStyle(
+                                                fontSize: 15.sp,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primaryText,
+                                              ),
+                                            ),
+                                          ),
+                                          // Quantity Badge
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 10.w,
+                                              vertical: 5.h,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.cardBackground,
+                                              borderRadius: BorderRadius.circular(
+                                                12.r,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              "${_formatQuantity(quantity)} $unit",
+                                              style: TextStyle(
+                                                fontSize: 12.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textDark,
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 4.w),
+                                          // Delete Action
+                                          IconButton(
+                                            icon: Icon(
+                                              Icons.close_rounded,
+                                              size: 16.sp,
+                                              color: Colors.grey.shade400,
+                                            ),
+                                            onPressed: () =>
+                                                _removeFoodItem(itemKey),
+                                            splashRadius: 18,
+                                            constraints: const BoxConstraints(),
+                                            padding: EdgeInsets.all(6.w),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
                         },
                       ),
               ),
