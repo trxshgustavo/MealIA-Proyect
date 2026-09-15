@@ -47,3 +47,7 @@ app.*.map.json
 # Environment variables
 .env
 build/
+
+# Firebase Configs
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
