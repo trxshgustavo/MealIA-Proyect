@@ -66,23 +66,14 @@ Future<void> main() async {
     // Continuamos de todas formas, pero algunas funciones no funcionarán
   }
   // Initialize App Check
-  // SOLO en release: En debug, App Check genera errores 403 que bloquean Firebase Auth
-  // y causan que Google Sign-In se cuelgue con timeout.
-  if (!kDebugMode) {
-    try {
-      await FirebaseAppCheck.instance.activate(
-        providerAndroid: AndroidPlayIntegrityProvider(),
-        providerApple: AppleDeviceCheckProvider(),
-      );
-      debugPrint('✓ App Check activado (release mode)');
-    } catch (e) {
-      debugPrint('⚠️ APP CHECK ACTIVATION ERROR (no crítico): $e');
-    }
-  } else {
-    debugPrint('⚠️ App Check desactivado en debug mode (evita errores 403)');
-    debugPrint(
-      '💡 Para activar App Check en debug, registra tu debug token en Firebase Console → App Check',
+  try {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: kDebugMode ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
+      providerApple: kDebugMode ? AppleDebugProvider() : AppleDeviceCheckProvider(),
     );
+    debugPrint('✓ App Check activado (${kDebugMode ? "debug" : "release"} mode)');
+  } catch (e) {
+    debugPrint('⚠️ APP CHECK ACTIVATION ERROR (no crítico): $e');
   }
   runApp(const MealIAApp());
 }
