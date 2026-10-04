@@ -466,10 +466,14 @@ class _RecipeScreenState extends State<RecipeScreen>
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 16.0, left: 16.0),
-                    child: const IconTheme(
-                      data: IconThemeData(size: 42),
-                      child: BackButton(color: Colors.black87),
+                    padding: EdgeInsets.only(left: 8.w),
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      iconSize: 20.sp,
+                      color: Colors.black87,
+                      tooltip: 'Volver',
+                      visualDensity: VisualDensity.compact,
                     ),
                   ),
                 ),
