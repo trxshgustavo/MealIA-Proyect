@@ -20,12 +20,18 @@ class ScannedFood {
   String unit;
   bool isSelected;
   
-  // Exact Macros & Barcode
+  // Nutrition evidence. Macros should only be used for tracking when they come
+  // from a trusted source or a clearly visible nutrition label.
   String? barcode;
   double? exactCalories;
   double? exactProteins;
   double? exactFats;
   double? exactCarbs;
+  double? confidence;
+  bool nutritionEstimated;
+  String? nutritionSource;
+  String? nutritionSourceUrl;
+  Map<String, double> micronutrients;
 
   ScannedFood({
     required this.name,
@@ -39,7 +45,81 @@ class ScannedFood {
     this.exactProteins,
     this.exactFats,
     this.exactCarbs,
-  });
+    this.confidence,
+    this.nutritionEstimated = true,
+    this.nutritionSource,
+    this.nutritionSourceUrl,
+    Map<String, double>? micronutrients,
+  }) : micronutrients = micronutrients ?? {};
+
+  bool get hasCompleteMacros =>
+      exactCalories != null &&
+      exactProteins != null &&
+      exactFats != null &&
+      exactCarbs != null;
+
+  bool get isNutritionVerified {
+    if (!hasCompleteMacros || nutritionEstimated) return false;
+    final source = nutritionSource?.toLowerCase() ?? '';
+    return source.contains('openfoodfacts') ||
+        source.contains('open food facts') ||
+        source.contains('fooddata central') ||
+        source.contains('usda') ||
+        source.contains('etiqueta') ||
+        source.contains('label') ||
+        source.contains('base nutricional');
+  }
+
+  bool get canUseNutritionForTracking => hasCompleteMacros;
+
+  String get nutritionQualityLabel {
+    if (isNutritionVerified) {
+      return nutritionSource == null || nutritionSource!.isEmpty
+          ? 'Nutrición verificada'
+          : 'Fuente: $nutritionSource';
+    }
+    if (hasCompleteMacros) {
+      return 'Estimado para conteo';
+    }
+    return 'Pendiente de estimación';
+  }
+
+  String get caloriesLabel {
+    final text = calories.trim();
+    if (text.isEmpty || text == '?') return '? kcal';
+    return text.toLowerCase().contains('kcal') ? text : '$text kcal';
+  }
+
+  static double? asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.replaceAll(',', '.'));
+    return null;
+  }
+
+  static String? asString(dynamic value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
+  static Map<String, double> parseMicronutrients(dynamic value) {
+    if (value is! Map) return {};
+    final parsed = <String, double>{};
+    value.forEach((key, rawValue) {
+      final number = asDouble(rawValue);
+      if (number != null) parsed[key.toString()] = number;
+    });
+    return parsed;
+  }
+
+  Map<String, dynamic> nutritionMetadataForApi() {
+    return {
+      'nutrition_source': nutritionSource,
+      'nutrition_source_url': nutritionSourceUrl,
+      'nutrition_confidence': confidence,
+      'nutrition_estimated': nutritionEstimated,
+      'micronutrients': micronutrients.isEmpty ? null : micronutrients,
+    };
+  }
 
   factory ScannedFood.fromJson(Map<String, dynamic> json) {
     // Helper to parse "2 kg", "500 g", etc.
@@ -55,18 +135,42 @@ class ScannedFood {
       u = json['unidad_estimada'].toString();
     }
 
+    final nutritionSource = asString(
+      json['nutrition_source'] ??
+          json['source_name'] ??
+          json['fuente_nutricional'] ??
+          json['fuente'],
+    );
+    final nutritionSourceUrl = asString(
+      json['nutrition_source_url'] ?? json['source_url'] ?? json['url_fuente'],
+    );
+    final verified = json['nutrition_verified'] == true ||
+        json['verified'] == true ||
+        json['datos_verificados'] == true ||
+        nutritionSource != null;
+
     return ScannedFood(
-      name: json['alimento'] ?? 'Desconocido',
+      name: asString(json['alimento'] ?? json['name'] ?? json['nombre']) ??
+          'Desconocido',
       calories: json['calorias']?.toString() ?? '?',
       info: json['info'] ?? '',
       quantity: q,
       unit: u,
       isSelected: true,
       barcode: json['codigo_barras']?.toString(),
-      exactCalories: json['calorias_exactas'] != null ? (json['calorias_exactas'] as num).toDouble() : null,
-      exactProteins: json['proteinas'] != null ? (json['proteinas'] as num).toDouble() : null,
-      exactFats: json['grasas'] != null ? (json['grasas'] as num).toDouble() : null,
-      exactCarbs: json['carbohidratos'] != null ? (json['carbohidratos'] as num).toDouble() : null,
+      exactCalories: asDouble(json['calorias_exactas'] ?? json['calories']),
+      exactProteins: asDouble(json['proteinas'] ?? json['protein']),
+      exactFats: asDouble(json['grasas'] ?? json['fat']),
+      exactCarbs: asDouble(json['carbohidratos'] ?? json['carbs']),
+      confidence: asDouble(json['confidence'] ?? json['confianza']),
+      nutritionEstimated: json['nutrition_estimated'] == true ||
+          json['estimado'] == true ||
+          !verified,
+      nutritionSource: nutritionSource,
+      nutritionSourceUrl: nutritionSourceUrl,
+      micronutrients: parseMicronutrients(
+        json['micronutrients'] ?? json['micronutrientes'],
+      ),
     );
   }
 }
@@ -129,7 +233,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
 
       _controller = CameraController(
         camera,
-        ResolutionPreset.medium,
+        ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
             ? ImageFormatGroup.jpeg
@@ -167,18 +271,7 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
       final backendItems = await appState.scanFridge(bytes, image.name);
 
       if (backendItems != null && backendItems.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _detectedItems = backendItems
-                .map((e) => ScannedFood.fromJson(e))
-                .toList();
-            for (var item in _detectedItems) {
-              if (!_validUnits.contains(item.unit)) {
-                item.unit = 'Unidades';
-              }
-            }
-          });
-        }
+        _applyDetectedItems(backendItems);
         return;
       }
 
@@ -200,12 +293,14 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
               TextPart(
                 'Analiza la imagen minuciosamente y detecta el alimento o producto principal. Si ves una etiqueta nutricional, léela detalladamente. '
                 'Devuelve un JSON ARRAY estrictamente válido. '
-                'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "calorias_exactas": 100.0, "proteinas": 5.0, "grasas": 2.0, "carbohidratos": 15.0, "info": "breve descripción"}]. '
+                'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "calorias_exactas": 100.0, "proteinas": 5.0, "grasas": 2.0, "carbohidratos": 15.0, "micronutrientes": {"fiber": 0.0, "sugars": 0.0, "sodium": 0.0, "calcium": 0.0, "iron": 0.0, "vitamin_c": 0.0}, "confidence": 0.0, "nutrition_estimated": true, "nutrition_source": "Estimación IA basada en imagen", "nutrition_source_url": null, "info": "breve descripción"}]. '
                 'REGLAS DE PRECISIÓN:\n'
-                '1. Enfócate en el alimento principal o empaque. Extrae u estima los macros exactos por la porción detectada.\n'
-                '2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo o etiquetas visibles.\n'
-                '3. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
-                '4. Si es imposible calcular macros, usa null para ellos. Si no ves alimentos, devuelve [].\n'
+                '1. Identifica el alimento visible; si la imagen no es clara, devuelve [] y no adivines.\n'
+                '2. Si hay etiqueta nutricional o fuente impresa visible, usa esos valores y marca nutrition_estimated=false.\n'
+                '3. Si no hay etiqueta, aproxima calorías, macros y micronutrientes para la porción visible usando valores nutricionales típicos del alimento. No dejes nutrientes nulos si el alimento fue identificado.\n'
+                '4. Cuando aproximes, marca nutrition_estimated=true y nutrition_source="Estimación IA basada en imagen".\n'
+                '5. Estima cantidad con la mayor precisión posible y marca confidence entre 0 y 1. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
+                '6. Si no ves alimentos, devuelve [].\n'
                 'NO uses markdown. Solo JSON plano.',
               ),
               DataPart('image/jpeg', bytes),
@@ -222,29 +317,17 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
               .replaceAll('```json', '')
               .replaceAll('```', '')
               .trim();
-          final List<dynamic> decoded = jsonDecode(cleanJson);
-          if (mounted) {
-            setState(() {
-              _detectedItems = decoded
-                  .map((e) => ScannedFood.fromJson(e))
-                  .toList();
-              for (var item in _detectedItems) {
-                if (!_validUnits.contains(item.unit)) {
-                  item.unit = 'Unidades';
-                }
-              }
-            });
+          final decoded = _decodeFoodJson(cleanJson);
+          final parsedItems = _parseDetectedItems(decoded);
+          if (parsedItems.isNotEmpty) {
+            _applyDetectedItems(parsedItems);
+            return;
           }
-          return;
         }
       }
 
       if (_detectedItems.isEmpty && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se detectaron alimentos claros. Intenta acercar la cámara o con mejor iluminación.'),
-          ),
-        );
+        _showNoFoodDetectedSnackBar();
       }
     } catch (e) {
       debugPrint("Analysis Error: $e");
@@ -270,6 +353,126 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
     // Return structured list
     final selected = _detectedItems.where((i) => i.isSelected).toList();
     Navigator.pop(context, selected);
+  }
+
+  dynamic _decodeFoodJson(String text) {
+    try {
+      return jsonDecode(text);
+    } catch (_) {
+      final arrayMatch = RegExp(r'\[[\s\S]*\]').firstMatch(text);
+      if (arrayMatch != null) {
+        return jsonDecode(arrayMatch.group(0)!);
+      }
+
+      final objectMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+      if (objectMatch != null) {
+        return jsonDecode(objectMatch.group(0)!);
+      }
+
+      rethrow;
+    }
+  }
+
+  List<dynamic> _parseDetectedItems(dynamic decoded) {
+    if (decoded is List) {
+      return decoded.whereType<Map>().toList();
+    }
+
+    if (decoded is Map) {
+      for (final key in ['items', 'alimentos', 'foods', 'productos']) {
+        final value = decoded[key];
+        if (value is List) {
+          return value.whereType<Map>().toList();
+        }
+      }
+
+      if (decoded.containsKey('alimento') ||
+          decoded.containsKey('name') ||
+          decoded.containsKey('nombre')) {
+        return [decoded];
+      }
+    }
+
+    return [];
+  }
+
+  void _applyDetectedItems(List<dynamic> rawItems) {
+    if (!mounted) return;
+
+    setState(() {
+      _detectedItems = rawItems
+          .whereType<Map>()
+          .map((item) => ScannedFood.fromJson(Map<String, dynamic>.from(item)))
+          .where((item) => item.name.trim().isNotEmpty && item.name != 'Desconocido')
+          .toList();
+
+      for (var item in _detectedItems) {
+        if (!_validUnits.contains(item.unit)) {
+          item.unit = 'Unidades';
+        }
+      }
+    });
+  }
+
+  void _showNoFoodDetectedSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'No se detectó con claridad. Puedes intentarlo con más luz o agregarlo manualmente.',
+        ),
+        action: SnackBarAction(
+          label: 'Agregar',
+          onPressed: _showManualFoodDialog,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showManualFoodDialog() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Agregar alimento'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del alimento',
+              hintText: 'Ej. Manzana, yogurt, arroz',
+            ),
+            onSubmitted: (value) => Navigator.pop(context, value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Agregar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+    final trimmedName = name?.trim();
+    if (trimmedName == null || trimmedName.isEmpty || !mounted) return;
+
+    setState(() {
+      _detectedItems = [
+        ScannedFood(
+          name: trimmedName,
+          calories: '?',
+          info: 'Agregado manualmente',
+          isSelected: true,
+        ),
+      ];
+    });
   }
 
   @override
@@ -566,13 +769,26 @@ class _ResultsSheet extends StatelessWidget {
                 if (index == 0) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 20),
-                    child: Text(
-                      "Hemos encontrado esto",
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Hemos encontrado esto",
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryText,
+                              ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          "Los nutrientes pueden ser verificados o estimados. Revisa la cantidad antes de agregar.",
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: Colors.grey[600],
                           ),
+                        ),
+                      ],
                     ),
                   );
                 }
@@ -648,6 +864,53 @@ class _FoodItemCard extends StatefulWidget {
 
   @override
   State<_FoodItemCard> createState() => _FoodItemCardState();
+}
+
+class _NutritionQualityChip extends StatelessWidget {
+  final ScannedFood item;
+
+  const _NutritionQualityChip({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final isVerified = item.isNutritionVerified;
+    final color = isVerified
+        ? AppColors.accentColor
+        : item.hasCompleteMacros
+            ? Colors.orange
+            : Colors.grey;
+    final icon = isVerified
+        ? Icons.verified
+        : item.hasCompleteMacros
+            ? Icons.warning_amber_rounded
+            : Icons.info_outline;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13.sp, color: color),
+          SizedBox(width: 4.w),
+          Flexible(
+            child: Text(
+              item.nutritionQualityLabel,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _FoodItemCardState extends State<_FoodItemCard> {
@@ -744,12 +1007,14 @@ class _FoodItemCardState extends State<_FoodItemCard> {
                           ),
                           SizedBox(height: 4.h),
                           Text(
-                            "${widget.item.calories} kcal • ${widget.item.info}",
+                            "${widget.item.caloriesLabel} • ${widget.item.info}",
                             style: TextStyle(
                               fontSize: 13.sp,
                               color: Colors.grey[500],
                             ),
                           ),
+                          SizedBox(height: 6.h),
+                          _NutritionQualityChip(item: widget.item),
                         ],
                       ),
                     ),

@@ -727,32 +727,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool isDestructive = false,
     String? subtitle,
   }) {
-    return ListTile(
-      visualDensity: VisualDensity.compact, // Helps with compactness
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: 16.w,
-        vertical: 4.h,
-      ), // Tight vertical padding
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isDestructive ? Colors.redAccent : AppColors.primaryText,
-          fontSize: 15.sp, // Kept small font
-          fontWeight: FontWeight.w500,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        visualDensity: VisualDensity.compact, // Helps with compactness
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16.w,
+          vertical: 4.h,
+        ), // Tight vertical padding
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isDestructive ? Colors.redAccent : AppColors.primaryText,
+            fontSize: 15.sp, // Kept small font
+            fontWeight: FontWeight.w500,
+          ),
         ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: TextStyle(color: Colors.grey, fontSize: 12.sp),
+              )
+            : null,
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 14.sp, // Small arrow
+          color: Colors.grey.shade300,
+        ),
+        onTap: onTap,
       ),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle,
-              style: TextStyle(color: Colors.grey, fontSize: 12.sp),
-            )
-          : null,
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        size: 14.sp, // Small arrow
-        color: Colors.grey.shade300,
-      ),
-      onTap: onTap,
     );
   }
 }

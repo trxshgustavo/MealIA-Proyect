@@ -71,7 +71,7 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
 
       _controller = CameraController(
         camera,
-        ResolutionPreset.medium,
+        ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: !kIsWeb && defaultTargetPlatform == TargetPlatform.android
             ? ImageFormatGroup.jpeg
@@ -114,14 +114,14 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
           final name = e['alimento']?.toString() ?? 'Producto';
           final qty = (e['cantidad_estimada'] is num) ? (e['cantidad_estimada'] as num).toDouble() : 1.0;
           final unit = e['unidad_estimada']?.toString() ?? 'Unidades';
-          final cals = (e['calorias'] is num) ? (e['calorias'] as num).toDouble() : 100.0;
-          final carbs = (e['carbs'] is num) ? (e['carbs'] as num).toDouble() : 10.0;
-          final prot = (e['proteinas'] is num) ? (e['proteinas'] as num).toDouble() : 5.0;
-          final fat = (e['grasas'] is num) ? (e['grasas'] as num).toDouble() : 2.0;
+          final cals = ScannedFood.asDouble(e['calorias_exactas'] ?? e['calorias']);
+          final carbs = ScannedFood.asDouble(e['carbs'] ?? e['carbohidratos']);
+          final prot = ScannedFood.asDouble(e['proteinas'] ?? e['protein']);
+          final fat = ScannedFood.asDouble(e['grasas'] ?? e['fat']);
 
           return ScannedFood(
             name: name,
-            calories: '${cals.toInt()} kcal',
+            calories: cals == null ? '?' : cals.toInt().toString(),
             info: barcode != null && barcode.isNotEmpty ? 'Código: $barcode' : 'Producto de boleta',
             quantity: qty,
             unit: _validUnits.contains(unit) ? unit : 'Unidades',
@@ -130,6 +130,13 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
             exactProteins: prot,
             exactFats: fat,
             exactCarbs: carbs,
+            confidence: ScannedFood.asDouble(e['confidence'] ?? e['confianza']),
+            nutritionEstimated: e['nutrition_verified'] != true,
+            nutritionSource: e['nutrition_source']?.toString(),
+            nutritionSourceUrl: e['nutrition_source_url']?.toString(),
+            micronutrients: ScannedFood.parseMicronutrients(
+              e['micronutrients'] ?? e['micronutrientes'],
+            ),
           );
         }).toList();
 
@@ -259,7 +266,26 @@ class _ReceiptScannerScreenState extends State<ReceiptScannerScreen> {
                 if (nutriments['carbohydrates_100g'] != null) {
                   item.exactCarbs = (nutriments['carbohydrates_100g'] as num).toDouble();
                 }
+                for (final entry in const {
+                  'fiber': 'fiber_100g',
+                  'sugars': 'sugars_100g',
+                  'sodium': 'sodium_100g',
+                  'salt': 'salt_100g',
+                  'calcium': 'calcium_100g',
+                  'iron': 'iron_100g',
+                  'vitamin_c': 'vitamin-c_100g',
+                }.entries) {
+                  final value = nutriments[entry.value];
+                  if (value is num) {
+                    item.micronutrients[entry.key] = value.toDouble();
+                  }
+                }
               }
+              item.nutritionEstimated = !item.hasCompleteMacros;
+              item.nutritionSource = 'OpenFoodFacts';
+              item.nutritionSourceUrl =
+                  'https://world.openfoodfacts.org/product/${item.barcode}';
+              item.confidence = item.hasCompleteMacros ? 0.95 : 0.75;
               debugPrint("OpenFoodFacts success for ${item.barcode}: ${item.name}");
             }
           }

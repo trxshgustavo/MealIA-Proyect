@@ -92,24 +92,76 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
       _quantity = newQty;
       _qtyController.text = _quantity.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
       
-      // Multiplicar base
-      _analyzedMeal!['calories'] = ((_baseAnalyzedMeal!['calories'] as num) * _quantity).round();
-      _analyzedMeal!['protein'] = ((_baseAnalyzedMeal!['protein'] as num) * _quantity).round();
-      _analyzedMeal!['carbs'] = ((_baseAnalyzedMeal!['carbs'] as num) * _quantity).round();
-      _analyzedMeal!['fat'] = ((_baseAnalyzedMeal!['fat'] as num) * _quantity).round();
-      
-      if (_baseAnalyzedMeal!['vitamin_a'] != null) _analyzedMeal!['vitamin_a'] = double.parse(((_baseAnalyzedMeal!['vitamin_a'] as num) * _quantity).toStringAsFixed(1));
-      if (_baseAnalyzedMeal!['vitamin_c'] != null) _analyzedMeal!['vitamin_c'] = double.parse(((_baseAnalyzedMeal!['vitamin_c'] as num) * _quantity).toStringAsFixed(1));
-      if (_baseAnalyzedMeal!['calcium'] != null) _analyzedMeal!['calcium'] = double.parse(((_baseAnalyzedMeal!['calcium'] as num) * _quantity).toStringAsFixed(1));
-      if (_baseAnalyzedMeal!['iron'] != null) _analyzedMeal!['iron'] = double.parse(((_baseAnalyzedMeal!['iron'] as num) * _quantity).toStringAsFixed(1));
-      if (_baseAnalyzedMeal!['fiber'] != null) _analyzedMeal!['fiber'] = double.parse(((_baseAnalyzedMeal!['fiber'] as num) * _quantity).toStringAsFixed(1));
-      if (_baseAnalyzedMeal!['sugar'] != null) _analyzedMeal!['sugar'] = double.parse(((_baseAnalyzedMeal!['sugar'] as num) * _quantity).toStringAsFixed(1));
-      if (_baseAnalyzedMeal!['sodium'] != null) _analyzedMeal!['sodium'] = ((_baseAnalyzedMeal!['sodium'] as num) * _quantity).round();
+      _scaleNutrient('calories', round: true);
+      _scaleNutrient('protein', round: true);
+      _scaleNutrient('carbs', round: true);
+      _scaleNutrient('fat', round: true);
+      _scaleNutrient('vitamin_a');
+      _scaleNutrient('vitamin_c');
+      _scaleNutrient('calcium');
+      _scaleNutrient('iron');
+      _scaleNutrient('fiber');
+      _scaleNutrient('sugar');
+      _scaleNutrient('sodium', round: true);
     });
+  }
+
+  void _scaleNutrient(String key, {bool round = false}) {
+    final value = _baseAnalyzedMeal?[key];
+    if (value is! num) return;
+    final scaled = value * _quantity;
+    _analyzedMeal![key] = round ? scaled.round() : double.parse(scaled.toStringAsFixed(1));
+  }
+
+  bool _hasUsableNutrition(Map<String, dynamic> meal) {
+    return meal['calories'] is num &&
+        meal['protein'] is num &&
+        meal['carbs'] is num &&
+        meal['fat'] is num;
+  }
+
+  bool _hasVerifiedNutrition(Map<String, dynamic> meal) {
+    if (!_hasUsableNutrition(meal)) return false;
+    final verified = meal['nutrition_verified'] == true ||
+        meal['verified'] == true ||
+        meal['datos_verificados'] == true;
+    final source = (meal['nutrition_source'] ??
+            meal['source_name'] ??
+            meal['fuente_nutricional'] ??
+            '')
+        .toString()
+        .toLowerCase();
+
+    if (verified) return true;
+    return source.contains('openfoodfacts') ||
+        source.contains('open food facts') ||
+        source.contains('fooddata central') ||
+        source.contains('usda') ||
+        source.contains('etiqueta') ||
+        source.contains('label') ||
+        source.contains('base nutricional');
+  }
+
+  String _nutritionSourceLabel(Map<String, dynamic> meal) {
+    final source = meal['nutrition_source'] ?? meal['source_name'];
+    if (source == null || source.toString().trim().isEmpty) {
+      return 'Sin fuente nutricional verificable';
+    }
+    return 'Fuente: $source';
   }
 
   Future<void> _saveMeal() async {
     if (_analyzedMeal == null) return;
+    if (!_hasUsableNutrition(_analyzedMeal!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se pudo calcular una estimación completa de macros/calorías. Intenta con una foto más clara o agrega una descripción.',
+          ),
+        ),
+      );
+      return;
+    }
     
     setState(() => _isAnalyzing = true); // Repurpose for loading state
     
@@ -235,22 +287,24 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildMacroText("Calorías", "${_analyzedMeal!['calories']} kcal"),
-                        _buildMacroText("Prot", "${_analyzedMeal!['protein']}g"),
-                        _buildMacroText("Carbs", "${_analyzedMeal!['carbs']}g"),
-                        _buildMacroText("Grasa", "${_analyzedMeal!['fat']}g"),
+                        _buildMacroText("Calorías", _formatNutrient(_analyzedMeal!['calories'], "kcal")),
+                        _buildMacroText("Prot", _formatNutrient(_analyzedMeal!['protein'], "g")),
+                        _buildMacroText("Carbs", _formatNutrient(_analyzedMeal!['carbs'], "g")),
+                        _buildMacroText("Grasa", _formatNutrient(_analyzedMeal!['fat'], "g")),
                       ],
                     ),
                     SizedBox(height: 8.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildMacroText("Vit A", "${_analyzedMeal!['vitamin_a']} mcg"),
-                        _buildMacroText("Vit C", "${_analyzedMeal!['vitamin_c']} mg"),
-                        _buildMacroText("Calcio", "${_analyzedMeal!['calcium']} mg"),
-                        _buildMacroText("Hierro", "${_analyzedMeal!['iron']} mg"),
+                        _buildMacroText("Vit A", _formatNutrient(_analyzedMeal!['vitamin_a'], "mcg")),
+                        _buildMacroText("Vit C", _formatNutrient(_analyzedMeal!['vitamin_c'], "mg")),
+                        _buildMacroText("Calcio", _formatNutrient(_analyzedMeal!['calcium'], "mg")),
+                        _buildMacroText("Hierro", _formatNutrient(_analyzedMeal!['iron'], "mg")),
                       ],
                     ),
+                    SizedBox(height: 12.h),
+                    _buildNutritionEvidence(_analyzedMeal!),
                   ],
                 ),
               ),
@@ -270,7 +324,9 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
                   SizedBox(width: 12.w),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _saveMeal,
+                      onPressed: _hasUsableNutrition(_analyzedMeal!)
+                          ? _saveMeal
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.buttonDark,
                         padding: EdgeInsets.symmetric(vertical: 14.h),
@@ -335,6 +391,45 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
         SizedBox(height: 4.h),
         Text(value, style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, color: AppColors.textDark)),
       ],
+    );
+  }
+
+  String _formatNutrient(dynamic value, String unit) {
+    if (value is! num) return "--";
+    return "${value is int ? value : double.parse(value.toStringAsFixed(1))} $unit";
+  }
+
+  Widget _buildNutritionEvidence(Map<String, dynamic> meal) {
+    final reliable = _hasVerifiedNutrition(meal);
+    final color = reliable ? AppColors.accentColor : Colors.orange;
+    final icon = reliable ? Icons.verified : Icons.warning_amber_rounded;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 18.sp),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Text(
+              reliable
+                  ? _nutritionSourceLabel(meal)
+                  : 'Valores aproximados para conteo. Ajusta la porción si hace falta.',
+              style: TextStyle(
+                color: color,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

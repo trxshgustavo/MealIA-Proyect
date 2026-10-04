@@ -1267,10 +1267,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           item.name,
                           quantity: item.quantity,
                           unit: item.unit,
-                          exactCalories: item.exactCalories,
-                          exactProteins: item.exactProteins,
-                          exactFats: item.exactFats,
-                          exactCarbs: item.exactCarbs,
+                          exactCalories: item.hasCompleteMacros
+                              ? item.exactCalories
+                              : null,
+                          exactProteins: item.hasCompleteMacros
+                              ? item.exactProteins
+                              : null,
+                          exactFats: item.hasCompleteMacros
+                              ? item.exactFats
+                              : null,
+                          exactCarbs: item.hasCompleteMacros
+                              ? item.exactCarbs
+                              : null,
+                          nutritionMetadata: item.nutritionMetadataForApi(),
                         );
                       } else if (item is String) {
                         debugPrint("InventoryScreen: Adding String $item");
@@ -1368,10 +1377,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           item.name,
                           quantity: item.quantity,
                           unit: item.unit,
-                          exactCalories: item.exactCalories,
-                          exactProteins: item.exactProteins,
-                          exactFats: item.exactFats,
-                          exactCarbs: item.exactCarbs,
+                          exactCalories: item.hasCompleteMacros
+                              ? item.exactCalories
+                              : null,
+                          exactProteins: item.hasCompleteMacros
+                              ? item.exactProteins
+                              : null,
+                          exactFats: item.hasCompleteMacros
+                              ? item.exactFats
+                              : null,
+                          exactCarbs: item.hasCompleteMacros
+                              ? item.exactCarbs
+                              : null,
+                          nutritionMetadata: item.nutritionMetadataForApi(),
                         );
                       } else if (item is String) {
                         success = await appState.addFood(item);

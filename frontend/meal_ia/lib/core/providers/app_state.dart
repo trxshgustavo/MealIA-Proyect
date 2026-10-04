@@ -72,6 +72,24 @@ class AppState extends ChangeNotifier {
   // --- HELPERS ---
   String? get currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
+  Map<String, dynamic> get _strictNutritionRules => {
+        'avoid_invented_nutrition': false,
+        'use_best_effort_estimates_when_exact_unknown': true,
+        'trusted_sources': [
+          'USDA FoodData Central',
+          'OpenFoodFacts',
+          'visible nutrition label',
+          'verified restaurant/brand nutrition facts',
+        ],
+        'require_null_for_unknown_nutrients': false,
+        'never_return_zero_or_null_for_identified_food_nutrients': true,
+        'require_source_name_and_url': true,
+        'macro_calories_tolerance_percent': 5,
+        'micronutrients_may_be_estimated_when_source_missing': true,
+        'recipe_must_match_user_goal': goal,
+        'meals_per_day': mealsPerDay,
+      };
+
   // --- VERIFICACIÓN DE SESIÓN ---
   Future<bool> checkLoginStatus() async {
     try {
@@ -1152,15 +1170,25 @@ class AppState extends ChangeNotifier {
     if (token == null) return null;
 
     try {
-      final bodyStr = jsonEncode({'rejected_recipes': rejectedRecipes ?? []});
-      final response = await http.post(
-        Uri.parse('$_baseUrl/generate-menu'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: bodyStr,
-      );
+      Future<http.Response> requestMenu({required bool includeRules}) {
+        final body = {
+          'rejected_recipes': rejectedRecipes ?? [],
+          if (includeRules) 'nutrition_rules': _strictNutritionRules,
+        };
+        return http.post(
+          Uri.parse('$_baseUrl/generate-menu'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+      }
+
+      var response = await requestMenu(includeRules: true);
+      if (response.statusCode == 422) {
+        response = await requestMenu(includeRules: false);
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -1223,14 +1251,25 @@ class AppState extends ChangeNotifier {
 
     try {
       final clientDate = _formatDate(DateTime.now());
-      final response = await http.post(
-        Uri.parse('$_baseUrl/generate-weekly-menu?client_date=$clientDate'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        // We can pass an empty body or {}
-      ).timeout(const Duration(seconds: 120)); // Allow 2 minutes for 7-day generation
+      Future<http.Response> requestWeeklyMenu({required bool includeRules}) {
+        return http
+            .post(
+              Uri.parse('$_baseUrl/generate-weekly-menu?client_date=$clientDate'),
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Content-Type': 'application/json',
+              },
+              body: includeRules
+                  ? jsonEncode({'nutrition_rules': _strictNutritionRules})
+                  : null,
+            )
+            .timeout(const Duration(seconds: 120));
+      }
+
+      var response = await requestWeeklyMenu(includeRules: true);
+      if (response.statusCode == 422) {
+        response = await requestWeeklyMenu(includeRules: false);
+      }
 
       if (response.statusCode == 200) {
         final List<dynamic> plans = jsonDecode(utf8.decode(response.bodyBytes));
@@ -1564,6 +1603,8 @@ class AppState extends ChangeNotifier {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/analyze-food'));
       request.headers.addAll({'Authorization': 'Bearer $token'});
+      request.fields['strict_nutrition'] = 'true';
+      request.fields['nutrition_rules'] = jsonEncode(_strictNutritionRules);
 
       if (text != null && text.isNotEmpty) {
         request.fields['text_description'] = text;
@@ -1594,6 +1635,8 @@ class AppState extends ChangeNotifier {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-fridge'));
       request.headers.addAll({'Authorization': 'Bearer $token'});
+      request.fields['strict_nutrition'] = 'true';
+      request.fields['nutrition_rules'] = jsonEncode(_strictNutritionRules);
       request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
 
       var response = await request.send();
@@ -1601,7 +1644,7 @@ class AppState extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(responseData);
-        return decoded['items'] as List<dynamic>?;
+        return _extractScannedItems(decoded);
       } else {
         debugPrint("Error scanFridge: ${response.statusCode} - $responseData");
       }
@@ -1618,6 +1661,8 @@ class AppState extends ChangeNotifier {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-receipt'));
       request.headers.addAll({'Authorization': 'Bearer $token'});
+      request.fields['strict_nutrition'] = 'true';
+      request.fields['nutrition_rules'] = jsonEncode(_strictNutritionRules);
       request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
 
       var response = await request.send();
@@ -1625,13 +1670,32 @@ class AppState extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(responseData);
-        return decoded['items'] as List<dynamic>?;
+        return _extractScannedItems(decoded);
       } else {
         debugPrint("Error scanReceipt: ${response.statusCode} - $responseData");
       }
     } catch (e) {
       debugPrint("Error in scanReceipt: $e");
     }
+    return null;
+  }
+
+  List<dynamic>? _extractScannedItems(dynamic decoded) {
+    if (decoded is List) return decoded;
+
+    if (decoded is Map<String, dynamic>) {
+      for (final key in ['items', 'alimentos', 'foods', 'productos']) {
+        final value = decoded[key];
+        if (value is List) return value;
+      }
+
+      if (decoded.containsKey('alimento') ||
+          decoded.containsKey('name') ||
+          decoded.containsKey('nombre')) {
+        return [decoded];
+      }
+    }
+
     return null;
   }
 
@@ -1739,6 +1803,7 @@ class AppState extends ChangeNotifier {
     double? exactProteins,
     double? exactFats,
     double? exactCarbs,
+    Map<String, dynamic>? nutritionMetadata,
   }) async {
     String normalizedKey = food.trim().toLowerCase();
     if (normalizedKey.isEmpty) return false;
@@ -1834,6 +1899,7 @@ class AppState extends ChangeNotifier {
               'proteins': exactProteins,
               'fats': exactFats,
               'carbs': exactCarbs,
+              ...?nutritionMetadata,
             }),
           )
           .timeout(const Duration(seconds: 10));
