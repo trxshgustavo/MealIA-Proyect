@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
+import '../../../core/validation/input_validation.dart';
 import '../theme/app_colors.dart';
 import '../legal/legal_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -182,11 +183,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _showMessage("Las contraseñas nuevas no coinciden", isError: true);
       return;
     }
-    if (_newPassController.text.length < 6) {
-      _showMessage(
-        "La contraseña debe tener al menos 6 caracteres",
-        isError: true,
-      );
+    final passwordError = passwordValidationError(_newPassController.text.trim());
+    if (passwordError != null) {
+      _showMessage(passwordError, isError: true);
       return;
     }
 

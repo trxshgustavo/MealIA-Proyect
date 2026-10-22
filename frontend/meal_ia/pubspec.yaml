@@ -29,7 +29,6 @@ dependencies:
   camera: ^0.10.6
   permission_handler: ^12.0.1
   path_provider: ^2.1.5
-  google_generative_ai: ^0.4.7
   firebase_app_check: ^0.4.6
   in_app_purchase: ^3.1.13
   flutter_widget_from_html: ^0.16.1
@@ -51,15 +50,13 @@ flutter:
   uses-material-design: true
 
   assets:
-    - .env
+    - assets/config/firebase.env
     - assets/carrot.png
     - assets/google_logo.png
     - assets/saludo_carrot.png
-    - assets/animation1.gif
     - assets/animation1_transparent.gif
     - assets/saludo.gif
     - assets/legal/
-    - assets/ml/
 
 flutter_launcher_icons:
   android: "launcher_icon"

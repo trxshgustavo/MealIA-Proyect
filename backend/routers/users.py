@@ -72,10 +72,11 @@ def upgrade_subscription(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_user),
 ):
-    current_user.is_premium = 1  # True
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    # Never grant an entitlement based only on a client-side purchase callback.
+    raise HTTPException(
+        status_code=503,
+        detail="La verificación de compras todavía no está configurada",
+    )
 
 
 # --- GESTIÓN DE FOTOS ---

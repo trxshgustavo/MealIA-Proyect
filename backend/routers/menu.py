@@ -1087,6 +1087,9 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
         data = json.loads(content)
         
         days_generated = data.get("days", [])
+        if (not isinstance(days_generated, list) or len(days_generated) != 7
+                or not all(isinstance(day, dict) for day in days_generated)):
+            raise ValueError("La IA no devolvió un plan completo de siete días")
         
         saved_plans = []
         from datetime import timedelta, datetime
@@ -1104,10 +1107,10 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
         # Opcional: borrar planes futuros para que no se superpongan (solo los generados automáticamente)
         db.query(models.MealPlan).filter(
             models.MealPlan.owner_id == current_user.id,
-            models.MealPlan.date >= today_datetime
+            models.MealPlan.date >= today_datetime,
+            models.MealPlan.date < today_datetime + timedelta(days=7),
         ).delete()
-        db.commit()
-        
+        # Keep replacement atomic: roll back deletions if any generated day fails.
         def safe_get_int(data, key, default=0):
             val = data.get(key)
             if val is None: return default
@@ -1213,9 +1216,10 @@ Asegúrate de que haya exactamente 7 elementos en el array "days".
             
         return saved_plans
 
-    except Exception as e:
-        logger.error(f"Error AI Weekly Menu: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generando menú semanal: {str(e)}")
+    except Exception:
+        db.rollback()
+        logger.exception("Error AI Weekly Menu")
+        raise HTTPException(status_code=502, detail="No se pudo generar el plan semanal. Tus planes anteriores se conservaron.")
 
 
 @router.get("/meal-plans", response_model=list[schemas.MealPlan])

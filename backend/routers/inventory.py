@@ -7,6 +7,7 @@ import models
 import schemas
 import security
 from database import get_db
+from inventory_units import canonical_quantity, combine_quantities
 
 router = APIRouter()
 
@@ -35,7 +36,9 @@ def add_inventory_item(
     )
 
     if db_item:
-        db_item.quantity += item.quantity  # Suma si existe
+        db_item.quantity, db_item.unit = combine_quantities(
+            db_item.quantity, db_item.unit, item.quantity, item.unit
+        )
         # Actualiza macros si el cliente los envía (útil si escaneó con recibo)
         if item.calories is not None:
             db_item.calories = item.calories
@@ -46,12 +49,13 @@ def add_inventory_item(
         if hasattr(item, 'category') and item.category:
             db_item.category = item.category
     else:
+        quantity, unit = canonical_quantity(item.quantity, item.unit)
         # Crea nuevo con unidad
         db_item = models.InventoryItem(
             name=normalized_name,
             owner_id=current_user.id,
-            quantity=item.quantity,
-            unit=item.unit,
+            quantity=quantity,
+            unit=unit,
             category=item.category if hasattr(item, 'category') else "Otros",
             calories=item.calories,
             proteins=item.proteins,
@@ -86,8 +90,9 @@ def update_inventory_item(
         raise HTTPException(status_code=404, detail="Ítem no encontrado")
 
     # Actualiza valores
-    db_item.quantity = item_update.quantity
-    db_item.unit = item_update.unit
+    db_item.quantity, db_item.unit = canonical_quantity(
+        item_update.quantity, item_update.unit
+    )
     if hasattr(item_update, 'category') and item_update.category:
         db_item.category = item_update.category
     if item_update.calories is not None:
@@ -114,7 +119,7 @@ def decrement_inventory_item(
         db.query(models.InventoryItem)
         .filter(
             models.InventoryItem.owner_id == current_user.id,
-            models.InventoryItem.name == item_name,
+            models.InventoryItem.name == item_name.strip().lower(),
         )
         .first()
     )
@@ -148,7 +153,7 @@ def remove_inventory_item(
         db.query(models.InventoryItem)
         .filter(
             models.InventoryItem.owner_id == current_user.id,
-            models.InventoryItem.name == item_name,
+            models.InventoryItem.name == item_name.strip().lower(),
         )
         .first()
     )

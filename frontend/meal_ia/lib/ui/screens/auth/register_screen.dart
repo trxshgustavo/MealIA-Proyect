@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
+import '../../../core/validation/input_validation.dart';
 import '../theme/app_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../utils/screen_utils.dart';
@@ -270,9 +271,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               style: const TextStyle(
                                 color: AppColors.primaryText,
                               ),
-                              validator: (v) => (v == null || v.length < 6)
-                                  ? 'Mínimo 6 caracteres'
-                                  : null,
+                              validator: passwordValidationError,
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
