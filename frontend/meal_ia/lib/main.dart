@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +18,6 @@ import 'ui/screens/onboarding/goals_screen.dart';
 import 'ui/screens/main/inventory_screen.dart';
 import 'ui/screens/main/menu_screen.dart';
 import 'ui/screens/main/recipe_screen.dart';
-import 'ui/screens/main/subscription_screen.dart';
 
 import 'ui/screens/main_shell.dart';
 
@@ -28,7 +28,7 @@ Future<void> main() async {
 
   // Cargar variables de entorno (no crítico si falla)
   try {
-    await dotenv.load(fileName: ".env");
+    await dotenv.load(fileName: "assets/config/firebase.env");
     debugPrint('✓ Variables de entorno cargadas');
   } catch (e) {
     debugPrint('⚠️ No se pudo cargar .env (no crítico): $e');
@@ -63,14 +63,31 @@ Future<void> main() async {
     debugPrint(
       '💡 Verifica tu configuración de Firebase en firebase_options.dart',
     );
-    // Continuamos de todas formas, pero algunas funciones no funcionarán
+    runApp(MaterialApp(
+      home: Scaffold(body: Center(child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('No se pudo iniciar MealIA. Revisa la conexión y la configuración de Firebase.'),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: main, child: const Text('Reintentar')),
+        ]),
+      ))),
+    ));
+    return;
   }
   // Initialize App Check
   try {
+    if (kIsWeb) {
+      final siteKey = dotenv.env['RECAPTCHA_V3_SITE_KEY'];
+      if (siteKey != null && siteKey.isNotEmpty) {
+        await FirebaseAppCheck.instance.activate(providerWeb: ReCaptchaV3Provider(siteKey));
+      }
+    } else {
     await FirebaseAppCheck.instance.activate(
       providerAndroid: kDebugMode ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
       providerApple: kDebugMode ? AppleDebugProvider() : AppleDeviceCheckProvider(),
     );
+    }
     debugPrint('✓ App Check activado (${kDebugMode ? "debug" : "release"} mode)');
   } catch (e) {
     debugPrint('⚠️ APP CHECK ACTIVATION ERROR (no crítico): $e');
@@ -144,7 +161,12 @@ class MealIAApp extends StatelessWidget {
               '/inventory': (_) => const InventoryScreen(),
               '/menu': (_) => const MenuScreen(),
               '/recipe': (_) => const RecipeScreen(),
-              '/subscription': (context) => const SubscriptionScreen(),
+              '/subscription': (context) => Scaffold(
+                appBar: AppBar(title: const Text('Suscripciones')),
+                body: const Center(child: Padding(padding: EdgeInsets.all(24),
+                  child: Text('Las suscripciones están temporalmente deshabilitadas mientras se configura la validación de compras.', textAlign: TextAlign.center),
+                )),
+              ),
             },
           );
         },

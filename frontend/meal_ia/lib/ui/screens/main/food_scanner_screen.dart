@@ -1,11 +1,9 @@
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
-import 'dart:convert';
 import 'dart:ui'; // For BackdropFilter
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
@@ -53,20 +51,21 @@ class ScannedFood {
 
     if (json['unidad_estimada'] != null) {
       u = json['unidad_estimada'].toString();
+      u = {'kg': 'Kg', 'l': 'L', 'unidad': 'Unidades', 'unidades': 'Unidades'}[u.toLowerCase()] ?? u;
     }
 
     return ScannedFood(
       name: json['alimento'] ?? 'Desconocido',
       calories: json['calorias']?.toString() ?? '?',
       info: json['info'] ?? '',
-      quantity: q,
+      quantity: q.isFinite && q > 0 ? q : 1.0,
       unit: u,
       isSelected: true,
       barcode: json['codigo_barras']?.toString(),
-      exactCalories: json['calorias_exactas'] != null ? (json['calorias_exactas'] as num).toDouble() : null,
-      exactProteins: json['proteinas'] != null ? (json['proteinas'] as num).toDouble() : null,
-      exactFats: json['grasas'] != null ? (json['grasas'] as num).toDouble() : null,
-      exactCarbs: json['carbohidratos'] != null ? (json['carbohidratos'] as num).toDouble() : null,
+      exactCalories: double.tryParse((json['calorias_exactas'] ?? json['calorias'] ?? '').toString()),
+      exactProteins: double.tryParse((json['proteinas'] ?? '').toString()),
+      exactFats: double.tryParse((json['grasas'] ?? '').toString()),
+      exactCarbs: double.tryParse((json['carbohidratos'] ?? '').toString()),
     );
   }
 }
@@ -81,6 +80,7 @@ class FoodScannerScreen extends StatefulWidget {
 class _FoodScannerScreenState extends State<FoodScannerScreen> {
   CameraController? _controller;
   bool _isCameraInitialized = false;
+  String? _cameraError;
   bool _isAnalyzing = false;
 
   // Results
@@ -107,12 +107,12 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
   Future<void> _initializeCamera() async {
     if (!kIsWeb) {
       var status = await Permission.camera.request();
-      if (status.isDenied) {
+      if (!status.isGranted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Se necesita permiso de cámara.')),
           );
-          Navigator.pop(context);
+          setState(() => _cameraError = 'La cámara no tiene permiso. Puedes seleccionar una foto.');
         }
         return;
       }
@@ -120,7 +120,10 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
 
     try {
       final cameras = await availableCameras();
-      if (cameras.isEmpty) return;
+      if (cameras.isEmpty) {
+        if (mounted) setState(() => _cameraError = 'No hay cámara disponible. Selecciona una foto.');
+        return;
+      }
 
       final camera = cameras.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.back,
@@ -142,16 +145,40 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
       }
     } catch (e) {
       debugPrint("Error camera: $e");
+      if (mounted) setState(() => _cameraError = 'No se pudo abrir la cámara. Puedes seleccionar una foto.');
     }
   }
 
   Future<void> _takePictureAndAnalyze() async {
-    if (_controller == null ||
-        !_controller!.value.isInitialized ||
-        _isAnalyzing) {
-      return;
+    if (_controller == null || !_controller!.value.isInitialized || _isAnalyzing) return;
+    try {
+      final image = await _controller!.takePicture();
+      await _analyzeImage(image);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo tomar la foto: $e')),
+        );
+      }
     }
+  }
 
+  Future<void> _pickImageAndAnalyze() async {
+    if (_isAnalyzing) return;
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (image != null && mounted) await _analyzeImage(image);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo abrir la imagen: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _analyzeImage(XFile image) async {
+    if (_isAnalyzing || !mounted) return;
     final appState = Provider.of<AppState>(context, listen: false);
 
     setState(() {
@@ -160,7 +187,6 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
     });
 
     try {
-      final image = await _controller!.takePicture();
       final bytes = await image.readAsBytes();
 
       // 1. Intentar análisis con backend (OpenAI GPT-4o Vision)
@@ -180,63 +206,6 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
           });
         }
         return;
-      }
-
-      // 2. Fallback con Gemini si está configurado en el cliente
-      final apiKey = dotenv.env['GEMINI_API_KEY'];
-      if (apiKey != null && apiKey.isNotEmpty) {
-        final modelsToTry = [
-          'gemini-2.5-flash',
-          'gemini-flash-latest',
-          'gemini-2.0-flash',
-          'gemini-2.0-flash-exp',
-        ];
-
-        String? resultText;
-        for (final modelName in modelsToTry) {
-          try {
-            final model = GenerativeModel(model: modelName, apiKey: apiKey);
-            final prompt = Content.multi([
-              TextPart(
-                'Analiza la imagen minuciosamente y detecta el alimento o producto principal. Si ves una etiqueta nutricional, léela detalladamente. '
-                'Devuelve un JSON ARRAY estrictamente válido. '
-                'Schema: [{"alimento": "Nombre", "cantidad_estimada": 1.0, "unidad_estimada": "Unidades/Kg/g/L/ml/oz/lb/paquete", "calorias": 100, "calorias_exactas": 100.0, "proteinas": 5.0, "grasas": 2.0, "carbohidratos": 15.0, "info": "breve descripción"}]. '
-                'REGLAS DE PRECISIÓN:\n'
-                '1. Enfócate en el alimento principal o empaque. Extrae u estima los macros exactos por la porción detectada.\n'
-                '2. Estima la cantidad con la mayor exactitud posible basándote en el tamaño relativo o etiquetas visibles.\n'
-                '3. Usa "Unidades" si es contable. Usa "g" o "Kg" si es peso.\n'
-                '4. Si es imposible calcular macros, usa null para ellos. Si no ves alimentos, devuelve [].\n'
-                'NO uses markdown. Solo JSON plano.',
-              ),
-              DataPart('image/jpeg', bytes),
-            ]);
-
-            final response = await model.generateContent([prompt]);
-            resultText = response.text;
-            if (resultText != null) break;
-          } catch (_) {}
-        }
-
-        if (resultText != null) {
-          String cleanJson = resultText
-              .replaceAll('```json', '')
-              .replaceAll('```', '')
-              .trim();
-          final List<dynamic> decoded = jsonDecode(cleanJson);
-          if (mounted) {
-            setState(() {
-              _detectedItems = decoded
-                  .map((e) => ScannedFood.fromJson(e))
-                  .toList();
-              for (var item in _detectedItems) {
-                if (!_validUnits.contains(item.unit)) {
-                  item.unit = 'Unidades';
-                }
-              }
-            });
-          }
-          return;
-        }
       }
 
       if (_detectedItems.isEmpty && mounted) {
@@ -282,8 +251,17 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
           // 1. Camera Preview
           if (_isCameraInitialized)
             CameraPreview(_controller!)
+          else if (_cameraError != null)
+            Center(child: Padding(padding: const EdgeInsets.all(32),
+              child: Text(_cameraError!, textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white)),
+            ))
           else
             const Center(child: CircularProgressIndicator(color: Colors.white)),
+          Positioned(top: 50.h, right: 20.w,
+            child: _GlassIconButton(icon: Icons.photo_library_outlined,
+              onPressed: _pickImageAndAnalyze),
+          ),
 
           // 2. Guide Overlay (Corners) for Scanning area
           if (_detectedItems.isEmpty && !_isAnalyzing)

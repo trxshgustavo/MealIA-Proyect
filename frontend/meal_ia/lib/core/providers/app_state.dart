@@ -12,6 +12,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
 import 'package:firebase_storage/firebase_storage.dart';
 import '../config/api_config.dart';
+import '../validation/input_validation.dart';
+import '../services/inventory_sync.dart';
 
 class AppState extends ChangeNotifier {
   // Asegúrate de que esta IP sea la correcta de tu PC
@@ -173,6 +175,7 @@ class AppState extends ChangeNotifier {
         }
       }
 
+      bool sessionRejected = false;
       Future<void> loadProfile() async {
         String? backendGoal;
         try {
@@ -232,7 +235,7 @@ class AppState extends ChangeNotifier {
           } else {
             debugPrint("Backend /users/me returned ${userResponse.statusCode}");
             if (userResponse.statusCode == 401) {
-              await logout();
+              sessionRejected = true;
               return;
             }
           }
@@ -296,7 +299,7 @@ class AppState extends ChangeNotifier {
             await _storage.write(key: photoKey, value: photoUrl);
           }
         } else {
-          goal = 'Mantenimiento';
+          goal = backendGoal ?? 'Mantenimiento';
         }
       }
 
@@ -332,6 +335,9 @@ class AppState extends ChangeNotifier {
               _inventory[item['name']] = {
                 'quantity': (item['quantity'] ?? 0).toDouble(),
                 'unit': item['unit'] ?? 'Unidades',
+            'category': item['category'] ?? 'Otros',
+            'calories': item['calories'], 'proteins': item['proteins'],
+            'fats': item['fats'], 'carbs': item['carbs'],
               };
             }
             await _storage.write(
@@ -339,7 +345,7 @@ class AppState extends ChangeNotifier {
               value: jsonEncode(_inventory),
             );
           } else if (invResponse.statusCode == 401) {
-            await logout();
+            sessionRejected = true;
             return;
           }
         } catch (e) {
@@ -361,6 +367,7 @@ class AppState extends ChangeNotifier {
                 _inventory[name] = {
                   'quantity': (data['quantity'] as num?)?.toDouble() ?? 0.0,
                   'unit': data['unit'] ?? 'Unidades',
+                  'category': data['category'] ?? 'Otros',
                 };
                 cacheUpdateNeeded = true;
               }
@@ -450,6 +457,10 @@ class AppState extends ChangeNotifier {
         loadSavedRecipes(),
       ]);
 
+      if (sessionRejected) {
+        await logout();
+        return false;
+      }
       notifyListeners();
 
       // Resilient Fallbacks if offline on first cold boot
@@ -475,28 +486,15 @@ class AppState extends ChangeNotifier {
 
   // Helper para restaurar el inventario del backend desde el caché local/Firestore
   Future<void> _syncInventoryToBackend(String token) async {
-    if (_inventory.isEmpty) return;
-    debugPrint("🔄 Sincronizando ${_inventory.length} items al backend...");
-    for (var entry in _inventory.entries.toList()) {
-      try {
-        await http.post(
-          Uri.parse('$_baseUrl/inventory'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'name': entry.key,
-            'quantity': entry.value['quantity'],
-            'unit': entry.value['unit'],
-            'category': entry.value['category'] ?? 'Otros',
-          }),
-        ).timeout(const Duration(seconds: 60));
-      } catch (e) {
-        debugPrint("Error sincronizando ${entry.key}: $e");
-      }
+    final client = http.Client();
+    try {
+      await restoreMissingInventory(client: client, baseUrl: _baseUrl,
+        token: token, inventory: Map.from(_inventory));
+    } catch (e) {
+      debugPrint('No se pudo restaurar el inventario: $e');
+    } finally {
+      client.close();
     }
-    debugPrint("✅ Sincronización de inventario completada.");
   }
 
   Future<void> refreshAppData() async {
@@ -514,6 +512,8 @@ class AppState extends ChangeNotifier {
   // --- LOGIN CON AUTO-REPARACIÓN DE FIREBASE ---
   Future<String> login(String email, String password) async {
     clearMemoryState();
+    await _storage.delete(key: 'auth_token');
+    try { await FirebaseAuth.instance.signOut(); } catch (_) {}
     final url = Uri.parse('$_baseUrl/token');
     debugPrint("Intentando login en: $url");
 
@@ -550,11 +550,14 @@ class AppState extends ChangeNotifier {
                 password: password,
               );
             } catch (createError) {
-              debugPrint("Error auto-repair Firebase: $createError");
+              return 'No se pudo sincronizar el acceso con Firebase. Revisa tu contraseña o recupera el acceso a la cuenta.';
             }
+          } else {
+            return _handleFirebaseError(e);
           }
         } catch (e) {
           debugPrint("Error genérico Firebase Login: $e");
+          return 'No se pudo conectar con Firebase. Inténtalo nuevamente.';
         }
 
         // 3. LOGRADO: Guardamos token y cargamos user
@@ -567,7 +570,7 @@ class AppState extends ChangeNotifier {
         // Credenciales incorrectas
         try {
           final data = jsonDecode(response.body);
-          return data['detail'] ?? 'Correo o contraseña incorrectos';
+          return apiErrorMessage(data['detail'], 'Correo o contraseña incorrectos');
         } catch (_) {
           return 'Correo o contraseña incorrectos';
         }
@@ -575,8 +578,7 @@ class AppState extends ChangeNotifier {
         // Otro error del servidor
         try {
           final data = jsonDecode(response.body);
-          return data['detail'] ??
-              'Error del servidor (${response.statusCode})';
+          return apiErrorMessage(data['detail'], 'Error del servidor (${response.statusCode})');
         } catch (_) {
           return 'Error del servidor (${response.statusCode})';
         }
@@ -621,9 +623,8 @@ class AppState extends ChangeNotifier {
     if (email.isEmpty || !email.contains('@')) {
       return 'Por favor ingresa un correo electrónico válido';
     }
-    if (password.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
-    }
+    final passwordError = passwordValidationError(password);
+    if (passwordError != null) return passwordError;
     if (firstName.isEmpty) {
       return 'Por favor ingresa tu nombre';
     }
@@ -659,7 +660,7 @@ class AppState extends ChangeNotifier {
         // Error de validación (email ya registrado, etc.)
         try {
           final data = jsonDecode(response.body);
-          return data['detail'] ?? 'El correo ya está registrado';
+          return apiErrorMessage(data['detail'], 'El correo ya está registrado');
         } catch (_) {
           return 'El correo ya está registrado';
         }
@@ -667,8 +668,7 @@ class AppState extends ChangeNotifier {
         // Otro error del servidor
         try {
           final data = jsonDecode(response.body);
-          return data['detail'] ??
-              'Error del servidor (${response.statusCode})';
+          return apiErrorMessage(data['detail'], 'Error del servidor (${response.statusCode})');
         } catch (_) {
           return 'Error del servidor (${response.statusCode})';
         }
@@ -1085,9 +1085,9 @@ class AppState extends ChangeNotifier {
 
         if (_isSameDay(targetDate, DateTime.now())) {
           generatedMenu = menuData;
-          int sumCals = (data['breakfast']?['calories'] ?? 0) as int;
-          sumCals += (data['lunch']?['calories'] ?? 0) as int;
-          sumCals += (data['dinner']?['calories'] ?? 0) as int;
+          int sumCals = ((data['breakfast']?['calories'] ?? 0) as num).toInt();
+          sumCals += ((data['lunch']?['calories'] ?? 0) as num).toInt();
+          sumCals += ((data['dinner']?['calories'] ?? 0) as num).toInt();
           if (data['extra_meals'] is List) {
             for (var m in data['extra_meals']) {
               if (m is Map && m['calories'] != null) {
@@ -1095,7 +1095,7 @@ class AppState extends ChangeNotifier {
               }
             }
           }
-          totalCalories = (data['total_calories'] as int?) ?? sumCals;
+          totalCalories = (data['total_calories'] as num?)?.toInt() ?? sumCals;
         }
 
         await saveMealPlan(targetDate, menuData);
@@ -1428,6 +1428,9 @@ class AppState extends ChangeNotifier {
           _inventory[item['name']] = {
             'quantity': (item['quantity'] ?? 0).toDouble(),
             'unit': item['unit'] ?? 'Unidades',
+            'category': item['category'] ?? 'Otros',
+            'calories': item['calories'], 'proteins': item['proteins'],
+            'fats': item['fats'], 'carbs': item['carbs'],
           };
         }
         notifyListeners();
@@ -1504,7 +1507,7 @@ class AppState extends ChangeNotifier {
     return true; // Retorna true porque ya quedó registrado localmente
   }
 
-  Future<Map<String, dynamic>?> analyzeFood({String? text, String? imagePath}) async {
+  Future<Map<String, dynamic>?> analyzeFood({String? text, Uint8List? imageBytes, String imageFilename = "food.jpg"}) async {
     final token = await _storage.read(key: 'auth_token');
     if (token == null) return null;
 
@@ -1516,8 +1519,8 @@ class AppState extends ChangeNotifier {
         request.fields['text_description'] = text;
       }
 
-      if (imagePath != null) {
-        request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      if (imageBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: imageFilename));
       }
 
       var response = await request.send();
@@ -1534,58 +1537,29 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  Future<List<dynamic>?> scanFridge(Uint8List bytes, String filename) async {
+  Future<List<dynamic>?> scanFridge(Uint8List bytes, String filename) =>
+      _scanImage('/inventory/scan-fridge', bytes, filename);
+
+  Future<List<dynamic>?> scanReceipt(Uint8List bytes, String filename) =>
+      _scanImage('/inventory/scan-receipt', bytes, filename);
+
+  Future<List<dynamic>?> _scanImage(String path, Uint8List bytes, String filename) async {
     final token = await _storage.read(key: 'auth_token');
-    if (token == null) return null;
-
-    try {
-      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-fridge'));
-      request.headers.addAll({'Authorization': 'Bearer $token'});
-      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
-
-      var response = await request.send();
-      var responseData = await response.stream.bytesToString();
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(responseData);
-        return decoded['items'] as List<dynamic>?;
-      } else {
-        debugPrint("Error scanFridge: ${response.statusCode} - $responseData");
-      }
-    } catch (e) {
-      debugPrint("Error in scanFridge: $e");
+    if (token == null) throw StateError('Inicia sesión antes de analizar una imagen');
+    final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$path'));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final response = await http.Response.fromStream(streamed).timeout(const Duration(seconds: 60));
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      throw StateError(decoded['detail']?.toString() ?? 'No se pudo analizar la imagen');
     }
-    return null;
+    return decoded['items'] as List<dynamic>? ?? [];
   }
 
-  Future<List<dynamic>?> scanReceipt(Uint8List bytes, String filename) async {
-    final token = await _storage.read(key: 'auth_token');
-    if (token == null) return null;
-
-    try {
-      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/inventory/scan-receipt'));
-      request.headers.addAll({'Authorization': 'Bearer $token'});
-      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
-
-      var response = await request.send();
-      var responseData = await response.stream.bytesToString();
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(responseData);
-        return decoded['items'] as List<dynamic>?;
-      } else {
-        debugPrint("Error scanReceipt: ${response.statusCode} - $responseData");
-      }
-    } catch (e) {
-      debugPrint("Error in scanReceipt: $e");
-    }
-    return null;
-  }
-
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<List<dynamic>?> getShoppingSuggestions() async {
     final token = await _storage.read(key: 'auth_token');
@@ -1618,7 +1592,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> updateFood(String foodKey, double quantity, String unit, {String category = 'Otros'}) async {
     // 1. OPTIMISTIC UPDATE
-    _inventory[foodKey] = {'quantity': quantity, 'unit': unit, 'category': category};
+    _inventory[foodKey] = {...?_inventory[foodKey], 'quantity': quantity, 'unit': unit, 'category': category};
 
     // CACHE UPDATE
     final user = FirebaseAuth.instance.currentUser;
@@ -1651,8 +1625,7 @@ class AppState extends ChangeNotifier {
         backendQuantity = quantity;
       }
 
-      // Safety check: Backend often rejects 0
-      if (backendQuantity == 0) backendQuantity = 1;
+
 
       final response = await http
           .put(
@@ -1688,7 +1661,7 @@ class AppState extends ChangeNotifier {
     double? exactCarbs,
   }) async {
     String normalizedKey = food.trim().toLowerCase();
-    if (normalizedKey.isEmpty) return false;
+    if (normalizedKey.isEmpty || !quantity.isFinite || quantity <= 0) return false;
 
     // CHECK FOR EXISTING ITEM TO ACCUMULATE
     if (_inventory.containsKey(normalizedKey)) {
@@ -1698,6 +1671,9 @@ class AppState extends ChangeNotifier {
         String currentUnit = currentData?['unit'] ?? 'Unidades';
 
         // Convert both to base to safely sum
+        if (_getBaseUnitFor(currentUnit) != _getBaseUnitFor(unit)) {
+          throw ArgumentError('No se pueden sumar unidades incompatibles');
+        }
         double currentBase = _convertToBase(currentQty, currentUnit);
         double newBase = _convertToBase(quantity, unit);
         double totalBase = currentBase + newBase;
@@ -1715,8 +1691,8 @@ class AppState extends ChangeNotifier {
         await updateFood(normalizedKey, totalBase, targetUnit, category: category);
         return true;
       } catch (e) {
-        debugPrint("Error accumulating food: $e. Fallback to overwrite.");
-        // Fallback to processing as new if accumulation fails logic (unlikely)
+        debugPrint("Error acumulando alimento: $e");
+        return false;
       }
     }
 
@@ -1760,8 +1736,7 @@ class AppState extends ChangeNotifier {
         backendQuantity = quantity;
       }
 
-      // Safety check: Backend often rejects 0
-      if (backendQuantity == 0) backendQuantity = 1;
+
 
       debugPrint("addFood sending: $backendQuantity $backendUnit");
 
@@ -1794,6 +1769,9 @@ class AppState extends ChangeNotifier {
           _inventory[normalizedKey] = {
             'quantity': (data['quantity'] as num).toDouble(),
             'unit': data['unit'] ?? backendUnit,
+            'category': data['category'] ?? category,
+            'calories': data['calories'], 'proteins': data['proteins'],
+            'fats': data['fats'], 'carbs': data['carbs'],
           };
           notifyListeners();
         }
@@ -2008,6 +1986,7 @@ class AppState extends ChangeNotifier {
           key: 'user_profile_cache_${user.uid}',
           value: jsonEncode(cacheData),
         );
+        await _storage.write(key: 'user_profile_cache_current', value: jsonEncode(cacheData));
         debugPrint("Local Cache Sync Successful");
         localCacheSuccess = true;
       } catch (e) {
@@ -2241,7 +2220,7 @@ class AppState extends ChangeNotifier {
     try {
       debugPrint("Saving calendar to Local Storage...");
       await _storage.write(
-        key: 'meal_calendar_local',
+        key: 'meal_calendar_local_${currentUserId ?? 'backend'}',
         value: jsonEncode(_mealCalendar),
       );
     } catch (e) {
@@ -2435,12 +2414,18 @@ class AppState extends ChangeNotifier {
   }
 
   String _getBaseUnitFor(String unit) {
-    switch (unit) {
+    switch (unit.trim().toLowerCase()) {
+      case 'u':
+      case 'unidad':
+      case 'unidades':
+        return 'u';
       case 'kg':
       case 'kilos':
       case 'kilogramos':
       case 'g':
       case 'gramos':
+      case 'oz':
+      case 'lb':
         return 'g';
       case 'l':
       case 'litro':
@@ -2448,12 +2433,12 @@ class AppState extends ChangeNotifier {
       case 'ml':
         return 'ml';
       default:
-        return 'u';
+        return unit.trim().toLowerCase();
     }
   }
 
   double _convertToBase(double qty, String unit) {
-    switch (unit) {
+    switch (unit.trim().toLowerCase()) {
       case 'kg':
       case 'kilos':
       case 'kilogramos':
@@ -2462,6 +2447,8 @@ class AppState extends ChangeNotifier {
       case 'litro':
       case 'litros':
         return qty * 1000;
+      case 'oz': return qty * 28.349523125;
+      case 'lb': return qty * 453.59237;
       case 'g':
       case 'ml':
       case 'gramos':

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -46,11 +47,12 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
   Future<void> _pickImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
     if (image != null) {
-      _analyze(imagePath: image.path);
+      final bytes = await image.readAsBytes();
+      if (mounted) await _analyze(imageBytes: bytes, imageFilename: image.name);
     }
   }
 
-  Future<void> _analyze({String? text, String? imagePath}) async {
+  Future<void> _analyze({String? text, Uint8List? imageBytes, String imageFilename = "food.jpg"}) async {
     if (text != null && text.trim().isEmpty) return;
 
     setState(() {
@@ -61,7 +63,7 @@ class _AddExtraMealBottomSheetState extends State<AddExtraMealBottomSheet> {
       _qtyController.text = "1";
     });
 
-    final result = await widget.appState.analyzeFood(text: text, imagePath: imagePath);
+    final result = await widget.appState.analyzeFood(text: text, imageBytes: imageBytes, imageFilename: imageFilename);
 
     if (mounted) {
       setState(() {

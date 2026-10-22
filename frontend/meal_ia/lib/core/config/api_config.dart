@@ -6,7 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class ApiConfig {
   // CONFIGURACIÓN DE ENTORNO
   // Cambia esta variable para alternar entre desarrollo y producción
-  static const bool isDevelopment = false;
+  static const bool isDevelopment = bool.fromEnvironment('APP_DEVELOPMENT');
 
   // IPs de Desarrollo por defecto
   static const String androidEmulatorIP = 'http://10.0.2.2:8000';
@@ -17,13 +17,16 @@ class ApiConfig {
 
   // URL activa (se selecciona automáticamente)
   static String get baseUrl {
-    if (!isDevelopment) return productionURL;
+    const definedUrl = String.fromEnvironment('BACKEND_URL');
+    if (definedUrl.isNotEmpty) return definedUrl.replaceFirst(RegExp(r'/+$'), '');
 
     // Si el usuario configuró una IP en el .env, usarla primero
-    final envUrl = dotenv.env['BACKEND_URL'];
+    final envUrl = dotenv.isInitialized ? dotenv.env['BACKEND_URL'] : null;
     if (envUrl != null && envUrl.isNotEmpty) {
-      return envUrl;
+      return envUrl.replaceFirst(RegExp(r'/+$'), '');
     }
+
+    if (!isDevelopment) return productionURL;
 
     // Selección automática por plataforma en desarrollo
     if (kIsWeb) {
@@ -58,7 +61,7 @@ class ApiConfig {
 
   // Información de debug
   static String get environmentInfo {
-    if (!isDevelopment) return 'Production ($productionURL)';
+    if (!isDevelopment) return 'Production ($baseUrl)';
     return 'Development ($baseUrl)';
   }
 }

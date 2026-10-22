@@ -18,6 +18,14 @@ import re
 router = APIRouter()
 
 
+def _premium_email(email: str) -> bool:
+    return email.strip().lower() in {
+        address.strip().lower()
+        for address in os.getenv("PREMIUM_EMAILS", "").split(",") if address.strip()
+    }
+
+
+
 # --- CLASES AUXILIARES ---
 class GoogleLoginResponse(schemas.Token):
     is_new_user: bool
@@ -64,7 +72,7 @@ def register_user(
             first_name=user.first_name,
             hashed_password=hashed_password,
             is_admin=is_admin,
-            is_premium=1 if user.email.lower() == "ggonzalezcarrasco18@gmail.com" else 0,
+            is_premium=int(_premium_email(user.email)),
         )
         db.add(new_user)
         db.commit()
@@ -121,7 +129,7 @@ def login_for_access_token(
             user.is_admin = 1
             needs_commit = True
             
-        if user.email.lower() == "ggonzalezcarrasco18@gmail.com" and not user.is_premium:
+        if _premium_email(user.email) and not user.is_premium:
             user.is_premium = 1
             needs_commit = True
             
@@ -147,42 +155,27 @@ def login_for_access_token(
 def auth_google(
     request: Request, google_token: schemas.GoogleToken, db: Session = Depends(get_db)
 ):
-    WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID")
-    ANDROID_CLIENT_ID = os.getenv("GOOGLE_ANDROID_CLIENT_ID")
-    IOS_CLIENT_ID = os.getenv(
-        "GOOGLE_IOS_CLIENT_ID",
-        "970236848335-p0l27kbi9b7q3g9ackgheem6mm0rqk68.apps.googleusercontent.com",
-    )
-
-    KNOWN_CLIENT_IDS = [
-        "970236848335-p0l27kbi9b7q3g9ackgheem6mm0rqk68.apps.googleusercontent.com",  # iOS
-        "970236848335-i0tvsjmvpa8bqisok1svcvfhqvmct4e0.apps.googleusercontent.com",  # Android
-    ]
-
-    CLIENT_IDS = list(
-        set(
-            [
-                cid
-                for cid in [WEB_CLIENT_ID, ANDROID_CLIENT_ID, IOS_CLIENT_ID]
-                + KNOWN_CLIENT_IDS
-                if cid
-            ]
-        )
-    )
+    # Public OAuth identifiers registered for MealIA; server settings can override them.
+    CLIENT_IDS = {
+        value.strip() for value in (
+            os.getenv("GOOGLE_WEB_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID") or "970236848335-m9t5mjq1i9dbsacop9i49ve6k0eoc529.apps.googleusercontent.com",
+            os.getenv("GOOGLE_ANDROID_CLIENT_ID") or "970236848335-i0tvsjmvpa8bqisok1svcvfhqvmct4e0.apps.googleusercontent.com",
+            os.getenv("GOOGLE_IOS_CLIENT_ID") or "970236848335-p0l27kbi9b7q3g9ackgheem6mm0rqk68.apps.googleusercontent.com",
+        ) if value and value.strip()
+    }
+    if not CLIENT_IDS:
+        raise HTTPException(status_code=503, detail="Google Sign-In no está configurado")
 
     try:
         id_info = id_token.verify_oauth2_token(
             google_token.token, google_requests.Request()
         )
-        # Verificar que la audiencia coincida con alguno de nuestros client IDs
-        if CLIENT_IDS and id_info.get("aud") not in CLIENT_IDS:
-            logger.warning(
-                f"Audiencia no listada: {id_info.get('aud')}, permitidos: {CLIENT_IDS}"
-            )
-            if not id_info.get("email_verified", True):
-                raise ValueError(f"Audiencia inválida: {id_info.get('aud')}")
+        if id_info.get("aud") not in CLIENT_IDS:
+            raise ValueError("La audiencia del token no pertenece a MealIA")
+        if not id_info.get("email_verified", False):
+            raise ValueError("El correo de Google no está verificado")
 
-        email = id_info["email"]
+        email = id_info["email"].strip().lower()
         first_name = id_info.get("given_name", "Usuario")
         last_name = id_info.get("family_name")
 
@@ -202,13 +195,13 @@ def auth_google(
                 last_name=last_name,
                 hashed_password=fake_password,
                 is_admin=is_admin,
-                is_premium=1 if email.lower() == "ggonzalezcarrasco18@gmail.com" else 0,
+                is_premium=int(_premium_email(email)),
             )
             db.add(user)
             db.commit()
             db.refresh(user)
         else:
-            if email.lower() == "ggonzalezcarrasco18@gmail.com" and not user.is_premium:
+            if _premium_email(email) and not user.is_premium:
                 user.is_premium = 1
                 db.commit()
                 db.refresh(user)

@@ -7,6 +7,7 @@ from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 # --- CORRECCIÓN DE IMPORTACIONES ---
 from database import get_db
@@ -59,7 +60,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 # Esta función es la que protege nuestros endpoints
 def get_user(db: Session, email: str):
     # 'models.User' funciona porque 'models' ahora fue importado correctamente arriba
-    return db.query(models.User).filter(models.User.email == email).first()
+    return db.query(models.User).filter(
+        func.lower(models.User.email) == email.strip().lower()
+    ).first()
 
 
 async def get_current_user(
