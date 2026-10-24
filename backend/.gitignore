@@ -1,12 +1,40 @@
-# Entorno virtual de Python
+# Python virtual environments
 venv/
+.venv/
+env/
+ENV/
 
-# Archivo de secretos
+# Secrets and environment variables
 .env
+.env.*
+*.env
+!.env.example
 
-# Base de datos local de SQLite
+# Local SQLite databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db.bak
+*.sqlite
+*.sqlite3
 mealia.db
+mealia.db.bak
 
-# Archivos de caché de Python
+# Python cache & test artifacts
 __pycache__/
-.pytest_cache/mealia.db
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# User uploads (Preserve directory with .gitkeep)
+uploads/*
+!uploads/.gitkeep
+
+# Logs & temp files
+*.log
+.DS_Store

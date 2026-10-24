@@ -11,6 +11,7 @@ import 'package:firebase_auth/firebase_auth.dart'; // NECESARIO PARA AUTH
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // NEW
 import 'package:firebase_storage/firebase_storage.dart';
+import '../services/notification_service.dart';
 import '../config/api_config.dart';
 
 class AppState extends ChangeNotifier {
@@ -63,6 +64,11 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> _savedRecipes = [];
   List<Map<String, dynamic>> get savedRecipes => _savedRecipes;
 
+  // Rachas (Streaks)
+  int currentStreak = 0;
+  String? lastStreakDate;
+  bool justIncreasedStreak = false;
+
   // --- HELPERS ---
   String? get currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
@@ -113,6 +119,8 @@ class AppState extends ChangeNotifier {
     generatedMenu = null;
     _savedRecipes.clear();
     totalCalories = 0;
+    currentStreak = 0;
+    lastStreakDate = null;
   }
 
   Future<void> logout() async {
@@ -167,6 +175,8 @@ class AppState extends ChangeNotifier {
           isAdmin = data['is_admin'] ?? false;
           if (data['meals_per_day'] != null) mealsPerDay = data['meals_per_day'];
           if (data['meal_times'] != null) mealTimes = Map<String, String>.from(data['meal_times']);
+          currentStreak = data['current_streak'] ?? 0;
+          lastStreakDate = data['last_streak_date'];
           debugPrint("Loaded Profile from Local Cache: $firstName ($email)");
         } catch (e) {
           debugPrint("Error decoding profile cache: $e");
@@ -218,6 +228,8 @@ class AppState extends ChangeNotifier {
               'is_admin': isAdmin,
               'meals_per_day': mealsPerDay,
               'meal_times': mealTimes,
+              'current_streak': currentStreak,
+              'last_streak_date': lastStreakDate,
             };
             await _storage.write(
               key: 'user_profile_cache_current',
@@ -269,6 +281,8 @@ class AppState extends ChangeNotifier {
               if (gender == null && data.containsKey('gender')) gender = data['gender'];
               if (data.containsKey('meals_per_day')) mealsPerDay = data['meals_per_day'];
               if (data.containsKey('meal_times')) mealTimes = Map<String, String>.from(data['meal_times']);
+              if (data.containsKey('current_streak')) currentStreak = data['current_streak'];
+              if (data.containsKey('last_streak_date')) lastStreakDate = data['last_streak_date'];
             }
           } catch (e) {
             debugPrint("Error leyendo backup de Firestore: $e");
@@ -463,6 +477,15 @@ class AppState extends ChangeNotifier {
       // Sincronizar inventario local hacia el backend (Para mitigar reinicios de DB en Render)
       _syncInventoryToBackend(token);
 
+      // Programar o actualizar recordatorio de racha
+      try {
+        final fulfilledToday = lastStreakDate == _formatDate(DateTime.now());
+        final notificationService = NotificationService();
+        await notificationService.scheduleStreakReminder(fulfilledToday);
+      } catch (e) {
+        debugPrint("Error scheduling streak reminder: $e");
+      }
+
       return true;
     } catch (e) {
       debugPrint("Warning in _loadUserData: $e");
@@ -504,6 +527,76 @@ class AppState extends ChangeNotifier {
     if (token != null) {
       await _loadUserData(token);
     }
+  }
+
+  Future<void> updateStreak() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final now = DateTime.now();
+    final todayStr = _formatDate(now);
+
+    if (lastStreakDate == todayStr) {
+      // Ya cumplió la racha hoy.
+      return;
+    }
+
+    if (lastStreakDate != null) {
+      final lastDate = DateTime.parse(lastStreakDate!);
+      final difference = DateTime(now.year, now.month, now.day)
+          .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
+          .inDays;
+
+      if (difference == 1) {
+        // Día consecutivo
+        currentStreak++;
+        justIncreasedStreak = true;
+      } else {
+        // Perdió la racha
+        currentStreak = 1;
+        justIncreasedStreak = true; // Also celebrate the first day of the new streak
+      }
+    } else {
+      // Primera vez
+      currentStreak = 1;
+      justIncreasedStreak = true; // First time celebration
+    }
+
+    lastStreakDate = todayStr;
+    notifyListeners();
+
+    // Guardar en Firestore
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'current_streak': currentStreak,
+        'last_streak_date': lastStreakDate,
+      }, SetOptions(merge: true));
+
+      // Actualizar caché
+      String? cachedProfile = await _storage.read(key: 'user_profile_cache_current');
+      if (cachedProfile != null) {
+        final data = jsonDecode(cachedProfile);
+        data['current_streak'] = currentStreak;
+        data['last_streak_date'] = lastStreakDate;
+        await _storage.write(key: 'user_profile_cache_current', value: jsonEncode(data));
+        await _storage.write(key: 'user_profile_cache_${user.uid}', value: jsonEncode(data));
+      }
+    } catch (e) {
+      debugPrint("Error updating streak in Firestore: $e");
+    }
+
+    // Reprogramar para mañana
+    try {
+      final notificationService = NotificationService();
+      await notificationService.scheduleStreakReminder(true);
+    } catch (e) {
+      debugPrint("Error cancelando notificación de racha: $e");
+    }
+  }
+
+  void clearStreakIncreasedFlag() {
+    justIncreasedStreak = false;
+    notifyListeners();
   }
 
   // Helper para fechas
@@ -1096,6 +1189,9 @@ class AppState extends ChangeNotifier {
             }
           }
           totalCalories = (data['total_calories'] as int?) ?? sumCals;
+          
+          // Actualizar racha al generar receta del día
+          await updateStreak();
         }
 
         await saveMealPlan(targetDate, menuData);
@@ -1337,49 +1433,6 @@ class AppState extends ChangeNotifier {
     return true;
   }
 
-  /// Calcula la racha actual de días consecutivos cumplidos (estilo Duolingo)
-  int get currentStreak {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todayKey = _formatDate(today);
-
-    int streak = 0;
-    bool todayDone = isDateKeyCompleted(todayKey);
-
-    if (todayDone) {
-      streak = 1;
-      DateTime checkDate = today.subtract(const Duration(days: 1));
-      while (true) {
-        String key = _formatDate(checkDate);
-        if (isDateKeyCompleted(key)) {
-          streak++;
-          checkDate = checkDate.subtract(const Duration(days: 1));
-        } else {
-          break;
-        }
-      }
-    } else {
-      DateTime yesterday = today.subtract(const Duration(days: 1));
-      String yesterdayKey = _formatDate(yesterday);
-      if (isDateKeyCompleted(yesterdayKey)) {
-        streak = 1;
-        DateTime checkDate = yesterday.subtract(const Duration(days: 1));
-        while (true) {
-          String key = _formatDate(checkDate);
-          if (isDateKeyCompleted(key)) {
-            streak++;
-            checkDate = checkDate.subtract(const Duration(days: 1));
-          } else {
-            break;
-          }
-        }
-      } else {
-        streak = 0;
-      }
-    }
-
-    return streak;
-  }
 
   /// Cantidad de comidas completadas hoy (de las requeridas)
   int get todayCompletedMealsCount {

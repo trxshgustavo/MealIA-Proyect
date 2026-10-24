@@ -1464,11 +1464,28 @@ def add_extra_meal(
     current_extras = list(plan.extra_meals) if plan.extra_meals else []
     extra_dict = extra_meal.model_dump()
     extra_dict["eaten"] = True
-    current_extras.append(extra_dict)
+    
+    # Recalcular calorias matematicamente exactas de la comida extra
+    c = extra_dict.get("carbs", 0) or 0
+    p = extra_dict.get("protein", 0) or 0
+    f = extra_dict.get("fat", 0) or 0
+    if c > 0 or p > 0 or f > 0:
+        extra_dict["calories"] = int(c * 4 + p * 4 + f * 9)
 
+    current_extras.append(extra_dict)
     plan.extra_meals = current_extras
-    if extra_dict.get("calories"):
-        plan.total_calories = (plan.total_calories or 0) + int(extra_dict.get("calories", 0))
+    
+    # Recalcular las calorias totales del plan
+    total_cal = 0
+    if isinstance(plan.breakfast, dict): total_cal += plan.breakfast.get("calories", 0) or 0
+    if isinstance(plan.lunch, dict): total_cal += plan.lunch.get("calories", 0) or 0
+    if isinstance(plan.dinner, dict): total_cal += plan.dinner.get("calories", 0) or 0
+    for m in plan.extra_meals:
+        if isinstance(m, dict):
+            total_cal += m.get("calories", 0) or 0
+            
+    plan.total_calories = total_cal
+    
     db.commit()
     db.refresh(plan)
     return plan
@@ -1637,31 +1654,23 @@ async def analyze_food(
 
     system_prompt = """
 Eres un Nutricionista clínico y Chef de élite experto en composición nutricional de alimentos.
-Tu trabajo es identificar el alimento o platillo (desde la foto o descripción) y calcular con alta precisión científica sus macronutrientes y calorías para una porción estándar individual.
+Tu trabajo es identificar el alimento o platillo (desde la foto o descripción) y dividirlo en ingredientes simples (en INGLÉS) junto con su peso estimado en gramos para poder buscarlos en la base de datos oficial del USDA.
 
 REGLAS OBLIGATORIAS:
-1. Nombre atractivo y descriptivo en español (ej: "Manzana Roja con Almendras", "Yogurt Griego con Frutas", "Ensalada César con Pollo").
-2. Lista de ingredientes principales que componen la comida con su cantidad estimada.
-3. CALCULO MATEMÁTICO EXACTO DE CALORÍAS: (carbs * 4) + (protein * 4) + (fat * 9).
+1. Nombre atractivo y descriptivo en ESPAÑOL.
+2. Lista de ingredientes en español para mostrar al usuario.
+3. Debes crear un array "usda_queries" con objetos que tengan "query" (nombre simple y genérico del ingrediente en INGLÉS para la base de datos USDA) y "grams" (entero, peso estimado en gramos).
 4. Devuelve SOLO JSON válido estrictamente en este formato:
 {
-  "name": "Nombre descriptivo de la comida en español",
-  "ingredients": ["1 porción de ingrediente", "..."],
+  "name": "Ensalada César con Pollo",
+  "ingredients": ["150g de pollo a la plancha", "50g lechuga", "20g aderezo"],
   "steps": ["Recomendación de consumo o preparación.", "Emplatado/Servir."],
-  "calories": 0,
-  "carbs": 0,
-  "protein": 0,
-  "fat": 0,
-  "fiber": 0.0,
-  "sugar": 0.0,
-  "sodium": 0,
-  "vitamin_a": 0.0,
-  "vitamin_c": 0.0,
-  "calcium": 0.0,
-  "iron": 0.0,
-  "time": "5 min",
-  "source_url": "https://www.themealdb.com",
-  "source_name": "Meal.IA Análisis Nutricional"
+  "usda_queries": [
+    {"query": "grilled chicken breast", "grams": 150},
+    {"query": "romaine lettuce", "grams": 50},
+    {"query": "caesar dressing", "grams": 20}
+  ],
+  "time": "5 min"
 }
 """
 
@@ -1680,17 +1689,40 @@ REGLAS OBLIGATORIAS:
         result_str = response.choices[0].message.content
         result = json.loads(result_str)
 
+        usda_queries = result.get("usda_queries", [])
+        total_protein = 0.0
+        total_fat = 0.0
+        total_carbs = 0.0
+        
+        # Buscar cada ingrediente en USDA
+        for item in usda_queries:
+            q = item.get("query")
+            grams = float(item.get("grams", 100))
+            if q:
+                usda_data = await search_usda_database(q)
+                if usda_data and usda_data.get("foods"):
+                    food = usda_data["foods"][0]
+                    nutrients = {n.get("nutrientName"): n.get("value") for n in food.get("foodNutrients", []) if n.get("value")}
+                    # USDA values are per 100g
+                    factor = grams / 100.0
+                    total_protein += float(nutrients.get("Protein", 0)) * factor
+                    total_fat += float(nutrients.get("Total lipid (fat)", 0)) * factor
+                    total_carbs += float(nutrients.get("Carbohydrate, by difference", 0)) * factor
+                    
         # Enforce exact mathematical calories
-        carbs = max(0, int(result.get("carbs", 0)))
-        protein = max(0, int(result.get("protein", 0)))
-        fat = max(0, int(result.get("fat", 0)))
+        carbs = max(0, int(total_carbs))
+        protein = max(0, int(total_protein))
+        fat = max(0, int(total_fat))
         calc_cals = (carbs * 4) + (protein * 4) + (fat * 9)
-        if calc_cals == 0 and result.get("calories", 0) > 0:
-            calc_cals = int(result.get("calories", 0))
-            carbs = int(calc_cals * 0.50 / 4)
-            protein = int(calc_cals * 0.25 / 4)
-            fat = int(calc_cals * 0.25 / 9)
+        
+        # Si por alguna razon USDA fallo en todo, proveer un fallback minimo
+        if calc_cals == 0:
+            calc_cals = 150
+            carbs = 20
+            protein = 5
+            fat = 4
             calc_cals = (carbs * 4) + (protein * 4) + (fat * 9)
+            
         result["calories"] = max(10, calc_cals)
         result["carbs"] = carbs
         result["protein"] = protein
@@ -1737,3 +1769,112 @@ REGLAS OBLIGATORIAS:
             "source_url": "https://www.themealdb.com",
             "source_name": "Meal.IA Nutrición",
         }
+
+# ════════════════════════════════════════════════════════════════════════════════
+# ANALIZAR FOTO DE COMIDA CON IA (COMIDAS AFUERA / EXTRA MEALS)
+# ════════════════════════════════════════════════════════════════════════════════
+@router.post("/analyze-food", response_model=schemas.MealDetail)
+async def analyze_food(
+    text_description: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    current_user: models.User = Depends(security.get_current_user),
+):
+    import base64
+    import json
+
+    if client is None:
+        raise HTTPException(status_code=503, detail="Servicio de IA no configurado")
+        
+    messages = []
+    
+    system_prompt = """
+Eres un nutricionista experto y modelo de visión computacional avanzado.
+Tu tarea es analizar la foto o descripción de la comida que te envía el usuario y estimar con la mayor precisión posible qué plato es, sus ingredientes, y sus valores nutricionales (calorías y macros).
+Devuelve el resultado ESTRICTAMENTE en formato JSON con la siguiente estructura:
+
+{
+  "name": "Nombre de la comida",
+  "ingredients": ["100g de arroz", "150g de pollo", "..."],
+  "steps": ["Comida extra o fuera de casa."],
+  "calories": 0,
+  "carbs": 0,
+  "protein": 0,
+  "fat": 0,
+  "fiber": 0.0,
+  "sugar": 0.0,
+  "sodium": 0,
+  "vitamin_a": 0.0,
+  "vitamin_c": 0.0,
+  "calcium": 0.0,
+  "iron": 0.0,
+  "time": "0 min",
+  "source_url": "Meal.IA Vision",
+  "source_name": "Meal.IA Vision",
+  "eaten": true
+}
+
+REGLAS DE CÁLCULO ESTRICTAS:
+1. Las calorías deben cumplir exactamente con: (1g proteína = 4 kcal, 1g carbo = 4 kcal, 1g grasa = 9 kcal).
+2. Si la foto contiene varios elementos, suma todo.
+3. Asegúrate de dar estimaciones realistas basadas en el tamaño de porción que ves en la imagen.
+"""
+    messages.append({"role": "system", "content": system_prompt})
+    
+    user_content = []
+    if text_description:
+        user_content.append({"type": "text", "text": f"Analiza esta comida: {text_description}"})
+    else:
+        user_content.append({"type": "text", "text": "Analiza la comida en esta foto y estima sus macros reales:"})
+        
+    if image:
+        contents = await image.read()
+        base64_image = base64.b64encode(contents).decode("utf-8")
+        user_content.append({"type": "image_url", "image_url": {"url": f"data:{image.content_type};base64,{base64_image}"}})
+        
+    if not user_content:
+         raise HTTPException(status_code=400, detail="Debe proveer texto o imagen")
+         
+    messages.append({"role": "user", "content": user_content})
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=800,
+        )
+        
+        content = response.choices[0].message.content
+        meal_data = json.loads(content)
+        
+        # Validar y sanear macros
+        def safe_get(data, key, default=0):
+            try: return int(data.get(key, default))
+            except: return default
+            
+        def safe_get_float(data, key, default=0.0):
+            try: return float(data.get(key, default))
+            except: return default
+            
+        carbs = safe_get(meal_data, "carbs")
+        protein = safe_get(meal_data, "protein")
+        fat = safe_get(meal_data, "fat")
+        
+        # Recalcular calorias matematicamente exactas para asegurar que el contador funciona 100% perfecto
+        meal_data["calories"] = (carbs * 4) + (protein * 4) + (fat * 9)
+        meal_data["carbs"] = carbs
+        meal_data["protein"] = protein
+        meal_data["fat"] = fat
+        meal_data["fiber"] = safe_get_float(meal_data, "fiber")
+        meal_data["sugar"] = safe_get_float(meal_data, "sugar")
+        meal_data["sodium"] = safe_get(meal_data, "sodium")
+        meal_data["vitamin_a"] = safe_get_float(meal_data, "vitamin_a")
+        meal_data["vitamin_c"] = safe_get_float(meal_data, "vitamin_c")
+        meal_data["calcium"] = safe_get_float(meal_data, "calcium")
+        meal_data["iron"] = safe_get_float(meal_data, "iron")
+        
+        return meal_data
+    except Exception as e:
+        logger.error(f"Error analizando comida extra con IA: {e}")
+        raise HTTPException(status_code=500, detail="Error procesando con IA")

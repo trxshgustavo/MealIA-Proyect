@@ -1,2 +1,148 @@
+# ==============================================================================
+# GitIgnore for MealIA Monorepo (FastAPI Backend + Flutter App + Vite Web)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Secrets & Environment Variables (CRITICAL)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+
+# Credentials, Keys & Certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+**/google-services.json
+**/GoogleService-Info.plist
+
+# ------------------------------------------------------------------------------
+# Databases & Local Backups
+# ------------------------------------------------------------------------------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db.bak
+*.sqlite
+*.sqlite3
 mealia.db
+backend/mealia.db
+backend/mealia.db.bak
+
+# ------------------------------------------------------------------------------
+# User Uploads (Preserve folder via .gitkeep)
+# ------------------------------------------------------------------------------
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ------------------------------------------------------------------------------
+# Python & Virtual Environments (Backend)
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------------------------
+# Flutter & Dart (Frontend Mobile)
+# ------------------------------------------------------------------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+frontend/meal_ia/build/
+frontend/meal_ia/.dart_tool/
+frontend/meal_ia/.flutter-plugins
+frontend/meal_ia/.flutter-plugins-dependencies
+frontend/meal_ia/.pub/
+frontend/meal_ia/.pub-cache/
+
+# Android build artifacts
+frontend/meal_ia/android/.gradle/
+frontend/meal_ia/android/local.properties
+frontend/meal_ia/android/captures/
+frontend/meal_ia/android/gradle-wrapper.jar
+frontend/meal_ia/android/hs_err_pid*.log
+
+# iOS / macOS build artifacts
+frontend/meal_ia/ios/Pods/
+frontend/meal_ia/ios/.symlinks/
+frontend/meal_ia/ios/Flutter/Flutter.framework
+frontend/meal_ia/ios/Flutter/Flutter.podspec
+frontend/meal_ia/macos/Pods/
+frontend/meal_ia/macos/Flutter/ephemeral/
+frontend/meal_ia/windows/flutter/ephemeral/
+frontend/meal_ia/linux/flutter/ephemeral/
+
+# ------------------------------------------------------------------------------
+# Node.js & Vite (Website)
+# ------------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+frontend/meal_ia/website/dist/
+frontend/meal_ia/website/dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# Operating System & IDEs
+# ------------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# IDE files (Keep .vscode configs for project setup, ignore user caches)
+.idea/
+*.iml
+*.ipr
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.vscode/*.log

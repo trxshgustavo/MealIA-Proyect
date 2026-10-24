@@ -7,6 +7,7 @@ import 'recipe_screen.dart';
 import 'add_extra_meal_bottomsheet.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../../utils/screen_utils.dart';
+import '../../screens/widgets/streak_celebration_dialog.dart';
 
 class RecipeCalendarScreen extends StatefulWidget {
   const RecipeCalendarScreen({super.key});
@@ -1128,6 +1129,7 @@ class _RecipeCalendarScreenState extends State<RecipeCalendarScreen> {
       Navigator.of(context).pop();
       // Refrescar el día
       setState(() {});
+      StreakCelebrationDialog.showIfNecessary(context);
     }
   }
 

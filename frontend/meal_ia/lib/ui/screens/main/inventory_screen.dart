@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../../../utils/screen_utils.dart';
 import '../../screens/main/food_scanner_screen.dart';
 import '../../screens/main/receipt_scanner_screen.dart';
+import '../../screens/widgets/streak_celebration_dialog.dart';
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -379,7 +380,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       // Cerrar el diálogo
       Navigator.of(context).pop();
       // Navegar al menú
-      Navigator.pushNamed(context, '/menu');
+      Navigator.pushNamed(context, '/menu').then((_) {
+         if (mounted) StreakCelebrationDialog.showIfNecessary(context);
+      });
     } catch (e) {
       if (mounted) {
         // Cerrar el diálogo

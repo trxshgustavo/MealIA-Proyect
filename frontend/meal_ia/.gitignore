@@ -46,6 +46,9 @@ app.*.map.json
 
 # Environment variables
 .env
+.env.*
+*.env
+!.env.example
 build/
 
 # Firebase Configs

@@ -4,6 +4,7 @@ import '../../../core/providers/app_state.dart';
 import '../theme/app_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../utils/screen_utils.dart';
+import '../../screens/widgets/streak_celebration_dialog.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -14,6 +15,16 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        StreakCelebrationDialog.showIfNecessary(context);
+      }
+    });
+  }
 
   // Lógica para regenerar menú con pantalla de carga (Copiado y adaptado de InventoryScreen)
   Future<void> _handleRegenerate() async {
