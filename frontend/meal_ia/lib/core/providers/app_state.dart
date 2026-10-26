@@ -15,8 +15,7 @@ import '../services/notification_service.dart';
 import '../config/api_config.dart';
 
 class AppState extends ChangeNotifier {
-  // Asegúrate de que esta IP sea la correcta de tu PC
-  final String _baseUrl = ApiConfig.baseUrl;
+  String get _baseUrl => ApiConfig.baseUrl;
 
   final _storage = const FlutterSecureStorage();
   late final GoogleSignIn _googleSignIn = GoogleSignIn(

@@ -937,6 +937,12 @@ class _FoodItemCardState extends State<_FoodItemCard> {
     );
   }
 
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    super.dispose();
+  }
+
   void _updateQuantity(double newVal) {
     if (newVal < 0) return;
     setState(() {

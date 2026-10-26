@@ -34,6 +34,12 @@ def migrate():
         cursor.execute("ALTER TABLE inventory_items ADD COLUMN category VARCHAR DEFAULT 'Otros';")
         cursor.execute("UPDATE inventory_items SET category = 'Otros' WHERE category IS NULL;")
 
+    # Add indexes for query performance
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_inventory_items_owner_id ON inventory_items (owner_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_saved_recipes_owner_id ON saved_recipes (owner_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_meal_plans_owner_id ON meal_plans (owner_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS ix_meal_plans_date ON meal_plans (date);")
+
     conn.commit()
     conn.close()
     print("Migration complete.")

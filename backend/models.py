@@ -40,7 +40,7 @@ class InventoryItem(Base):
     fats = Column(Float, nullable=True)
     carbs = Column(Float, nullable=True)
 
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"), index=True)
     owner = relationship("User", back_populates="inventory_items")
 
 
@@ -53,7 +53,7 @@ class SavedRecipe(Base):
     ingredients = Column(JSON)
     steps = Column(JSON)
     calories = Column(Integer)
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"), index=True)
 
     owner = relationship("User", back_populates="saved_recipes")
 
@@ -62,7 +62,7 @@ class MealPlan(Base):
     __tablename__ = "meal_plans"
 
     id = Column(Integer, primary_key=True, index=True)
-    date = Column(DateTime, nullable=False)  # Fecha del plan
+    date = Column(DateTime, nullable=False, index=True)  # Fecha del plan
     breakfast = Column(JSON)
     lunch = Column(JSON)
     dinner = Column(JSON)
@@ -76,5 +76,5 @@ class MealPlan(Base):
     dinner_eaten = Column(Integer, default=0)
     extra_meals = Column(JSON, default=list)  # Lista de comidas extra
 
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"), index=True)
     owner = relationship("User", back_populates="meal_plans")

@@ -96,15 +96,24 @@ def search_themealdb_by_ingredient(ingredient: str) -> list:
     return []
 
 
+_MEAL_CACHE: dict = {}
+
+
 def get_themealdb_detail(meal_id: str) -> Optional[dict]:
-    """Obtiene el detalle completo de una receta por su ID."""
+    """Obtiene el detalle completo de una receta por su ID con cache en memoria."""
+    if meal_id in _MEAL_CACHE:
+        return _MEAL_CACHE[meal_id]
     try:
         with httpx.Client(timeout=HTTP_TIMEOUT) as http:
             resp = http.get(THEMEALDB_LOOKUP_URL, params={"i": meal_id})
             if resp.status_code == 200:
                 data = resp.json()
                 meals = data.get("meals") or []
-                return meals[0] if meals else None
+                if meals:
+                    if len(_MEAL_CACHE) > 500:
+                        _MEAL_CACHE.clear()
+                    _MEAL_CACHE[meal_id] = meals[0]
+                    return meals[0]
     except Exception as e:
         logger.warning(f"TheMealDB lookup error: {e}")
     return None

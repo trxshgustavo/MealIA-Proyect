@@ -29,6 +29,9 @@ print("--------------------------------------------------")
 print("MEAL.IA BACKEND STARTED - v3 (WITH ARGON2 & CORS)")
 print("--------------------------------------------------")
 
+from fastapi.middleware.gzip import GZipMiddleware
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
@@ -63,8 +66,9 @@ app.include_router(menu.router, tags=["Menu & Recipes"])
 app.include_router(payments.router, tags=["Payments"])
 
 # Configuración de carpetas
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+UPLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 
 # --- ENDPOINT DE SALUD PARA DIAGNÓSTICO ---
