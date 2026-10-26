@@ -86,7 +86,7 @@ class NotificationService {
           ),
           iOS: DarwinNotificationDetails(),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time, // Repetir todos los días a la misma hora
       );
       debugPrint("Recordatorio de racha programado para: $scheduledDate");

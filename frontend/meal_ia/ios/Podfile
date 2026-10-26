@@ -39,6 +39,14 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      # Permission handler definitions
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_MICROPHONE=1',
+        'PERMISSION_NOTIFICATIONS=1',
+      ]
       # Fix Xcode 14+ resource bundle signing issues
       if target.respond_to?(:product_type) and target.product_type == "com.apple.product-type.bundle"
         config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
