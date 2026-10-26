@@ -13,6 +13,7 @@ from database import get_db
 import models
 import schemas
 
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 load_dotenv()  # Carga las variables de .env
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:

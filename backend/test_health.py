@@ -1,4 +1,4 @@
-import requests
+import urllib.request
 import urllib.error
 
 try:

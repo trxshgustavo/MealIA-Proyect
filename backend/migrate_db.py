@@ -1,7 +1,8 @@
+import os
 import sqlite3
 import json
 
-db_path = "c:\\Users\\ggonz\\MealIA\\backend\\mealia.db"
+db_path = os.path.join(os.path.dirname(__file__), "mealia.db")
 
 def migrate():
     conn = sqlite3.connect(db_path)
