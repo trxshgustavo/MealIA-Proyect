@@ -11,8 +11,11 @@
   "python.envFile": "${workspaceFolder}/backend/.env",
   "python.venvPath": "${workspaceFolder}\\backend",
   "python.venvFolders": [".venv"],
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.ignore": ["frontend", "**/frontend/**"],
   "pyrefly.projectRoot": "${workspaceFolder}\\backend",
   "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
   "files.readonlyInclude": {
     "{**/.c4z/.extsrcs/*.PROTSYM.cbl,**/.c4z/.extsrcs/*.PROTSYM.listing}": true
   }

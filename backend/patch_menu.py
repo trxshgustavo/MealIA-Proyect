@@ -1,5 +1,3 @@
-import re
-
 file_path = r"c:\Users\ggonz\MealIA\backend\routers\menu.py"
 
 with open(file_path, "r", encoding="utf-8") as f:
