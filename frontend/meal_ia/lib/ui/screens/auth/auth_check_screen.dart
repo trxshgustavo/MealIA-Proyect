@@ -51,8 +51,10 @@ class _AuthCheckScreenState extends State<AuthCheckScreen>
       final isLoggedIn = await appState.checkLoginStatus().timeout(
         const Duration(seconds: 30),
         onTimeout: () {
-          debugPrint("Timeout de red en arranque, manteniendo sesión local...");
-          return true;
+          // Never treat a timed-out authentication check as a successful login.
+          // The user can retry signing in when connectivity is restored.
+          debugPrint("Tiempo de espera agotado al verificar la sesión.");
+          return false;
         },
       );
       if (!mounted) return;
