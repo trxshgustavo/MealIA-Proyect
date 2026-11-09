@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -18,9 +19,18 @@ class NotificationService {
   bool _initialized = false;
 
   Future<void> init() async {
-    if (_initialized) return;
+    if (kIsWeb || _initialized) return;
 
     tz.initializeTimeZones();
+    // timezone defaults to UTC until explicitly set to the device's IANA zone.
+    // Avoid scheduling an incorrect 22:00 reminder if resolution fails.
+    try {
+      final deviceTimezone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(deviceTimezone.identifier));
+    } catch (e) {
+      debugPrint('No se pudo detectar la zona horaria local: $e');
+      return;
+    }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/launcher_icon');
@@ -51,6 +61,7 @@ class NotificationService {
   Future<void> scheduleStreakReminder(bool fulfilledToday) async {
     if (kIsWeb) return; // Not supported on web
     await init();
+    if (!_initialized) return;
 
     // Cancelar cualquier recordatorio anterior para no duplicar
     await cancelStreakReminder();
@@ -62,7 +73,7 @@ class NotificationService {
 
     if (fulfilledToday) {
        // Si ya cumplió hoy, programamos para mañana a las 22:00
-       scheduledDate = scheduledDate.add(const Duration(days: 1));
+       scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day + 1, 22);
     } else {
        // Si no ha cumplido hoy, pero ya pasaron las 22:00, lo pasamos a mañana
        if (scheduledDate.isBefore(now)) {
